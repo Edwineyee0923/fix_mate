@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "576904705793",
+    "project_id": "fixmate-fb750",
+    "storage_bucket": "fixmate-fb750.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:576904705793:android:cd183fc9b6dd28a047cd00",
+        "android_client_info": {
+          "package_name": "com.example.fix_mate"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBpPaslMvg24F8Fq3ePRwPlP1ayS7Ryfcw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
