@@ -63,8 +63,8 @@ flutter:
   assets:
     - lib/assets/images/fixmate_logo.png
     - lib/assets/images/ss_login.png
-    - lib/assets/images/ss_register.png
-    - lib/assets/images/ss_register1.png
+    - lib/assets/images/sp_login.png
+    - lib/assets/images/reset_password.png
 
 
 

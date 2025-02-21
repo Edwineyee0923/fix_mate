@@ -3,6 +3,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'firebase_options.dart';
 import 'package:flutter/material.dart';
 import 'package:fix_mate/service_seeker/s_login.dart';
+import 'package:fix_mate/service_provider/p_login.dart';
+import 'package:fix_mate/home_page/reset_password.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,7 +26,7 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.blue,
         fontFamily: 'Poppins', // Set Poppins as the main font
       ),
-      home: s_login(),
+      home: reset_password(),
     );
   }
 }

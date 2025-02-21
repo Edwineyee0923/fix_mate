@@ -75,7 +75,7 @@ Container dk_button(BuildContext context, String title, Function onTap) {
   return Container(
     width: 340,
     height: 60,
-    margin: const EdgeInsets.fromLTRB(0, 10, 0, 20),
+    margin: const EdgeInsets.fromLTRB(0, 10, 0, 10),
     decoration: BoxDecoration(borderRadius: BorderRadius.circular(90)),
     child: ElevatedButton(
       onPressed: () {
@@ -151,6 +151,35 @@ Container pk_button(BuildContext context, String title, Function onTap) {
       ),
       style: ElevatedButton.styleFrom(
         backgroundColor: const Color(0xFFfb9798), // Fixed color (no change)
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(30),
+        ),
+      ),
+    ),
+  );
+}
+
+
+Container a_button(BuildContext context, String title, Function onTap) {
+  return Container(
+    width: 340,
+    height: 60,
+    margin: const EdgeInsets.fromLTRB(0, 10, 0, 10),
+    decoration: BoxDecoration(borderRadius: BorderRadius.circular(90)),
+    child: ElevatedButton(
+      onPressed: () {
+        onTap();
+      },
+      child: Text(
+        title,
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+          fontSize: 20,
+        ),
+      ),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: const Color(0xFF4C3532), // Fixed color (no change)
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(30),
         ),
@@ -284,6 +313,78 @@ Widget forgetPassword(BuildContext context, Color textColor) {
         MaterialPageRoute(builder: (context) => home_page()),
       ),
     ),
+  );
+}
+
+void showSuccessMessage(BuildContext context, String message, {VoidCallback? onPressed}) {
+  showDialog(
+    context: context,
+    builder: (context) {
+      return Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20), // Rounded corners
+        ),
+        elevation: 10, // Subtle shadow for depth
+        backgroundColor: Colors.white, // Background color
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.check_circle_outline, // Success icon
+                color: Colors.green, // Green color for success
+                size: 60,
+              ),
+              SizedBox(height: 20),
+              Text(
+                'Success!',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+              SizedBox(height: 15),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 18,
+                  color: Colors.black54,
+                ),
+              ),
+              SizedBox(height: 25),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(); // Close the dialog
+                    if (onPressed != null) {
+                      onPressed(); // Execute the function passed in onPressed
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green, // Green button
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30), // Rounded button
+                    ),
+                  ),
+                  child: Text(
+                    'OK',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white, // Button text color
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    },
   );
 }
 

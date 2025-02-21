@@ -3,15 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:fix_mate/reusable_widget/reusable_widget.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-class s_login extends StatefulWidget {
+class p_login extends StatefulWidget {
 
-  const s_login({Key? key}) : super(key: key);
+  const p_login({Key? key}) : super(key: key);
 
-  _s_loginState createState() => _s_loginState();
+  _p_loginState createState() => _p_loginState();
 
 }
 
-class _s_loginState extends State<s_login> {
+class _p_loginState extends State<p_login> {
   TextEditingController _emailTextController = TextEditingController();
   TextEditingController _passwordTextController = TextEditingController();
 
@@ -40,13 +40,13 @@ class _s_loginState extends State<s_login> {
                 child: Column(
                   children: [
                     Image.asset(
-                      'lib/assets/images/ss_login.png', // Updated image path
+                      'lib/assets/images/sp_login.png', // Updated image path
                       width: 300,
                       height: 300,
                     ),
                     SizedBox(height: 25),
                     Text(
-                      'Login \nService Seeker Account',
+                      'Login \nService Provider Account',
                       style: TextStyle(
                         fontSize: 30,
                         fontWeight: FontWeight.bold,
@@ -62,42 +62,42 @@ class _s_loginState extends State<s_login> {
                     reusableTextField(
                         "Enter Password", Icons.lock_outline, true,
                         _passwordTextController),
-                  forgetPassword(context, Color(0xFFfb9798)),
+                    forgetPassword(context, Color(0xFF464E65)),
                     SizedBox(height: 10),
-                    pk_button(
+                    dk_button(
                       context,
                       "Login",
                           () {
-                            // Validate email and password
-                            if (_emailTextController.text.isEmpty || _passwordTextController.text.isEmpty) {
-                              // Show a validation message inside the UI
-                              showValidationMessage(context, 'Please fill in both email and password.');
-                              return; // Stop further execution if email or password is empty
-                            } // Your login logic
+                        // Validate email and password
+                        if (_emailTextController.text.isEmpty || _passwordTextController.text.isEmpty) {
+                          // Show a validation message inside the UI
+                          showValidationMessage(context, 'Please fill in both email and password.');
+                          return; // Stop further execution if email or password is empty
+                        } // Your login logic
 
-                            // Perform Firebase authentication
-                            FirebaseAuth.instance
-                                .signInWithEmailAndPassword(
-                                email: _emailTextController.text, password: _passwordTextController.text)
-                                .then((value) {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (context) => home_page()),
-                              );
-                            }).onError((error, stackTrace) {
-                              print("Error ${error.toString()}");
+                        // Perform Firebase authentication
+                        FirebaseAuth.instance
+                            .signInWithEmailAndPassword(
+                            email: _emailTextController.text, password: _passwordTextController.text)
+                            .then((value) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => home_page()),
+                          );
+                        }).onError((error, stackTrace) {
+                          print("Error ${error.toString()}");
 
-                              // Check for specific error codes
-                              if (error is FirebaseAuthException) {
-                                if (error.code == 'user-not-found' || error.code == 'wrong-password') {
-                                  // Handle specific error codes for incorrect email/password
-                                  showValidationMessage(context, 'Invalid email or password. Please try again.');
-                                } else {
-                                  // Other errors, show a generic validation message
-                                  showValidationMessage(context, 'Sign-in failed. Please check and re-enter your email and password.');
-                                }
-                              }
-                            });
+                          // Check for specific error codes
+                          if (error is FirebaseAuthException) {
+                            if (error.code == 'user-not-found' || error.code == 'wrong-password') {
+                              // Handle specific error codes for incorrect email/password
+                              showValidationMessage(context, 'Invalid email or password. Please try again.');
+                            } else {
+                              // Other errors, show a generic validation message
+                              showValidationMessage(context, 'Sign-in failed. Please check and re-enter your email and password.');
+                            }
+                          }
+                        });
                       },
                     ),
                     signUpOption(context),
@@ -129,7 +129,7 @@ Row signUpOption(BuildContext context) { // ✅ Accept context as a parameter
         child: const Text(
           " Sign Up",
           style: TextStyle(
-            color: Color(0xFFfb9798),
+            color: Color(0xFF464E65),
             fontWeight: FontWeight.bold,
             fontSize: 16,
           ),
