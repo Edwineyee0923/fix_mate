@@ -1,7 +1,8 @@
 import 'package:fix_mate/home_page/home_page.dart';
+import 'package:fix_mate/home_page/reset_password.dart';
 import 'package:flutter/material.dart';
 
-// TextField for the login/registration page
+// TextField for the login page
 Widget reusableTextField(String text, IconData icon, bool isPasswordType,
     TextEditingController controller) {
   FocusNode focusNode = FocusNode();
@@ -310,7 +311,7 @@ Widget forgetPassword(BuildContext context, Color textColor) {
       ),
       onPressed: () => Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => home_page()),
+        MaterialPageRoute(builder: (context) => reset_password()),
       ),
     ),
   );
@@ -387,6 +388,306 @@ void showSuccessMessage(BuildContext context, String message, {VoidCallback? onP
     },
   );
 }
+
+// Reusable Big Button with Icons on Both Sides
+Widget big_button({
+  required BuildContext context,
+  required String title,
+  required VoidCallback onTap,
+  IconData? leftIcon,  // ✅ Optional left icon
+  IconData? rightIcon, // ✅ Optional right icon
+  Color color = const Color(0xFFfb9798), // Default color (Pink)
+}) {
+  return Container(
+    width: 300, // Increased width
+    height: 100, // Slightly increased height for better UI
+    margin: const EdgeInsets.symmetric(vertical: 10),
+    decoration: BoxDecoration(borderRadius: BorderRadius.circular(30)),
+    child: ElevatedButton(
+      onPressed: onTap,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: color, // Customizable button color
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(30),
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          if (leftIcon != null) ...[ // ✅ Show left icon only if it's provided
+          Icon(leftIcon, size: 40, color: Colors.white), // Left-side icon
+          SizedBox(width: 10),
+    ],// Space between icon & text
+          Text(
+            title,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 26,
+            ),
+          ),
+          if (rightIcon != null) ...[ // ✅ Show right icon only if it's provided
+          SizedBox(width: 10), // Space between text & icon
+          Icon(rightIcon, size: 35, color: Colors.white), // Right-side icon
+  ],
+        ],
+      ),
+    ),
+  );
+}
+
+
+class InternalTextField extends StatefulWidget {
+  final String labelText;
+  final String? hintText;
+  final IconData? icon;
+  final TextEditingController controller;
+  final bool isPassword;
+  final String? validationMessage; // Optional validation message
+  final Function(String)? onChanged;
+  final bool isValid; // Parent-controlled validation state
+
+  const InternalTextField({
+    Key? key,
+    required this.labelText,
+    this.hintText,
+    this.icon,
+    required this.controller,
+    this.isPassword = false,
+    this.validationMessage,
+    this.onChanged,
+    this.isValid = true, // Defaults to true (no validation error)
+  }) : super(key: key);
+
+  @override
+  _InternalTextFieldState createState() => _InternalTextFieldState();
+}
+
+class _InternalTextFieldState extends State<InternalTextField> {
+  bool isPasswordVisible = false; // Password visibility toggle
+  FocusNode focusNode = FocusNode();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          widget.labelText,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: Colors.black,
+          ),
+        ),
+        const SizedBox(height: 5),
+        SizedBox(
+          width: 340,
+          height: 50,
+          child: AnimatedBuilder(
+            animation: focusNode,
+            builder: (context, child) {
+              return Container(
+                decoration: BoxDecoration(
+                  boxShadow: [
+                    if (focusNode.hasFocus)
+                      BoxShadow(
+                        color: const Color(0xFFD19C86).withOpacity(0.5),
+                        blurRadius: 10,
+                        offset: const Offset(0, 2),
+                      ),
+                  ],
+                ),
+                child: TextField(
+                  controller: widget.controller,
+                  focusNode: focusNode,
+                  obscureText: widget.isPassword ? !isPasswordVisible : false,
+                  cursorColor: Colors.brown,
+                  style: TextStyle(
+                    color: Colors.black.withOpacity(0.9),
+                    fontSize: 16,
+                  ),
+                  decoration: InputDecoration(
+                    contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+                    prefixIcon: widget.icon != null
+                        ? Padding(
+                      padding: const EdgeInsets.only(left: 10.0, right: 5.0),
+                      child: Icon(widget.icon, color: Colors.brown.withOpacity(0.8), size: 22),
+                    )
+                        : null,
+                    hintText: widget.hintText,
+                    hintStyle: TextStyle(color: Colors.brown.withOpacity(0.6), fontSize: 14),
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(25.0),
+                      borderSide: const BorderSide(color: Color(0xFF4C3532)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(25.0),
+                      borderSide: const BorderSide(color: Color(0xFF4C3532), width: 2),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(25.0),
+                      borderSide: const BorderSide(color: Colors.black),
+                    ),
+                    suffixIcon: widget.isPassword
+                        ? IconButton(
+                      icon: Icon(
+                        isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                        color: Colors.brown.withOpacity(0.8),
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          isPasswordVisible = !isPasswordVisible;
+                        });
+                      },
+                    )
+                        : null,
+                  ),
+                  onChanged: (text) {
+                    if (widget.onChanged != null) {
+                      widget.onChanged!(text);
+                    }
+                  },
+                ),
+              );
+            },
+          ),
+        ),
+        if (!widget.isValid && widget.validationMessage != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 5, left: 10),
+            child: Text(
+              widget.validationMessage!,
+              style: const TextStyle(
+                color: Colors.red,
+                fontSize: 12,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+
+class LongInputContainer extends StatefulWidget {
+  final String labelText;
+  final TextEditingController controller;
+  final int? maxWords;
+  final double width;
+  final double height;
+  final String placeholder;
+  final bool isRequired;
+  final String? requiredMessage;
+
+  const LongInputContainer({
+    Key? key,
+    required this.labelText,
+    required this.controller,
+    this.maxWords,
+    this.width = 340,
+    this.height = 100,
+    this.placeholder = "Enter here...",
+    this.isRequired = false,
+    this.requiredMessage = "This field is required.",
+  }) : super(key: key);
+
+  @override
+  _LongInputContainerState createState() => _LongInputContainerState();
+}
+
+class _LongInputContainerState extends State<LongInputContainer> {
+  FocusNode focusNode = FocusNode();
+  String errorMessage = "";
+
+  void validateInput(String text) {
+    setState(() {
+      // Required field validation
+      if (widget.isRequired && text.trim().isEmpty) {
+        errorMessage = widget.requiredMessage!;
+        return;
+      }
+
+      // Word limit validation
+      if (widget.maxWords != null) {
+        int wordCount = text.trim().split(RegExp(r"\s+")).length;
+        if (wordCount > widget.maxWords!) {
+          errorMessage = "Maximum ${widget.maxWords} words allowed!";
+          return;
+        }
+      }
+
+      // No errors
+      errorMessage = "";
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          widget.labelText,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: Colors.black,
+          ),
+        ),
+        const SizedBox(height: 5),
+        AnimatedBuilder(
+          animation: focusNode,
+          builder: (context, child) {
+            return Container(
+              width: widget.width,
+              height: widget.height,
+              padding: const EdgeInsets.symmetric(horizontal: 15),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(25.0),
+                border: Border.all(color: Colors.black),
+                boxShadow: [
+                  if (focusNode.hasFocus)
+                    BoxShadow(
+                      color: const Color(0xFFD19C86).withOpacity(0.5),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
+                    ),
+                ],
+              ),
+              child: TextField(
+                controller: widget.controller,
+                cursorColor: Colors.brown,
+                focusNode: focusNode,
+                maxLines: null, // Allows multiline input
+                keyboardType: TextInputType.multiline,
+                decoration: InputDecoration(
+                  border: InputBorder.none,
+                  hintText: widget.placeholder, // Custom placeholder
+                  hintStyle: TextStyle(color: Colors.brown.withOpacity(0.6), fontSize: 14),
+                ),
+                onChanged: validateInput,
+                onEditingComplete: () => validateInput(widget.controller.text),
+              ),
+            );
+          },
+        ),
+        if (errorMessage.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 5, left: 10),
+            child: Text(
+              errorMessage,
+              style: const TextStyle(color: Colors.red, fontSize: 12),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
 
 
 

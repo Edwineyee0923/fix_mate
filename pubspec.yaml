@@ -40,9 +40,12 @@ dependencies:
   firebase_storage: ^11.6.0
   cloud_firestore: ^4.14.0
   firebase_auth: ^4.16.0
-  url_launcher: ^6.0.10
+  url_launcher: ^6.2.1 # Ensure it's up to date
   firebase_core_platform_interface: ^5.0.0
-
+  share_plus: ^7.0.2
+  image_picker: ^1.0.7
+  http: ^0.13.6
+  intl: ^0.18.1
 
 dev_dependencies:
   flutter_test:
@@ -62,6 +65,7 @@ dev_dependencies:
 flutter:
   assets:
     - lib/assets/images/fixmate_logo.png
+    - lib/assets/images/fix_mate_logo.png
     - lib/assets/images/ss_login.png
     - lib/assets/images/sp_login.png
     - lib/assets/images/reset_password.png

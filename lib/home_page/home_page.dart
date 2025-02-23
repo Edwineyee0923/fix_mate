@@ -1,403 +1,262 @@
-import 'package:flutter/cupertino.dart';
+import 'package:fix_mate/home_page/login_option.dart';
+import 'package:fix_mate/home_page/register_option.dart';
 import 'package:flutter/material.dart';
+import 'package:fix_mate/reusable_widget/reusable_widget.dart';
+import 'package:url_launcher/url_launcher.dart';
 
-class home_page extends StatelessWidget {
+Future<void> sendEmail() async {
+  final Uri emailUri = Uri(
+    scheme: 'mailto',
+    path: 'enweiyee0923@gmail.com',
+    query: {
+      'subject': Uri.encodeComponent('Issue in regard to login'),
+  'body': Uri.encodeComponent(
+      'Dear FixMate Admin,\n\n'
+          'I hope you are doing well, but I am facing an issue when I log in to the FixMate application.\n\n'
+          'Below is my email:\n'
+          'Role: Service seeker/ Service Provider\n\n'
+          'I would appreciate your help with this issue. Thank you.\n\n'
+          'Best regards,\n'
+          '[Your Name]\n'
+          'User of FixMate'
+      ),
+    }.entries.map((e) => '${e.key}=${e.value}').join('&'),
+  );
+
+  if (await canLaunchUrl(emailUri)) {
+    await launchUrl(emailUri);
+  } else {
+    print('No email app found. Opening Gmail in browser...');
+    final Uri gmailUri = Uri.parse(
+        'https://mail.google.com/mail/?view=cm&fs=1&to=enweiyee0923@gmail.com'
+            '&su=Issue%20in%20regard%20to%20login'
+            '&body=${Uri.encodeComponent('''Dear FixMate Admin,
+
+I hope you are doing well, but I am facing an issue when I log in to the FixMate application.
+
+Below is my email:
+Role: Service seeker/ Service Provider
+
+I would appreciate your help with this issue. Thank you.
+
+Best regards,
+[Your Name]
+User of FixMate''')}'
+    );
+
+    await launchUrl(
+      gmailUri,
+      mode: LaunchMode.externalApplication, // Opens in browser
+    );
+  }
+}
+
+
+class home_page extends StatefulWidget {
+
+  const home_page({Key? key}) : super(key: key);
+
+  _home_pageState createState() => _home_pageState();
+
+}
+
+class _home_pageState extends State<home_page> {
+  void navigateNextPage(BuildContext ctx) {
+    Navigator.of(ctx).push(MaterialPageRoute(builder: (_) {
+      return login_option();
+    }));
+  }
+
+  void navigateNextPage2(BuildContext ctx) {
+    Navigator.of(ctx).push(MaterialPageRoute(builder: (_) {
+      return register_option();
+    }));
+  }
+
+
+
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Container(
-          width: 428,
-          height: 926,
-          decoration: ShapeDecoration(
-            color: Color(0xFFFFFFF2),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
-          child: Stack(
-            children: [
-              Positioned(
-                left: -58,
-                top: 73,
-                child: Container(
-                  width: 569,
-                  height: 514,
-                  decoration: BoxDecoration(
-                    image: DecorationImage(
-                      image: AssetImage('assets/images/FixMate_Logo.png'),
-                      fit: BoxFit.fill,
+    return Scaffold(
+      body: SingleChildScrollView( // Prevent overflow
+        child: Container(
+          width: MediaQuery
+              .of(context)
+              .size
+              .width,
+          height: MediaQuery
+              .of(context)
+              .size
+              .height,
+          color: Color(0xFFFFFFF2), // Background color
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.start, // Align to top
+            crossAxisAlignment: CrossAxisAlignment.center, // Centers horizontally
+            children: <Widget>[
+              SizedBox(height: MediaQuery
+                  .of(context)
+                  .size
+                  .height * 0.1), // Add space from top
+              Center(
+                child: Column(
+                  children: [
+                    Image.asset(
+                      'lib/assets/images/fix_mate_logo.png', // Updated image path
+                      width: 350,
+                      height: 350,
                     ),
+                    SizedBox(height: 20),
+                  pk_button(
+                    context,
+                    "Login",
+                        () {
+                      navigateNextPage(context); // Navigate to s_login page when pressed
+                    },
                   ),
+                    dk_button(
+                      context,
+                      "Register",
+                          () {
+                        navigateNextPage2(context); // Navigate to s_login page when pressed
+                      },
+                    ),
+                    SizedBox(
+                      child: Center( // Ensures text is centered inside
+                        child: Text(
+                          'Having Trouble logging in?',
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontSize: 16,
+                            fontFamily: 'Poppins',
+                            fontWeight: FontWeight.w500,
+                            height: 1.50,
+                          ),
+                        ),
+                      ),
+                    ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Contact ',
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontSize: 16,
+                        fontFamily: 'Poppins',
+                        fontWeight: FontWeight.w500,
+                        height: 1.50,
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () => sendEmail(),
+                      child: Text(
+                        'Customer Service',
+                        style: TextStyle(
+                          color: Color(0xFF4C3532),
+                          fontSize: 16,
+                          fontFamily: 'Poppins',
+                          fontWeight: FontWeight.w800,
+                          decoration: TextDecoration.underline,
+                          decorationThickness: 2.5,
+                          height: 1.50,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              Positioned(
-                left: -19,
-                top: 0,
-                child: Container(
-                  width: 437,
-                  height: 47,
-                  clipBehavior: Clip.antiAlias,
-                  decoration: BoxDecoration(),
-                  child: Stack(
-                    children: [
-                      Positioned(
-                        left: 332,
-                        top: 19,
-                        child: Container(
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Container(
-                                width: 19.97,
-                                height: 12,
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                  children: [
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 7),
-                              Container(
-                                width: 17,
-                                height: 12.50,
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                  children: [
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 7),
-                              Container(
-                                width: 27.33,
-                                height: 13,
-                                child: FlutterLogo(),
-                              ),
-                            ],
+                    SizedBox(height: 60),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Login means you agree to ',
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                            height: 1.50,
                           ),
                         ),
-                      ),
-                      Positioned(
-                        left: 282,
-                        top: 6,
-                        child: Container(
-                          width: 6,
-                          height: 6,
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Expanded(
-                                child: Container(
-                                  height: 6,
-                                  decoration: ShapeDecoration(shape: OvalBorder()),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        left: 70.50,
-                        top: 17,
-                        child: Container(
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Text(
-                                '9:41',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: Colors.black,
-                                  fontSize: 17,
-                                  fontFamily: 'SF Pro Text',
-                                  fontWeight: FontWeight.w600,
-                                  height: 1,
-                                  letterSpacing: -0.50,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              Positioned(
-                left: 58,
-                top: 546,
-                child: Container(
-                  width: 315,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    boxShadow: [
-                      BoxShadow(
-                        color: Color(0x4C95ADFE),
-                        blurRadius: 22,
-                        offset: Offset(0, 10),
-                        spreadRadius: 0,
-                      )
-                    ],
-                  ),
-                  child: Stack(
-                    children: [
-                      Positioned(
-                        left: 0,
-                        top: 0,
-                        child: Container(
-                          width: 315,
-                          height: 60,
-                          decoration: ShapeDecoration(
-                            color: Color(0xFF464E65),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(99),
+                        GestureDetector(
+                          onTap: () => sendEmail(),
+                          child: Text(
+                            'Terms of Service',
+                            style: TextStyle(
+                              color: Color(0xFF4C3532),
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              decoration: TextDecoration.underline,
+                              height: 1.50,
+                              decorationThickness: 2.5,
                             ),
                           ),
                         ),
-                      ),
-                      Positioned(
-                        left: 130,
-                        top: 18,
-                        child: Text(
-                          'Login',
-                          textAlign: TextAlign.center,
+                      ],
+                    ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'and ',
                           style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                            fontFamily: 'Poppins',
-                            fontWeight: FontWeight.w700,
-                            height: 1.20,
+                            color: Colors.black,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                            height: 1.50,
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              Positioned(
-                left: 56,
-                top: 630,
-                child: Container(
-                  width: 315,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    boxShadow: [
-                      BoxShadow(
-                        color: Color(0x4C95ADFE),
-                        blurRadius: 22,
-                        offset: Offset(0, 10),
-                        spreadRadius: 0,
-                      )
-                    ],
-                  ),
-                  child: Stack(
-                    children: [
-                      Positioned(
-                        left: 0,
-                        top: 0,
-                        child: Container(
-                          width: 315,
-                          height: 60,
-                          decoration: ShapeDecoration(
-                            color: Color(0xFFFB9798),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(99),
+                        GestureDetector(
+                          onTap: () => sendEmail(),
+                          child: Text(
+                            'Privacy Policy',
+                            style: TextStyle(
+                              color: Color(0xFF4C3532),
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              decoration: TextDecoration.underline,
+                              height: 1.50,
+                              decorationThickness: 2.5,
                             ),
                           ),
                         ),
-                      ),
-                      Positioned(
-                        left: 116,
-                        top: 18,
-                        child: Text(
-                          'Register',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                            fontFamily: 'Poppins',
-                            fontWeight: FontWeight.w700,
-                            height: 1.20,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              Positioned(
-                left: 105,
-                top: 714,
-                child: SizedBox(
-                  width: 224,
-                  height: 60,
-                  child: SizedBox(
-                    width: 224,
-                    height: 60,
-                    child: Text(
-                      'Having Trouble logging in?',
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontSize: 16,
-                        fontFamily: 'Poppins',
-                        fontWeight: FontWeight.w600,
-                        height: 1.50,
-                      ),
+                      ],
                     ),
-                  ),
-                ),
-              ),
-              Positioned(
-                left: 40,
-                top: 830,
-                child: SizedBox(
-                  width: 221,
-                  height: 27,
-                  child: SizedBox(
-                    width: 221,
-                    height: 27,
-                    child: Text(
-                      'Login means you agree to ',
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontSize: 16,
-                        fontFamily: 'Poppins',
-                        fontWeight: FontWeight.w400,
-                        height: 1.50,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              Positioned(
-                left: 104,
-                top: 744,
-                child: SizedBox(
-                  width: 73,
-                  height: 60,
-                  child: SizedBox(
-                    width: 73,
-                    height: 60,
-                    child: Text(
-                      'Contact',
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontSize: 16,
-                        fontFamily: 'Poppins',
-                        fontWeight: FontWeight.w400,
-                        height: 1.50,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              Positioned(
-                left: 174,
-                top: 744,
-                child: SizedBox(
-                  width: 155,
-                  height: 27,
-                  child: SizedBox(
-                    width: 155,
-                    height: 27,
-                    child: Text(
-                      'Customer Service',
-                      style: TextStyle(
-                        color: Color(0xFF5094D3),
-                        fontSize: 16,
-                        fontFamily: 'Poppins',
-                        fontWeight: FontWeight.w700,
-                        decoration: TextDecoration.underline,
-                        height: 1.50,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              Positioned(
-                left: 241,
-                top: 830,
-                child: SizedBox(
-                  width: 154,
-                  height: 25,
-                  child: SizedBox(
-                    width: 154,
-                    height: 25,
-                    child: Text(
-                      'Terms of Service ',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontSize: 16,
-                        fontFamily: 'Poppins',
-                        fontWeight: FontWeight.w700,
-                        decoration: TextDecoration.underline,
-                        height: 1.50,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              Positioned(
-                left: 169,
-                top: 855,
-                child: SizedBox(
-                  width: 119,
-                  height: 27,
-                  child: SizedBox(
-                    width: 119,
-                    height: 27,
-                    child: Text(
-                      'Privacy Policy',
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontSize: 16,
-                        fontFamily: 'Poppins',
-                        fontWeight: FontWeight.w700,
-                        decoration: TextDecoration.underline,
-                        height: 1.50,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              Positioned(
-                left: 125,
-                top: 855,
-                child: SizedBox(
-                  width: 44,
-                  height: 20,
-                  child: SizedBox(
-                    width: 44,
-                    height: 20,
-                    child: Text(
-                      'and',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontSize: 16,
-                        fontFamily: 'Poppins',
-                        fontWeight: FontWeight.w400,
-                        height: 1.50,
-                      ),
-                    ),
-                  ),
+                  ],
                 ),
               ),
             ],
           ),
         ),
-      ],
+      ),
     );
   }
+
+}
+Row signUpOption(BuildContext context) { // ✅ Accept context as a parameter
+  return Row(
+    mainAxisAlignment: MainAxisAlignment.center,
+    children: [
+      const Text(
+        "Don't have an account?",
+        style: TextStyle(color: Colors.black, fontSize: 16),
+      ),
+      GestureDetector(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => home_page()),
+          );
+        },
+        child: const Text(
+          " Sign Up",
+          style: TextStyle(
+            color: Color(0xFF464E65),
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+          ),
+        ),
+      ),
+    ],
+  );
+
 }
