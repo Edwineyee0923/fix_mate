@@ -652,8 +652,8 @@ class _LongInputContainerState extends State<LongInputContainer> {
                 boxShadow: [
                   if (focusNode.hasFocus)
                     BoxShadow(
-                      color: const Color(0xFFD19C86).withOpacity(0.5),
-                      blurRadius: 10,
+                      color: const Color(0xFFD19C86).withOpacity(1),
+                      blurRadius: 15,
                       offset: const Offset(0, 2),
                     ),
                 ],
@@ -688,7 +688,34 @@ class _LongInputContainerState extends State<LongInputContainer> {
   }
 }
 
-
+void ReusableSnackBar(BuildContext context, String message, {
+  IconData? icon,
+  Color iconColor = Colors.black,
+  Color backgroundColor = Colors.white
+}) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Row(
+        children: [
+          if (icon != null) ...[
+            Icon(icon, color: iconColor), // Apply custom icon color
+            SizedBox(width: 10), // Spacing between icon and text
+          ],
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+      backgroundColor: backgroundColor, // Custom background color
+      behavior: SnackBarBehavior.floating, // Floating effect
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), // Rounded corners
+      elevation: 8, // Shadow effect
+    ),
+  );
+}
 
 
 

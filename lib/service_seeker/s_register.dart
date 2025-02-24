@@ -6,7 +6,7 @@ import 'package:fix_mate/reusable_widget/upload_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fix_mate/reusable_widget/reusable_widget.dart';
 import 'package:intl/intl.dart'; // For formatting date
-
+import 'package:firebase_auth/firebase_auth.dart';
 
 class s_register extends StatefulWidget {
   @override
@@ -18,34 +18,55 @@ class _s_registerState extends State<s_register> {
   String? _imageUrl;
   final UploadService _uploadService = UploadService();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
+
+  // Opens the gallery, allows the user to select an image, and uploads it to Cloudinary.
+  //
+  // This function:
+  // - Uses `ImagePicker` to let the user choose an image.
+  // - If an image is selected, it updates the UI and calls `uploadImage()` to upload it.
+  // - After a successful upload, it stores the image URL in `_imageUrl`.
   Future<void> _pickAndUploadImage() async {
     final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
 
     if (pickedFile != null) {
       File imageFile = File(pickedFile.path);
-      setState(() => _image = imageFile);
+      setState(() => _image = imageFile); // Update UI with the selected image.
 
       String? imageUrl = await _uploadService.uploadImage(imageFile);
 
       if (imageUrl != null) {
-        setState(() => _imageUrl = imageUrl);
+        setState(() => _imageUrl = imageUrl); // Update UI with uploaded image URL.
 
-        // Save image URL to Firestore under 'users' collection
-        _firestore.collection('users').doc("user_id").set({
-          'profileImage': imageUrl,
-        });
+        // // Save image URL to Firestore under 'users' collection
+        // _firestore.collection('users').doc("user_id").set({
+        //   'profileImage': imageUrl,
+        // });
       }
     }
   }
 
+  // Fetches and displays the user's profile picture from Firestore.
+  //
+  // This function:
+  // - Gets the current authenticated user's ID.
+  // - Fetches their profile image URL from Firestore (`service_seekers` collection).
+  // - Updates `_imageUrl` if the image exists.
+  // - Prints an error message if fetching fails.
   Future<void> _loadProfileImage() async {
-    DocumentSnapshot snapshot = await _firestore.collection('users').doc("user_id").get();
-
-    if (snapshot.exists && snapshot.data() != null) {
-      setState(() {
-        _imageUrl = (snapshot.data() as Map<String, dynamic>)['profileImage'];
-      });
+    try {
+      User? user = _auth.currentUser;
+      if (user != null) {
+        DocumentSnapshot snapshot = await _firestore.collection('service_seekers').doc(user.uid).get();
+        if (snapshot.exists && snapshot.data() != null) {
+          setState(() {
+            _imageUrl = (snapshot.data() as Map<String, dynamic>)['profilePic'];
+          });
+        }
+      }
+    } catch (e) {
+      print("Error loading profile image: $e");
     }
   }
 
@@ -78,6 +99,7 @@ class _s_registerState extends State<s_register> {
     }));
   }
 
+  // Form Controllers
   TextEditingController nameController = TextEditingController();
   TextEditingController bioController = TextEditingController();
   TextEditingController dobController = TextEditingController();
@@ -86,16 +108,79 @@ class _s_registerState extends State<s_register> {
   TextEditingController passwordController = TextEditingController();
   TextEditingController confirmPasswordController = TextEditingController();
 
+  // Form Validation
   bool isNameValid = false;
   bool isDobValid = true;
   bool isPhoneValid = true;
   bool isEmailValid = true;
   bool isPasswordValid = true;
   bool isConfirmPasswordValid = true;
-
-
   String? selectedGender; // Holds selected gender value
   final List<String> genderOptions = ["Male", "Female", "Prefer not to say"]; // Dropdown options
+
+
+  // 🔹 Register User & Save Data
+  Future<bool> registerUser() async {
+    if (!isNameValid || !isEmailValid || !isPhoneValid || !isDobValid || !isPasswordValid || !isConfirmPasswordValid || selectedGender == null) {
+      ReusableSnackBar(context, "Please fill all fields correctly!", icon: Icons.warning, iconColor: Colors.orange);
+      return false; // Registration failed
+    }
+
+    try {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => Center(child: CircularProgressIndicator()),
+      );
+
+      UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
+        email: emailController.text.trim(),
+        password: passwordController.text.trim(),
+      );
+
+      String userId = userCredential.user!.uid;
+
+      if (_image != null) {
+        String? uploadedImageUrl = await _uploadService.uploadImage(_image!);
+        if (uploadedImageUrl != null) {
+          _imageUrl = uploadedImageUrl;
+        }
+      }
+
+      await _firestore.collection('service_seekers').doc(userId).set({
+        'id': userId,
+        'name': nameController.text.trim(),
+        'email': emailController.text.trim(),
+        'phone': phoneController.text.trim(),
+        'dob': dobController.text.trim(),
+        'gender': selectedGender,
+        'bio': bioController.text.trim(),
+        'profilePic': _imageUrl ?? '',
+        'role': "Service Seeker",
+        'createdAt': Timestamp.now(),
+      });
+
+      Navigator.pop(context);
+      ReusableSnackBar(
+          context,
+          "Registration Successful!",
+          icon: Icons.check_circle,
+          iconColor: Colors.green // Green icon for success
+      );
+      return true; // Registration successful
+    } catch (e) {
+      Navigator.pop(context);
+      ReusableSnackBar(
+          context,
+          "Registration failed! Please fill in all the required field! ",
+          icon: Icons.error,
+          iconColor: Colors.red // Red icon for error
+      );
+      return false; // Registration failed
+    }
+  }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -267,11 +352,11 @@ class _s_registerState extends State<s_register> {
                         icon: Icons.phone,
                         controller: phoneController,
                         hintText: "Enter your phone number",
-                        validationMessage: "Enter a valid phone number!",
+                        validationMessage: "Enter a valid phone number! (e.g Malaysia: 60123456789, Indonesia: 628123456789))",
                         isValid: isPhoneValid,
                         onChanged: (value) {
                           setState(() {
-                            isPhoneValid = RegExp(r'^\d{10,12}$').hasMatch(value);
+                            isPhoneValid = RegExp(r'^[1-9]\d{9,11}$').hasMatch(value);
                           });
                         },
                       ),
@@ -309,6 +394,8 @@ class _s_registerState extends State<s_register> {
                         },
                       ),
 
+                      const SizedBox(height: 10),
+
                       // Confirm Password Field
                       InternalTextField(
                         labelText: "Confirm Password",
@@ -324,6 +411,18 @@ class _s_registerState extends State<s_register> {
                           });
                         },
                       ),
+                      SizedBox(height: 15),
+                      pk_button(
+                        context,
+                        "Register",
+                            () async {
+                          bool isRegistered = await registerUser(); // ✅ Call function and wait for result
+                          if (isRegistered) {
+                            navigateNextPage(context); // ✅ Navigate only if registration is successful
+                          }
+                        },
+                      ),
+
                     ],
                   ),
                 ),
