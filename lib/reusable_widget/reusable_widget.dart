@@ -180,7 +180,7 @@ Container a_button(BuildContext context, String title, Function onTap) {
         ),
       ),
       style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFF4C3532), // Fixed color (no change)
+        backgroundColor: const Color(0xFFFF9342), // Fixed color (no change)
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(30),
         ),
@@ -446,6 +446,7 @@ class InternalTextField extends StatefulWidget {
   final String? validationMessage; // Optional validation message
   final Function(String)? onChanged;
   final bool isValid; // Parent-controlled validation state
+  final bool enabled;
 
   const InternalTextField({
     Key? key,
@@ -457,6 +458,7 @@ class InternalTextField extends StatefulWidget {
     this.validationMessage,
     this.onChanged,
     this.isValid = true, // Defaults to true (no validation error)
+    this.enabled = false,
   }) : super(key: key);
 
   @override
@@ -504,9 +506,10 @@ class _InternalTextFieldState extends State<InternalTextField> {
                   obscureText: widget.isPassword ? !isPasswordVisible : false,
                   cursorColor: Colors.brown,
                   style: TextStyle(
-                    color: Colors.black.withOpacity(0.9),
+                    color: widget.enabled ? Colors.black.withOpacity(0.9) : Colors.brown.withOpacity(0.6), // 🔥 Grey text when disabled
                     fontSize: 16,
                   ),
+                  enabled: widget.enabled, // This makes the field editable or non-editable
                   decoration: InputDecoration(
                     contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
                     prefixIcon: widget.icon != null
@@ -530,6 +533,10 @@ class _InternalTextFieldState extends State<InternalTextField> {
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(25.0),
                       borderSide: const BorderSide(color: Colors.black),
+                    ),
+                    disabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(25.0),
+                      borderSide: const BorderSide(color: Colors.black), // 🔥 Fixes grey border issue
                     ),
                     suffixIcon: widget.isPassword
                         ? IconButton(
@@ -581,6 +588,7 @@ class LongInputContainer extends StatefulWidget {
   final String placeholder;
   final bool isRequired;
   final String? requiredMessage;
+  final bool enabled;
 
   const LongInputContainer({
     Key? key,
@@ -592,6 +600,7 @@ class LongInputContainer extends StatefulWidget {
     this.placeholder = "Enter here...",
     this.isRequired = false,
     this.requiredMessage = "This field is required.",
+    this.enabled = false,
   }) : super(key: key);
 
   @override
@@ -664,6 +673,11 @@ class _LongInputContainerState extends State<LongInputContainer> {
                 focusNode: focusNode,
                 maxLines: null, // Allows multiline input
                 keyboardType: TextInputType.multiline,
+                enabled: widget.enabled,
+                style: TextStyle(
+                  color: widget.enabled ? Colors.black.withOpacity(0.9) : Colors.brown.withOpacity(0.6), // 🔥 Grey text when disabled
+                  fontSize: 16,
+                ),
                 decoration: InputDecoration(
                   border: InputBorder.none,
                   hintText: widget.placeholder, // Custom placeholder
@@ -716,6 +730,148 @@ void ReusableSnackBar(BuildContext context, String message, {
     ),
   );
 }
+
+class ExpandableReorderableRadioGroup extends StatefulWidget {
+  // final String labelText;
+  final List<String> initialOptions;
+  final Function(List<String>) onReorder;
+  final Function(String) onSelected;
+  final String? selectedValue;
+  final Color activeColor;
+  final Color inactiveColor;
+  final int maxVisibleItems; // Number of items before expand
+
+  const ExpandableReorderableRadioGroup({
+    Key? key,
+    // required this.labelText,
+    required this.initialOptions,
+    required this.onReorder,
+    required this.onSelected,
+    this.selectedValue,
+    this.activeColor = const Color(0xFF55AC98),
+    this.inactiveColor = Colors.grey,
+    this.maxVisibleItems = 5, // Default: Show 5 before expanding
+  }) : super(key: key);
+
+  @override
+  _ExpandableReorderableRadioGroupState createState() => _ExpandableReorderableRadioGroupState();
+}
+
+class _ExpandableReorderableRadioGroupState extends State<ExpandableReorderableRadioGroup> {
+  List<String> options = [];
+  String? _selected;
+  bool _isExpanded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    options = List.from(widget.initialOptions);
+    _selected = widget.selectedValue;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    int itemCount = _isExpanded ? options.length : widget.maxVisibleItems;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Text(
+        //   widget.labelText,
+        //   style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black),
+        // ),
+        // const SizedBox(height: 5),
+
+        // Scrollable Area for Selection
+        Container(
+          constraints: BoxConstraints(
+            maxHeight: itemCount * 50, // Adjust height dynamically
+          ),
+          child: ReorderableListView(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            buildDefaultDragHandles: false, // Custom drag handles
+            children: options.sublist(0, itemCount).map((option) {
+              bool isSelected = _selected == option;
+
+              return Padding(
+                key: ValueKey(option),
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 5),
+                child: Row(
+                  children: [
+                    // Drag Handle
+                    ReorderableDragStartListener(
+                      index: options.indexOf(option),
+                      child: const Icon(Icons.drag_handle, color: Colors.grey),
+                    ),
+
+                    // Selectable Option
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _selected = option;
+                          });
+                          widget.onSelected(option);
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: isSelected ? widget.activeColor : Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: isSelected ? widget.activeColor : widget.inactiveColor,
+                              width: 2,
+                            ),
+                          ),
+                          child: Text(
+                            option,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: isSelected ? Colors.white : widget.inactiveColor,
+                              fontSize: 14,
+                              fontFamily: 'Poppins',
+                              fontWeight: FontWeight.w400,
+                              letterSpacing: -0.30,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+            onReorder: (oldIndex, newIndex) {
+              setState(() {
+                if (newIndex > oldIndex) newIndex--; // Fix index shift issue
+                final item = options.removeAt(oldIndex);
+                options.insert(newIndex, item);
+              });
+              widget.onReorder(options);
+            },
+          ),
+        ),
+
+        // Expand/Collapse Button
+        if (options.length > widget.maxVisibleItems)
+          TextButton(
+            onPressed: () {
+              setState(() {
+                _isExpanded = !_isExpanded;
+              });
+            },
+            child: Text(
+              _isExpanded ? "Show Less ▲" : "Show More ▼",
+              style: TextStyle(color: widget.activeColor, fontSize: 14, fontWeight: FontWeight.w500),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+
 
 
 

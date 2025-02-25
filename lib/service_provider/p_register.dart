@@ -8,16 +8,16 @@ import 'package:fix_mate/reusable_widget/reusable_widget.dart';
 import 'package:intl/intl.dart'; // For formatting date
 import 'package:firebase_auth/firebase_auth.dart';
 
-class s_register extends StatefulWidget {
+class p_register extends StatefulWidget {
   final bool isEditing;
 
-  s_register({this.isEditing = false}); // Default to false (registration mode)
+  p_register({this.isEditing = false}); // Default to false (registration mode)
 
   @override
-  _s_registerState createState() => _s_registerState();
+  _p_registerState createState() => _p_registerState();
 }
 
-class _s_registerState extends State<s_register> {
+class _p_registerState extends State<p_register> {
   File? _image;
   String? _imageUrl;
   final UploadService _uploadService = UploadService();
@@ -193,7 +193,7 @@ class _s_registerState extends State<s_register> {
     return Scaffold(
       backgroundColor: Color(0xFFFFFFF2), // Set background color here
       appBar: AppBar(
-        backgroundColor: Color(0xFFfb9798),
+        backgroundColor: Color(0xFF464E65),
         leading: IconButton(
           icon: Icon(Icons.arrow_back_ios_new_rounded),
           onPressed: () {
@@ -201,7 +201,7 @@ class _s_registerState extends State<s_register> {
           },
         ),
         title: Text(
-          "Service Seeker Registration",
+          "Service Provider Registration",
           style: TextStyle(
             fontSize: 22,
             fontWeight: FontWeight.bold,
@@ -245,7 +245,7 @@ class _s_registerState extends State<s_register> {
                   child: Text(
                     "Upload Profile Picture",
                     style: TextStyle(
-                      color: Color(0xFFfb9798),
+                      color: Color(0xFF464E65).withOpacity(0.8),
                       decoration: TextDecoration.underline,
                       fontSize: 18,
                       fontWeight: FontWeight.w800,
@@ -275,15 +275,15 @@ class _s_registerState extends State<s_register> {
                         },// Pass validation status
                       ),
                       SizedBox(height: 15),
-                  LongInputContainer(
-                    labelText: "Bio (Optional)",
-                    controller: bioController,
-                    enabled: isEditing,
-                    maxWords: 50,
-                    width: 340,
-                    placeholder: "Type your description here...",
-                    height: 150,
-                  ),
+                      LongInputContainer(
+                        labelText: "Bio (Optional)",
+                        controller: bioController,
+                        enabled: isEditing,
+                        maxWords: 50,
+                        width: 340,
+                        placeholder: "Type your description here...",
+                        height: 150,
+                      ),
 
                       SizedBox(height: 15),
                       // Gender Dropdown
@@ -425,7 +425,37 @@ class _s_registerState extends State<s_register> {
                         },
                       ),
                       SizedBox(height: 15),
-                      pk_button(
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "Select your preferred states and reorder them based on priority (Main, Secondary, Tertiary).",
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black),
+                          ),
+                          const SizedBox(height: 5),
+
+                          ExpandableReorderableRadioGroup(
+                            initialOptions: [
+                              'Perak', 'Kedah', 'Penang', 'Kelantan', 'Perlis',
+                              'Johor', 'Selangor', 'Sabah', 'Sarawak', 'Negeri Sembilan',
+                              'Pahang', 'Melaka', 'Terengganu'
+                            ],
+                            onReorder: (newOrder) {
+                              print('New Order: $newOrder');
+                            },
+                            onSelected: (value) {
+                              print('Selected State: $value');
+                            },
+                            maxVisibleItems: 3, // Show 5 options before expanding
+                          ),
+                        ],
+                      ),
+
+
+
+
+                      SizedBox(height: 15),
+                      dk_button(
                         context,
                         "Register",
                             () async {
