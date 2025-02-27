@@ -2,6 +2,7 @@ import 'package:fix_mate/home_page/home_page.dart';
 import 'package:flutter/material.dart';
 import 'package:fix_mate/reusable_widget/reusable_widget.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:fix_mate/service_seeker/s_profile.dart';
 
 class s_login extends StatefulWidget {
   const s_login({Key? key}) : super(key: key);
@@ -62,7 +63,7 @@ class _s_loginState extends State<s_login> {
                           .then((value) {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (context) => home_page()),
+                          MaterialPageRoute(builder: (context) => s_profile()),
                         );
                       }).onError((error, stackTrace) {
                         print("Error ${error.toString()}");

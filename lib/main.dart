@@ -2,6 +2,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fix_mate/home_page/home_page.dart';
 import 'package:fix_mate/home_page/register_option.dart';
+import 'package:fix_mate/service_provider/p_profile.dart';
 import 'package:fix_mate/service_provider/p_register.dart';
 import 'package:fix_mate/service_seeker/s_profile.dart';
 import 'firebase_options.dart';

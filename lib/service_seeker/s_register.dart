@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:fix_mate/home_page/home_page.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:fix_mate/reusable_widget/upload_service.dart';
+import 'package:fix_mate/services/upload_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fix_mate/reusable_widget/reusable_widget.dart';
 import 'package:intl/intl.dart'; // For formatting date
@@ -114,7 +114,7 @@ class _s_registerState extends State<s_register> {
   TextEditingController confirmPasswordController = TextEditingController();
 
   // Form Validation
-  bool isNameValid = false;
+  bool isNameValid = true;
   bool isDobValid = true;
   bool isPhoneValid = true;
   bool isEmailValid = true;

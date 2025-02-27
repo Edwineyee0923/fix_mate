@@ -1,5 +1,7 @@
 import 'package:fix_mate/home_page/home_page.dart';
 import 'package:fix_mate/home_page/reset_password.dart';
+import 'package:fix_mate/service_provider/p_profile.dart';
+import 'package:fix_mate/service_provider/p_register.dart';
 import 'package:flutter/material.dart';
 import 'package:fix_mate/reusable_widget/reusable_widget.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -65,7 +67,7 @@ class _p_loginState extends State<p_login> {
                           .then((value) {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (context) => home_page()),
+                          MaterialPageRoute(builder: (context) => p_profile()),
                         );
                       }).onError((error, stackTrace) {
                         print("Error ${error.toString()}");

@@ -443,7 +443,9 @@ class InternalTextField extends StatefulWidget {
   final IconData? icon;
   final TextEditingController controller;
   final bool isPassword;
-  final String? validationMessage; // Optional validation message
+  final String? validationMessage; // For password mismatch or custom validation errors
+  final String? errorMessage; // For required field errors
+  final String? disabledMessage; // ✅ New: Message for disabled field
   final Function(String)? onChanged;
   final bool isValid; // Parent-controlled validation state
   final bool enabled;
@@ -456,6 +458,8 @@ class InternalTextField extends StatefulWidget {
     required this.controller,
     this.isPassword = false,
     this.validationMessage,
+    this.errorMessage,
+    this.disabledMessage, // ✅ Added new parameter
     this.onChanged,
     this.isValid = true, // Defaults to true (no validation error)
     this.enabled = false,
@@ -466,11 +470,14 @@ class InternalTextField extends StatefulWidget {
 }
 
 class _InternalTextFieldState extends State<InternalTextField> {
-  bool isPasswordVisible = false; // Password visibility toggle
+  bool isPasswordVisible = false;
   FocusNode focusNode = FocusNode();
 
   @override
   Widget build(BuildContext context) {
+    // Determine which error to show: `errorMessage` takes priority over `validationMessage`
+    String? displayError = widget.errorMessage ?? widget.validationMessage;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -506,10 +513,10 @@ class _InternalTextFieldState extends State<InternalTextField> {
                   obscureText: widget.isPassword ? !isPasswordVisible : false,
                   cursorColor: Colors.brown,
                   style: TextStyle(
-                    color: widget.enabled ? Colors.black.withOpacity(0.9) : Colors.brown.withOpacity(0.6), // 🔥 Grey text when disabled
+                    color: widget.enabled ? Colors.black.withOpacity(0.9) : Colors.brown.withOpacity(0.6),
                     fontSize: 16,
                   ),
-                  enabled: widget.enabled, // This makes the field editable or non-editable
+                  enabled: widget.enabled,
                   decoration: InputDecoration(
                     contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
                     prefixIcon: widget.icon != null
@@ -536,7 +543,7 @@ class _InternalTextFieldState extends State<InternalTextField> {
                     ),
                     disabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(25.0),
-                      borderSide: const BorderSide(color: Colors.black), // 🔥 Fixes grey border issue
+                      borderSide: const BorderSide(color: Colors.black),
                     ),
                     suffixIcon: widget.isPassword
                         ? IconButton(
@@ -573,14 +580,27 @@ class _InternalTextFieldState extends State<InternalTextField> {
               ),
             ),
           ),
+        if (!widget.enabled && widget.disabledMessage != null) // ✅ Show disabled message
+          Padding(
+            padding: const EdgeInsets.only(left:10),
+            child: Text(
+              widget.disabledMessage!,
+              style: const TextStyle(
+                color: Colors.grey,
+                fontSize: 12,
+              ),
+            ),
+          ),
       ],
     );
   }
 }
 
 
+
+
 class LongInputContainer extends StatefulWidget {
-  final String labelText;
+  final String? labelText; // ✅ Made optional
   final TextEditingController controller;
   final int? maxWords;
   final double width;
@@ -589,10 +609,13 @@ class LongInputContainer extends StatefulWidget {
   final bool isRequired;
   final String? requiredMessage;
   final bool enabled;
+  final bool isUrl;
+  final String? errorMessage;
+  final ValueChanged<String>? onChanged;
 
   const LongInputContainer({
     Key? key,
-    required this.labelText,
+    this.labelText, // ✅ No longer required
     required this.controller,
     this.maxWords,
     this.width = 340,
@@ -600,7 +623,10 @@ class LongInputContainer extends StatefulWidget {
     this.placeholder = "Enter here...",
     this.isRequired = false,
     this.requiredMessage = "This field is required.",
-    this.enabled = false,
+    this.enabled = true,
+    this.isUrl = false,
+    this.errorMessage,
+    this.onChanged,
   }) : super(key: key);
 
   @override
@@ -609,44 +635,55 @@ class LongInputContainer extends StatefulWidget {
 
 class _LongInputContainerState extends State<LongInputContainer> {
   FocusNode focusNode = FocusNode();
-  String errorMessage = "";
+  String? internalErrorMessage;
 
-  void validateInput(String text) {
+  bool validate() {
+    String text = widget.controller.text.trim();
     setState(() {
-      // Required field validation
-      if (widget.isRequired && text.trim().isEmpty) {
-        errorMessage = widget.requiredMessage!;
+      if (widget.isRequired && text.isEmpty) {
+        internalErrorMessage = widget.requiredMessage!;
         return;
       }
 
-      // Word limit validation
-      if (widget.maxWords != null) {
-        int wordCount = text.trim().split(RegExp(r"\s+")).length;
-        if (wordCount > widget.maxWords!) {
-          errorMessage = "Maximum ${widget.maxWords} words allowed!";
+      if (widget.isUrl) {
+        final urlRegex = RegExp(r"^(https?:\/\/)?([\w\-]+\.)+[\w-]+(\/[\w\- ./?%&=]*)?$");
+        if (!urlRegex.hasMatch(text)) {
+          internalErrorMessage = "Enter a valid URL!";
           return;
         }
       }
 
-      // No errors
-      errorMessage = "";
+      if (widget.maxWords != null) {
+        int wordCount = text.split(RegExp(r"\s+")).length;
+        if (wordCount > widget.maxWords!) {
+          internalErrorMessage = "Maximum ${widget.maxWords} words allowed!";
+          return;
+        }
+      }
+
+      internalErrorMessage = null;
     });
+
+    return internalErrorMessage == null;
   }
 
   @override
   Widget build(BuildContext context) {
+    String? displayError = widget.errorMessage ?? internalErrorMessage;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          widget.labelText,
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: Colors.black,
+        if (widget.labelText != null) // ✅ Only show if labelText is provided
+          Text(
+            widget.labelText!,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: Colors.black,
+            ),
           ),
-        ),
-        const SizedBox(height: 5),
+        if (widget.labelText != null) const SizedBox(height: 5), // ✅ Space only if label exists
         AnimatedBuilder(
           animation: focusNode,
           builder: (context, child) {
@@ -671,29 +708,33 @@ class _LongInputContainerState extends State<LongInputContainer> {
                 controller: widget.controller,
                 cursorColor: Colors.brown,
                 focusNode: focusNode,
-                maxLines: null, // Allows multiline input
-                keyboardType: TextInputType.multiline,
+                maxLines: null,
+                keyboardType: widget.isUrl ? TextInputType.url : TextInputType.multiline,
                 enabled: widget.enabled,
                 style: TextStyle(
-                  color: widget.enabled ? Colors.black.withOpacity(0.9) : Colors.brown.withOpacity(0.6), // 🔥 Grey text when disabled
+                  color: widget.enabled ? Colors.black.withOpacity(0.9) : Colors.brown.withOpacity(0.6),
                   fontSize: 16,
                 ),
                 decoration: InputDecoration(
                   border: InputBorder.none,
-                  hintText: widget.placeholder, // Custom placeholder
+                  hintText: widget.placeholder,
                   hintStyle: TextStyle(color: Colors.brown.withOpacity(0.6), fontSize: 14),
                 ),
-                onChanged: validateInput,
-                onEditingComplete: () => validateInput(widget.controller.text),
+                onChanged: (text) {
+                  validate(); // ✅ Validate input
+                  if (widget.onChanged != null) {
+                    widget.onChanged!(text); // ✅ Call the `onChanged` callback
+                  }
+                },
               ),
             );
           },
         ),
-        if (errorMessage.isNotEmpty)
+        if (displayError != null)
           Padding(
             padding: const EdgeInsets.only(top: 5, left: 10),
             child: Text(
-              errorMessage,
+              displayError,
               style: const TextStyle(color: Colors.red, fontSize: 12),
             ),
           ),
@@ -701,6 +742,10 @@ class _LongInputContainerState extends State<LongInputContainer> {
     );
   }
 }
+
+
+
+
 
 void ReusableSnackBar(BuildContext context, String message, {
   IconData? icon,
@@ -731,142 +776,242 @@ void ReusableSnackBar(BuildContext context, String message, {
   );
 }
 
-class ExpandableReorderableRadioGroup extends StatefulWidget {
+
+class CustomRadioGroup extends StatefulWidget {
   // final String labelText;
-  final List<String> initialOptions;
-  final Function(List<String>) onReorder;
-  final Function(String) onSelected;
-  final String? selectedValue;
+  final List<String> options;
+  final Function(List<String>) onSelected;
+  final List<String>? selectedValues;
   final Color activeColor;
   final Color inactiveColor;
-  final int maxVisibleItems; // Number of items before expand
+  final bool isRequired;
+  final String requiredMessage;
+  final Function(String?)? onValidation;
 
-  const ExpandableReorderableRadioGroup({
+  const CustomRadioGroup({
     Key? key,
     // required this.labelText,
-    required this.initialOptions,
-    required this.onReorder,
+    required this.options,
     required this.onSelected,
-    this.selectedValue,
-    this.activeColor = const Color(0xFF55AC98),
-    this.inactiveColor = Colors.grey,
-    this.maxVisibleItems = 5, // Default: Show 5 before expanding
+    this.selectedValues,
+    this.activeColor = const Color(0xFF464E65),
+    this.inactiveColor = const Color(0xFF464E65),
+    this.isRequired = false,
+    this.requiredMessage = "This field is required",
+    this.onValidation,
   }) : super(key: key);
 
   @override
-  _ExpandableReorderableRadioGroupState createState() => _ExpandableReorderableRadioGroupState();
+  _CustomRadioGroupState createState() => _CustomRadioGroupState();
 }
 
-class _ExpandableReorderableRadioGroupState extends State<ExpandableReorderableRadioGroup> {
-  List<String> options = [];
-  String? _selected;
-  bool _isExpanded = false;
+class _CustomRadioGroupState extends State<CustomRadioGroup> {
+  late List<String> _selected;
+  String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
-    options = List.from(widget.initialOptions);
-    _selected = widget.selectedValue;
+    _selected = widget.selectedValues ?? [];
+  }
+
+  void _validateSelection() {
+    setState(() {
+      if (widget.isRequired && _selected.isEmpty) {
+        _errorMessage = widget.requiredMessage;
+      } else {
+        _errorMessage = null;
+      }
+    });
+
+    if (widget.onValidation != null) {
+      widget.onValidation!(_errorMessage);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    int itemCount = _isExpanded ? options.length : widget.maxVisibleItems;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Label Text
         // Text(
         //   widget.labelText,
-        //   style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black),
+        //   style: const TextStyle(
+        //     fontSize: 16,
+        //     fontWeight: FontWeight.w600,
+        //     color: Colors.black,
+        //   ),
         // ),
-        // const SizedBox(height: 5),
+        const SizedBox(height: 5),
 
-        // Scrollable Area for Selection
-        Container(
-          constraints: BoxConstraints(
-            maxHeight: itemCount * 50, // Adjust height dynamically
-          ),
-          child: ReorderableListView(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            buildDefaultDragHandles: false, // Custom drag handles
-            children: options.sublist(0, itemCount).map((option) {
-              bool isSelected = _selected == option;
+        // Options with Wrapping Layout
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: widget.options.map((option) {
+            bool isSelected = _selected.contains(option);
 
-              return Padding(
-                key: ValueKey(option),
-                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 5),
-                child: Row(
-                  children: [
-                    // Drag Handle
-                    ReorderableDragStartListener(
-                      index: options.indexOf(option),
-                      child: const Icon(Icons.drag_handle, color: Colors.grey),
-                    ),
-
-                    // Selectable Option
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _selected = option;
-                          });
-                          widget.onSelected(option);
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
-                          decoration: BoxDecoration(
-                            color: isSelected ? widget.activeColor : Colors.white,
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: isSelected ? widget.activeColor : widget.inactiveColor,
-                              width: 2,
-                            ),
-                          ),
-                          child: Text(
-                            option,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: isSelected ? Colors.white : widget.inactiveColor,
-                              fontSize: 14,
-                              fontFamily: 'Poppins',
-                              fontWeight: FontWeight.w400,
-                              letterSpacing: -0.30,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+            return GestureDetector(
+              onTap: () {
+                setState(() {
+                  if (isSelected) {
+                    _selected.remove(option);
+                  } else {
+                    _selected.add(option);
+                  }
+                });
+                widget.onSelected(_selected);
+                _validateSelection();
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
+                decoration: BoxDecoration(
+                  color: isSelected ? widget.activeColor : Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: isSelected ? widget.activeColor : widget.inactiveColor,
+                    width: 2,
+                  ),
                 ),
-              );
-            }).toList(),
-            onReorder: (oldIndex, newIndex) {
-              setState(() {
-                if (newIndex > oldIndex) newIndex--; // Fix index shift issue
-                final item = options.removeAt(oldIndex);
-                options.insert(newIndex, item);
-              });
-              widget.onReorder(options);
-            },
-          ),
+                child: Text(
+                  option,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: isSelected ? Colors.white : widget.inactiveColor,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w400,
+                    letterSpacing: -0.30,
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
         ),
 
-        // Expand/Collapse Button
-        if (options.length > widget.maxVisibleItems)
-          TextButton(
-            onPressed: () {
-              setState(() {
-                _isExpanded = !_isExpanded;
-              });
-            },
+        if (_errorMessage != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 5),
             child: Text(
-              _isExpanded ? "Show Less ▲" : "Show More ▼",
-              style: TextStyle(color: widget.activeColor, fontSize: 14, fontWeight: FontWeight.w500),
+              _errorMessage!,
+              style: const TextStyle(
+                color: Colors.red,
+                fontSize: 12,
+              ),
             ),
           ),
       ],
+    );
+  }
+}
+
+class ConfirmationDialog extends StatelessWidget {
+  final String title;
+  final String message;
+  final String confirmText;
+  final String cancelText;
+  final VoidCallback onConfirm;
+
+  const ConfirmationDialog({
+    Key? key,
+    required this.title,
+    required this.message,
+    required this.confirmText,
+    required this.cancelText,
+    required this.onConfirm,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20), // Rounded corners
+      ),
+      elevation: 10, // Subtle shadow for depth
+      backgroundColor: Colors.white, // Background color
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.warning_amber_rounded, // Warning icon
+              color: Colors.orangeAccent, // Icon color
+              size: 60,
+            ),
+            const SizedBox(height: 15),
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 16,
+                color: Colors.black54,
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(context); // Close dialog first
+                      onConfirm(); // Execute confirm action
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.redAccent, // Confirm button color
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30), // Rounded button
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    child: Text(
+                      confirmText,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () {
+                      Navigator.pop(context); // Close dialog
+                    },
+                    style: OutlinedButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30), // Rounded button
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      side: const BorderSide(color: Colors.grey), // Outlined border
+                    ),
+                    child: Text(
+                      cancelText,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -2,11 +2,12 @@ import 'dart:io';
 import 'package:fix_mate/home_page/home_page.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:fix_mate/reusable_widget/upload_service.dart';
+import 'package:fix_mate/services/upload_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fix_mate/reusable_widget/reusable_widget.dart';
 import 'package:intl/intl.dart'; // For formatting date
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:fix_mate/services/send_email.dart';
 
 class p_register extends StatefulWidget {
   final bool isEditing;
@@ -112,9 +113,11 @@ class _p_registerState extends State<p_register> {
   TextEditingController emailController = TextEditingController();
   TextEditingController passwordController = TextEditingController();
   TextEditingController confirmPasswordController = TextEditingController();
+  TextEditingController certificateController = TextEditingController();
+  TextEditingController addressController = TextEditingController();
 
   // Form Validation
-  bool isNameValid = false;
+  bool isNameValid = true;
   bool isDobValid = true;
   bool isPhoneValid = true;
   bool isEmailValid = true;
@@ -123,11 +126,30 @@ class _p_registerState extends State<p_register> {
   bool isEditing = true;
   String? selectedGender; // Holds selected gender value
   final List<String> genderOptions = ["Male", "Female", "Prefer not to say"]; // Dropdown options
+  List<String> selectedStates = []; // Store the selected states
+  List<String> selectedExpertiseFields = []; // Store the selected expertise fields
+  String? selectedStatesError;
+  String? selectedGenderError;
+  String? selectedExpertiseFieldsError;
+  String? bioError;
+  String? certificateError;
 
 
   // 🔹 Register User & Save Data
   Future<bool> registerUser() async {
-    if (!isNameValid || !isEmailValid || !isPhoneValid || !isDobValid || !isPasswordValid || !isConfirmPasswordValid || selectedGender == null) {
+
+    // Trigger validation manually
+    setState(() {
+      selectedGenderError = selectedGender == null ? "Please select a gender!" : null;
+      // Validate Bio & Certificate
+      bioError = bioController.text.trim().isEmpty ? "Bio is required!" : null;
+      certificateError = certificateController.text.trim().isEmpty ? "A Google Drive link to supporting documents is required for service provider verification! (e.g., certificate, business card, proposal, IC/passport, or service evidence)." : null;
+    });
+
+
+
+
+    if (!isNameValid || !isEmailValid || !isPhoneValid || !isDobValid || !isPasswordValid || !isConfirmPasswordValid || selectedGender == null || selectedStates.isEmpty  || selectedExpertiseFields.isEmpty || bioError != null || certificateError != null) {
       ReusableSnackBar(context, "Please fill all fields correctly!", icon: Icons.warning, iconColor: Colors.orange);
       return false; // Registration failed
     }
@@ -153,7 +175,7 @@ class _p_registerState extends State<p_register> {
         }
       }
 
-      await _firestore.collection('service_seekers').doc(userId).set({
+      await _firestore.collection('service_providers').doc(userId).set({
         'id': userId,
         'name': nameController.text.trim(),
         'email': emailController.text.trim(),
@@ -161,18 +183,41 @@ class _p_registerState extends State<p_register> {
         'dob': dobController.text.trim(),
         'gender': selectedGender,
         'bio': bioController.text.trim(),
+        'certificateLink': certificateController.text.trim(),
         'profilePic': _imageUrl ?? '',
-        'role': "Service Seeker",
+        'role': "Service Provider",
         'createdAt': Timestamp.now(),
+        'selectedStates': selectedStates,
+        'address': addressController.text.trim(),
+        'selectedExpertiseFields': selectedExpertiseFields,
+        'status': "pending", // Set status as pending
       });
 
-      Navigator.pop(context);
-      ReusableSnackBar(
-          context,
-          "Registration Successful!",
-          icon: Icons.check_circle,
-          iconColor: Colors.green // Green icon for success
+      // ✅ Send Email Notification
+      await EmailService.sendEmail(
+          emailController.text.trim(),
+          "Your Service Provider Application is Pending",
+          "Hello ${nameController.text.trim()},\n\nYour application has been submitted for verification. You will receive another email once your registration is approved.\n\nThank you!"
       );
+      // ReusableSnackBar(
+      //     context,
+      //     "Application submitted! Your registration is pending verification. Please check your email.",
+      //     icon: Icons.check_circle,
+      //     iconColor: Colors.green // Green icon for success
+      // );
+
+      Navigator.pop(context);
+      Future.delayed(Duration.zero, () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Application submitted! Your registration is pending verification. Please check your email."),
+            backgroundColor: Colors.green[300],
+            duration: Duration(seconds: 3),
+          ),
+        );
+      });
+
+
       return true; // Registration successful
     } catch (e) {
       Navigator.pop(context);
@@ -201,7 +246,7 @@ class _p_registerState extends State<p_register> {
           },
         ),
         title: Text(
-          "Service Provider Registration",
+          "Service Provider Application",
           style: TextStyle(
             fontSize: 22,
             fontWeight: FontWeight.bold,
@@ -276,13 +321,15 @@ class _p_registerState extends State<p_register> {
                       ),
                       SizedBox(height: 15),
                       LongInputContainer(
-                        labelText: "Bio (Optional)",
+                        labelText: "Bio (Description of your services)",
                         controller: bioController,
                         enabled: isEditing,
-                        maxWords: 50,
+                        isRequired: true, // ✅ Required field
+                        maxWords: 300,
                         width: 340,
-                        placeholder: "Type your description here...",
+                        placeholder: "Please describe your services in detail...",
                         height: 150,
+                        errorMessage: bioError, // ✅ Pass validation error
                       ),
 
                       SizedBox(height: 15),
@@ -305,7 +352,7 @@ class _p_registerState extends State<p_register> {
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(25.0),
-                              border: Border.all(color: Colors.black),
+                              border: Border.all(color: selectedGenderError != null ? Colors.red : Colors.black), // Show red border if error
                             ),
                             child: DropdownButtonHideUnderline(
                               child: DropdownButton<String>(
@@ -316,7 +363,10 @@ class _p_registerState extends State<p_register> {
                                     SizedBox(width: 8), // Spacing between icon and text
                                     Text(
                                       "Select Gender",
-                                      style: TextStyle(color: Colors.brown.withOpacity(0.6), fontSize: 14),
+                                      style: TextStyle(
+                                        color: Colors.brown.withOpacity(0.6),
+                                        fontSize: 14,
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -324,6 +374,7 @@ class _p_registerState extends State<p_register> {
                                 onChanged: (String? newValue) {
                                   setState(() {
                                     selectedGender = newValue;
+                                    selectedGenderError = null; // Clear error when user selects gender
                                   });
                                 },
                                 items: genderOptions.map((String gender) {
@@ -335,8 +386,19 @@ class _p_registerState extends State<p_register> {
                               ),
                             ),
                           ),
+
+                          // 🔹 Show validation message below dropdown
+                          if (selectedGenderError != null)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 5),
+                              child: Text(
+                                selectedGenderError!,
+                                style: const TextStyle(color: Colors.red, fontSize: 12),
+                              ),
+                            ),
                         ],
                       ),
+
                       SizedBox(height: 15),
 
                       InternalTextField(
@@ -345,7 +407,7 @@ class _p_registerState extends State<p_register> {
                         icon: Icons.email,
                         hintText: "Enter your email",
                         enabled: isEditing,
-                        validationMessage: "Enter a valid email!",
+                        validationMessage: "Enter a valid email! (e.g abc123@gmail.com)",
                         isValid: isEmailValid,
                         onChanged: (value) {
                           setState(() {
@@ -370,7 +432,7 @@ class _p_registerState extends State<p_register> {
                           });
                         },
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 15),
 
                       // Date of Birth Picker
                       GestureDetector(
@@ -387,7 +449,7 @@ class _p_registerState extends State<p_register> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 15),
 
                       // Password Field
                       InternalTextField(
@@ -406,7 +468,7 @@ class _p_registerState extends State<p_register> {
                         },
                       ),
 
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 15),
 
                       // Confirm Password Field
                       InternalTextField(
@@ -429,32 +491,86 @@ class _p_registerState extends State<p_register> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            "Select your preferred states and reorder them based on priority (Main, Secondary, Tertiary).",
+                            "Expertise Field",
                             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black),
                           ),
-                          const SizedBox(height: 5),
-
-                          ExpandableReorderableRadioGroup(
-                            initialOptions: [
-                              'Perak', 'Kedah', 'Penang', 'Kelantan', 'Perlis',
-                              'Johor', 'Selangor', 'Sabah', 'Sarawak', 'Negeri Sembilan',
-                              'Pahang', 'Melaka', 'Terengganu'
-                            ],
-                            onReorder: (newOrder) {
-                              print('New Order: $newOrder');
+                          const SizedBox(height: 2),
+                          Text(
+                            "(Select multiple fields if applicable. Specify details in the description.)",
+                            style: const TextStyle(fontSize: 14,fontWeight: FontWeight.w500, fontStyle: FontStyle.italic, color: Colors.black54),
+                          ),
+                          CustomRadioGroup(
+                            options: ['Cleaning', 'Electrical', 'Plumbing','Painting', 'Door Install', 'Roofing', 'Flooring', 'Home Security', 'Others'],
+                            selectedValues: selectedExpertiseFields,
+                            isRequired: true,
+                            requiredMessage: "Please select at least one expertise field!",
+                            onSelected: (selectedList) {
+                              setState(() {
+                                selectedExpertiseFields = selectedList;
+                              });
                             },
-                            onSelected: (value) {
-                              print('Selected State: $value');
+                            onValidation: (error) {
+                              setState(() {
+                                selectedExpertiseFieldsError = error;
+                              });
                             },
-                            maxVisibleItems: 3, // Show 5 options before expanding
                           ),
                         ],
                       ),
+                      SizedBox(height: 15),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "Operation State",
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            "(May select more than one operation state.)",
+                            style: const TextStyle(fontSize: 14,fontWeight: FontWeight.w500, fontStyle: FontStyle.italic, color: Colors.black54),
+                          ),
+                          const SizedBox(height: 5),
 
+                          CustomRadioGroup(
+                            options: ['Perlis', 'Kedah', 'Penang','Perak', 'Selangor', 'Negeri Sembilan', 'Melaka', 'Johor',
+                              'Terengganu', 'Kelantan', 'Pahang', 'Sabah', 'Sarawak'],
+                            selectedValues: selectedStates,
+                            isRequired: true,
+                            requiredMessage: "Please select at least one operation state!",
+                            onSelected: (selectedList) {
+                              setState(() {
+                                selectedStates = selectedList;
+                              });
+                            },
+                            onValidation: (error) {
+                              setState(() {
+                                selectedStatesError = error;
+                              });
+                            },
+                          ),
 
+                        ],
+                      ),
+                      SizedBox(height: 15),
+                      LongInputContainer(
+                        labelText: "Certificate Link (Google Drive)",
+                        controller: certificateController,
+                        placeholder: "Enter a Google Drive link for supporting documents as a valid service providers.",
+                        isRequired: true, // ✅ Required field
+                        isUrl: true, // ✅ Ensures valid URL
+                        errorMessage: certificateError, // ✅ Pass validation error
+                      ),
 
 
                       SizedBox(height: 15),
+                      LongInputContainer(
+                        labelText: "Business Address (Optional)",
+                        controller: addressController,
+                        placeholder: "Enter Your Business Address here...",
+                        isRequired: false,
+                      ),
+
                       dk_button(
                         context,
                         "Register",
