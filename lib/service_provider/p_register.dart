@@ -134,6 +134,15 @@ class _p_registerState extends State<p_register> {
   String? bioError;
   String? certificateError;
 
+  void _validateCertificate() {
+    setState(() {
+      String text = certificateController.text.trim();
+      certificateError = text.isEmpty
+          ? "A Google Drive link to supporting documents is required for service provider verification! (e.g., certificate, business card, proposal, IC/passport, or service evidence)."
+          : null;
+    });
+  }
+
 
   // 🔹 Register User & Save Data
   Future<bool> registerUser() async {
@@ -144,8 +153,9 @@ class _p_registerState extends State<p_register> {
       // Validate Bio & Certificate
       bioError = bioController.text.trim().isEmpty ? "Bio is required!" : null;
       certificateError = certificateController.text.trim().isEmpty ? "A Google Drive link to supporting documents is required for service provider verification! (e.g., certificate, business card, proposal, IC/passport, or service evidence)." : null;
+      // Validate certificate again before saving
+      _validateCertificate();
     });
-
 
 
 
@@ -199,23 +209,22 @@ class _p_registerState extends State<p_register> {
           "Your Service Provider Application is Pending",
           "Hello ${nameController.text.trim()},\n\nYour application has been submitted for verification. You will receive another email once your registration is approved.\n\nThank you!"
       );
+
+
+      Navigator.pop(context);
       // ReusableSnackBar(
       //     context,
       //     "Application submitted! Your registration is pending verification. Please check your email.",
       //     icon: Icons.check_circle,
       //     iconColor: Colors.green // Green icon for success
       // );
-
-      Navigator.pop(context);
       Future.delayed(Duration.zero, () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Application submitted! Your registration is pending verification. Please check your email."),
-            backgroundColor: Colors.green[300],
-            duration: Duration(seconds: 3),
-          ),
+        showSuccessMessage(
+          context,
+          "Application submitted! Your registration is pending verification. Please check your email.",
         );
       });
+
 
 
       return true; // Registration successful
@@ -560,6 +569,7 @@ class _p_registerState extends State<p_register> {
                         isRequired: true, // ✅ Required field
                         isUrl: true, // ✅ Ensures valid URL
                         errorMessage: certificateError, // ✅ Pass validation error
+                        onChanged: (text) => _validateCertificate(),
                       ),
 
 
