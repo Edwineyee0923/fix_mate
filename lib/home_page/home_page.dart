@@ -142,7 +142,6 @@ class _home_pageState extends State<home_page> {
                       style: TextStyle(
                         color: Colors.black,
                         fontSize: 16,
-                        fontFamily: 'Poppins',
                         fontWeight: FontWeight.w500,
                         height: 1.50,
                       ),
@@ -152,12 +151,11 @@ class _home_pageState extends State<home_page> {
                       child: Text(
                         'Customer Service',
                         style: TextStyle(
-                          color: Color(0xFF4C3532),
-                          fontSize: 16,
-                          fontFamily: 'Poppins',
+                          color: Colors.grey,
                           fontWeight: FontWeight.w800,
+                          fontSize: 16,
                           decoration: TextDecoration.underline,
-                          decorationThickness: 2.5,
+                          decorationThickness: 1.5,
                           height: 1.50,
                         ),
                       ),
@@ -182,12 +180,12 @@ class _home_pageState extends State<home_page> {
                           child: Text(
                             'Terms of Service',
                             style: TextStyle(
-                              color: Color(0xFF4C3532),
-                              fontSize: 16,
+                              color: Colors.grey,
                               fontWeight: FontWeight.w800,
+                              fontSize: 16,
                               decoration: TextDecoration.underline,
+                              decorationThickness: 1.5,
                               height: 1.50,
-                              decorationThickness: 2.5,
                             ),
                           ),
                         ),
@@ -210,12 +208,12 @@ class _home_pageState extends State<home_page> {
                           child: Text(
                             'Privacy Policy',
                             style: TextStyle(
-                              color: Color(0xFF4C3532),
-                              fontSize: 16,
+                              color: Colors.grey,
                               fontWeight: FontWeight.w800,
+                              fontSize: 16,
                               decoration: TextDecoration.underline,
+                              decorationThickness: 1.5,
                               height: 1.50,
-                              decorationThickness: 2.5,
                             ),
                           ),
                         ),

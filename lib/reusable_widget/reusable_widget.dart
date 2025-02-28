@@ -305,7 +305,9 @@ Widget forgetPassword(BuildContext context, Color textColor) {
         style: TextStyle(
           color: textColor, // Accepting color dynamically
           fontWeight: FontWeight.w900, // Increase font weight
-          fontSize: 16,
+          fontSize: 17,
+          decoration: TextDecoration.underline,
+          decorationThickness: 1.5,
         ),
         textAlign: TextAlign.right,
       ),
@@ -526,7 +528,7 @@ class _InternalTextFieldState extends State<InternalTextField> {
                     )
                         : null,
                     hintText: widget.hintText,
-                    hintStyle: TextStyle(color: Colors.brown.withOpacity(0.6), fontSize: 14),
+                    hintStyle: TextStyle(color: Colors.grey.withOpacity(0.9), fontSize: 14),
                     filled: true,
                     fillColor: Colors.white,
                     border: OutlineInputBorder(
@@ -718,7 +720,7 @@ class _LongInputContainerState extends State<LongInputContainer> {
                 decoration: InputDecoration(
                   border: InputBorder.none,
                   hintText: widget.placeholder,
-                  hintStyle: TextStyle(color: Colors.brown.withOpacity(0.6), fontSize: 14),
+                  hintStyle: TextStyle(color: Colors.grey.withOpacity(0.9), fontSize: 14),
                 ),
                 onChanged: (text) {
                   validate(); // ✅ Validate input

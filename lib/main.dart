@@ -1,6 +1,8 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:fix_mate/admin/contact_developer.dart';
 import 'package:fix_mate/home_page/home_page.dart';
+import 'package:fix_mate/home_page/login_page.dart';
 import 'package:fix_mate/home_page/register_option.dart';
 import 'package:fix_mate/service_provider/p_profile.dart';
 import 'package:fix_mate/service_provider/p_register.dart';
@@ -33,7 +35,7 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.blue,
         fontFamily: 'Poppins', // Set Poppins as the main font
       ),
-      home: p_register(),
+      home: login_page(),
     );
   }
 }

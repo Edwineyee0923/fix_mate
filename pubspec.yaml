@@ -47,6 +47,7 @@ dependencies:
   http: ^0.13.6
   intl: ^0.18.1
   mailer: ^6.0.1
+  font_awesome_flutter: ^10.1.0
 
 dev_dependencies:
   flutter_test:
@@ -70,6 +71,7 @@ flutter:
     - lib/assets/images/ss_login.png
     - lib/assets/images/sp_login.png
     - lib/assets/images/reset_password.png
+    - lib/assets/images/LoginImage.png
 
 
 

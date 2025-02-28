@@ -223,7 +223,6 @@ class _s_registerState extends State<s_register> {
                   style: TextStyle(
                     color: Colors.black,
                     fontSize: 18,
-                    fontFamily: 'Poppins',
                     height: 1.0,
                   ),
                 ),
