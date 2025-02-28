@@ -2,6 +2,8 @@ import 'package:fix_mate/home_page/home_page.dart';
 import 'package:flutter/material.dart';
 import 'package:fix_mate/reusable_widget/reusable_widget.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 
 class reset_password extends StatefulWidget {
 
@@ -61,34 +63,58 @@ class _reset_passwordState extends State<reset_password> {
                   context,
                   "Reset Password",
                       () {
-                    if (_emailTextController.text.isEmpty) {
-                      // Show a validation message if the email is empty
+                    String email = _emailTextController.text.trim();
+                    if (email.isEmpty) {
                       showValidationMessage(context, 'Please enter your registered email.');
                       return;
                     }
 
-                    FirebaseAuth.instance
-                        .sendPasswordResetEmail(email: _emailTextController.text)
-                        .then((value) {
-                      // Show a dialog with a message
-                      showSuccessMessage(
-                        context,
-                        'Please check your email to reset your password.',
-                        onPressed: () {
-                          // Navigate to the homepage after closing the dialog
-                          Navigator.pushReplacement(
+                    // Query both collections in parallel
+                    Future.wait([
+                      FirebaseFirestore.instance
+                          .collection('service_seekers')
+                          .where('email', isEqualTo: email)
+                          .get(),
+                      FirebaseFirestore.instance
+                          .collection('service_providers')
+                          .where('email', isEqualTo: email)
+                          .get(),
+                    ]).then((List<QuerySnapshot> snapshots) {
+                      // Check if email exists in either collection
+                      final seekers = snapshots[0];
+                      final providers = snapshots[1];
+
+                      if (seekers.docs.isEmpty && providers.docs.isEmpty) {
+                        // Email not found in either collection
+                        showValidationMessage(context,
+                            'This email is not registered. Please sign up first.');
+                      } else {
+                        // Email exists in at least one collection, proceed with reset
+                        FirebaseAuth.instance
+                            .sendPasswordResetEmail(email: email)
+                            .then((value) {
+                          showSuccessMessage(
                             context,
-                            MaterialPageRoute(builder: (context) => home_page()),
+                            'Please check your email to reset your password.',
+                            onPressed: () {
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(builder: (context) => home_page()),
+                              );
+                            },
                           );
-                        },
-                      );
+                        }).catchError((error) {
+                          showValidationMessage(context,
+                              'Failed to send reset email. Please try again.');
+                        });
+                      }
                     }).catchError((error) {
-                      // Show an error validation message
-                      showValidationMessage(context, 'Failed to send reset email. Please try again.');
+                      showValidationMessage(
+                          context, 'An error occurred. Please try again later.');
                     });
                   },
                 ),
-                  ],
+                ],
                 ),
               ),
             ],

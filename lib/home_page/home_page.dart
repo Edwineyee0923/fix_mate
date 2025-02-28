@@ -1,4 +1,5 @@
 import 'package:fix_mate/home_page/login_option.dart';
+import 'package:fix_mate/home_page/login_page.dart';
 import 'package:fix_mate/home_page/register_option.dart';
 import 'package:flutter/material.dart';
 import 'package:fix_mate/reusable_widget/reusable_widget.dart';
@@ -63,7 +64,7 @@ class home_page extends StatefulWidget {
 class _home_pageState extends State<home_page> {
   void navigateNextPage(BuildContext ctx) {
     Navigator.of(ctx).push(MaterialPageRoute(builder: (_) {
-      return login_option();
+      return login_page();
     }));
   }
 
