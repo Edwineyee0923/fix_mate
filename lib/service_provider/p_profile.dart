@@ -236,6 +236,7 @@ class _p_profileState extends State<p_profile> {
           },
         ),
         title: Text("My Profile", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+        titleSpacing: 2, // Aligns title closer to the leading icon (left-aligned)
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 10), // Moves left by reducing right padding

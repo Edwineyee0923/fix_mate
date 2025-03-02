@@ -207,7 +207,7 @@ class _s_registerState extends State<s_register> {
             fontWeight: FontWeight.bold,
           ),
         ),
-        titleSpacing: 0, // Aligns title closer to the leading icon (left-aligned)
+        titleSpacing: 2, // Aligns title closer to the leading icon (left-aligned)
       ),
       body: SingleChildScrollView(
         child: Center( // Centers everything

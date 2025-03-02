@@ -207,6 +207,7 @@ class _s_profileState extends State<s_profile> {
           },
         ),
         title: Text("My Profile", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+        titleSpacing: 2,
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 10), // Moves left by reducing right padding

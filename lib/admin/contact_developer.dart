@@ -1,8 +1,12 @@
+import 'package:fix_mate/admin/admin_layout.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
+
 class contact_developer extends StatefulWidget {
+  static String routeName = "/admin/contact_developer";
+
   const contact_developer({Key? key}) : super(key: key);
 
   @override
@@ -39,21 +43,26 @@ class _contact_developerState extends State<contact_developer> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return AdminLayout(
+      selectedIndex: 2,
+      child: Scaffold(
       backgroundColor: Color(0xFFFFF8F2),
       appBar: AppBar(
         backgroundColor: Color(0xFFFF9342),
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new_rounded),
-          onPressed: () {
-            Navigator.pop(context);
-          },
-        ),
+        // leading: IconButton(
+        //   icon: Icon(Icons.arrow_back_ios_new_rounded),
+        //   onPressed: () {
+        //     Navigator.pop(context);
+        //   },
+        // ),
+        // centerTitle: true,
         title: Text(
           "Contact Developers",
           style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
         ),
+        titleSpacing: 20,
       ),
+
       body: SingleChildScrollView(
         child: Center(
           child: Padding(
@@ -145,6 +154,7 @@ class _contact_developerState extends State<contact_developer> {
           ),
         ),
       ),
+      )
     );
   }
 }
