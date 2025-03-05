@@ -1,7 +1,9 @@
 import 'package:fix_mate/admin/admin_layout.dart';
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:smooth_page_indicator/smooth_page_indicator.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
+import 'package:fix_mate/admin/application_detail.dart';
 
 class SP_application extends StatefulWidget {
   static String routeName = "/admin/SP_application";
@@ -13,94 +15,179 @@ class SP_application extends StatefulWidget {
 }
 
 class _SP_applicationState extends State<SP_application> {
-
-  String selectedStatus = "All status";
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  String selectedStatus = "All Status";
+  List<ApplicationCard> allApplications = [];
 
   @override
+  void initState() {
+    super.initState();
+    _loadApplications(); // Load applications from Firestore
+  }
+
+  Future<void> _loadApplications() async {
+    try {
+      QuerySnapshot snapshot = await _firestore
+          .collection('service_providers')
+          .orderBy('createdAt', descending: false) // Sort by earliest first
+          .get();
+
+      List<ApplicationCard> applications = snapshot.docs.map((doc) {
+        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+
+        return ApplicationCard(
+          name: data['name'] ?? "Unknown",
+          location: (data['selectedStates'] as List<dynamic>?)?.join(", ") ?? "Unknown",
+          services: (data['selectedExpertiseFields'] as List<dynamic>?)?.join(", ") ?? "No services listed",
+          status: data['status'] ?? "Pending",
+          imageUrl: data['profilePic'] ?? "", // Default image if null
+          appliedAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+          onReview: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ApplicationDetailsScreen(
+                    applicationData: data,
+                    docId: doc.id,
+                ),
+              ),
+            );
+          },
+        );
+      }).toList();
+
+      setState(() {
+        allApplications = applications;
+      });
+    } catch (e) {
+      print("Error loading applications: $e");
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    // **Filter applications based on the selected status**
+    List<ApplicationCard> filteredApplications = allApplications.where((app) {
+      if (selectedStatus == "All Status") return true;
+      return app.status == selectedStatus;
+    }).toList();
+
+    final PageController _pageController = PageController(initialPage: 2); // Starts at "Applications Not Reviewed"
+    // **Counts for Summary Cards**
+    int totalApplications = allApplications.length;
+    int reviewedApplications =
+        allApplications.where((app) => app.status == "Rejected" || app.status == "Approved").length;
+    int notReviewedApplications = allApplications.where((app) => app.status == "Pending").length;
+
+
     return AdminLayout(
       selectedIndex: 0,
       child: Scaffold(
-        backgroundColor: Color(0xFFFFF8F2),
+        backgroundColor: const Color(0xFFFFF8F2),
         appBar: AppBar(
-          backgroundColor: Color(0xFFFF9342),
-          // leading: IconButton(
-          //   icon: Icon(Icons.arrow_back_ios_new_rounded),
-          //   onPressed: () {
-          //     Navigator.pop(context);
-          //   },
-          // ),
-          title: Text(
+          backgroundColor: const Color(0xFFFF9342),
+          title: const Text(
             "Manage Application",
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white,),
           ),
           titleSpacing: 20,
         ),
-        body: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // -------------------- Summary Cards --------------------
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal, // Allow horizontal scrolling if needed
-                  child: Row(
-                    children: [
-                      SummaryCard(count: "4", label: "Total Applications", countColor: Colors.red),
-                      const SizedBox(width: 10),
-                      SummaryCard(count: "3", label: "Applications Reviewed", countColor: Colors.orange),
-                      const SizedBox(width: 10),
-                      SummaryCard(count: "1", label: "Applications Not Reviewed", countColor: Colors.brown),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // -------------------- Status Dropdown --------------------
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: StatusDropdown(
-                    selectedStatus: selectedStatus,
-                    onChanged: (String status) {
-                      setState(() {
-                        selectedStatus = status;
-                      });
-                    },
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // -------------------- List of Pending Applications --------------------
-                SizedBox(
-                  height: MediaQuery.of(context).size.height * 0.6, // Adjust height dynamically
-                  child: ListView(
-                    shrinkWrap: true,
-                    physics: NeverScrollableScrollPhysics(), // Prevent double scrolling
-                    children: [
-                      ApplicationCard(
-                        name: "Steven Yap",
-                        location: "Perak",
-                        services: "Plumbing, electrical repair...",
-                        status: "Done",
-                        imageUrl: "https://example.com/steven.jpg",
-                        isDone: true,
+        body: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // -------------------- Summary Cards with PageView --------------------
+              SizedBox(
+                height: 80, // Adjust based on SummaryCard height
+                child: PageView(
+                  controller: _pageController,
+                  clipBehavior: Clip.none, // Prevents cutting off elements
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      child: SummaryCard(
+                        count: "$totalApplications",
+                        label: "Total Applications",
+                        countColor: const Color(0xFFFF9342),
                       ),
-                      const SizedBox(height: 10),
-                      ApplicationCard(
-                        name: "Vivian",
-                        location: "Kedah",
-                        services: "Cleaning, painting...",
-                        status: "Not Done",
-                        imageUrl: "https://example.com/vivian.jpg",
-                        isDone: false,
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      child: SummaryCard(
+                        count: "$reviewedApplications",
+                        label: "Applications Reviewed",
+                        countColor: const Color(0xFFFF9342),
                       ),
-                    ],
-                  ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      child: SummaryCard(
+                        count: "$notReviewedApplications",
+                        label: "Applications Not Reviewed",
+                        countColor: const Color(0xFFFF9342),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(height: 15),
+// -------------------- Page Indicator (Three Dots) --------------------
+              Center(
+                child: SmoothPageIndicator(
+                  controller: _pageController,
+                  count: 3, // Number of summary cards
+                  effect: ExpandingDotsEffect(
+                    activeDotColor: Colors.orange,
+                    dotColor: Colors.grey.shade400,
+                    dotHeight: 8,
+                    dotWidth: 8,
+                  ),
+                  onDotClicked: (index) {
+                    _pageController.animateToPage(
+                      index,
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                    );
+                  },
+                ),
+              ),
+              // -------------------- Status Dropdown --------------------
+              Align(
+                alignment: Alignment.centerRight,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Expanded(
+                      child: Container(
+                        height: 1,
+                        color: Colors.grey.withOpacity(0.5),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    StatusDropdown(
+                      selectedStatus: selectedStatus,
+                      onChanged: (String status) {
+                        setState(() {
+                          selectedStatus = status;
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+
+              // -------------------- List of Filtered Applications --------------------
+              Expanded(
+                child: ListView.separated(
+                  itemCount: filteredApplications.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 10),
+                  // clipBehavior: Clip.none,
+                  itemBuilder: (context, index) => filteredApplications[index],
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -124,14 +211,15 @@ class SummaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: MediaQuery.of(context).size.width * 0.3, // Make cards responsive
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+      width: MediaQuery.of(context).size.width * 0.85, // Make cards responsive
+      height: 70,
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.2),
+            color: Colors.grey.withOpacity(0.4),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),
@@ -140,26 +228,27 @@ class SummaryCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
+          const SizedBox(width: 12),
           Text(
             count,
             style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
+              fontSize: 26,
+              fontWeight: FontWeight.w900,
               color: countColor,
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 17),
           Container(
-            width: 1.5,
-            height: 25,
+            width: 2.5,
+            height: 38,
             color: Colors.grey.withOpacity(0.5),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 14),
           Expanded(
             child: Text(
               label,
               style: const TextStyle(
-                fontSize: 16,
+                fontSize: 20,
                 fontWeight: FontWeight.w600,
                 color: Colors.black87,
               ),
@@ -185,7 +274,8 @@ class StatusDropdown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      height: 45,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: Colors.grey.withOpacity(0.5)),
@@ -200,12 +290,12 @@ class StatusDropdown extends StatelessWidget {
               onChanged(newValue);
             }
           },
-          items: ["All status", "Done", "Not Done"].map((String status) {
+          items: ["All Status", "Pending", "Approved", "Rejected"].map((String status) {
             return DropdownMenuItem<String>(
               value: status,
               child: Text(
                 status,
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
               ),
             );
           }).toList(),
@@ -216,13 +306,157 @@ class StatusDropdown extends StatelessWidget {
 }
 
 // ------------------ Application Card ------------------
+// class ApplicationCard extends StatelessWidget {
+//   final String name;
+//   final String location;
+//   final String services;
+//   final String status;
+//   final String imageUrl;
+//   final DateTime appliedAt;
+//
+//   const ApplicationCard({
+//     Key? key,
+//     required this.name,
+//     required this.location,
+//     required this.services,
+//     required this.status,
+//     required this.imageUrl,
+//     required this.appliedAt,
+//   }) : super(key: key);
+//
+//   @override
+//   Widget build(BuildContext context) {
+//
+//     Color statusColor;
+//     if (status == "Approved") {
+//       statusColor = Colors.green;
+//     } else if (status == "Rejected") {
+//       statusColor = Colors.red;
+//     } else {
+//       statusColor = Colors.orange;
+//     }
+//
+//     return Card(
+//       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+//       elevation: 3,
+//       margin: const EdgeInsets.symmetric(vertical: 4),
+//       child: Padding(
+//         padding: EdgeInsets.symmetric(horizontal: 15.0, vertical: 12.0),
+//         child: Column(
+//           crossAxisAlignment: CrossAxisAlignment.start,
+//           children: [
+//             Row(
+//               children: [
+//                 Text(
+//                   "10 Dec 2024, 10 a.m.",
+//                   style: const TextStyle(
+//                     fontSize: 14,
+//                     fontWeight: FontWeight.bold,
+//                   ),
+//                 ),
+//                 const Spacer(),
+//                 Container(
+//                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+//                   decoration: BoxDecoration(
+//                     border: Border.all(color: statusColor, width: 1.5),
+//                     borderRadius: BorderRadius.circular(20),
+//                   ),
+//                   child: Text(
+//                     status,
+//                     style: TextStyle(
+//                       fontSize: 12,
+//                       fontWeight: FontWeight.bold,
+//                       color: statusColor,
+//                     ),
+//                   ),
+//                 ),
+//               ],
+//             ),
+//             const SizedBox(height: 6),
+//             Container(
+//               height: 1, // Underline
+//               color: Colors.grey.withOpacity(0.5),
+//             ),
+//             const SizedBox(height: 10),
+//             Row(
+//               children: [
+//                 CircleAvatar(
+//                   radius: 25,
+//                   backgroundImage: NetworkImage(imageUrl),
+//                 ),
+//                 const SizedBox(width: 10),
+//                 Column(
+//                   crossAxisAlignment: CrossAxisAlignment.start,
+//                   children: [
+//                     Text(
+//                       name,
+//                       style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+//                     ),
+//                     Row(
+//                       children: [
+//                         const Icon(Icons.location_on, size: 14, color: Colors.grey),
+//                         Text(
+//                           location,
+//                           style: const TextStyle(fontSize: 14, color: Colors.grey),
+//                         ),
+//                       ],
+//                     ),
+//                     Row(
+//                       children: [
+//                         const Icon(Icons.build, size: 14, color: Colors.grey),
+//                         SizedBox(
+//                           width: 180, // Restrict width to prevent overflow
+//                           child: Text(
+//                             services,
+//                             style: const TextStyle(fontSize: 14, color: Colors.grey),
+//                             overflow: TextOverflow.ellipsis, // Truncate long text
+//                             maxLines: 1,
+//                           ),
+//                         ),
+//                       ],
+//                     ),
+//                   ],
+//                 ),
+//               ],
+//             ),
+//             const SizedBox(height: 10),
+//             Center(
+//               child: ElevatedButton(
+//                 onPressed: () {
+//                   // Handle button press, can navigate to details page
+//                 },
+//                 style: ElevatedButton.styleFrom(
+//                   backgroundColor: const Color(0xFFFF9442), // Original active color
+//                   shape: RoundedRectangleBorder(
+//                     borderRadius: BorderRadius.circular(20),
+//                   ),
+//                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+//                 ),
+//                 child: Text(
+//                   (status == "Approved" || status == "Rejected") ? "View Details" : "Review",
+//                   style: TextStyle(
+//                     fontSize: 14,
+//                     fontWeight: FontWeight.bold,
+//                     color: Colors.white,
+//                   ),
+//                 ),
+//               ),
+//             ),
+//           ],
+//         ),
+//       ),
+//     );
+//   }
+// }
+
 class ApplicationCard extends StatelessWidget {
   final String name;
   final String location;
   final String services;
   final String status;
   final String imageUrl;
-  final bool isDone;
+  final DateTime appliedAt;
+  final VoidCallback onReview;
 
   const ApplicationCard({
     Key? key,
@@ -231,31 +465,44 @@ class ApplicationCard extends StatelessWidget {
     required this.services,
     required this.status,
     required this.imageUrl,
-    required this.isDone,
+    required this.appliedAt,
+    required this.onReview,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    Color statusColor;
+    if (status == "Approved") {
+      statusColor = Colors.green;
+    } else if (status == "Rejected") {
+      statusColor = Colors.red;
+    } else {
+      statusColor = Color(0xFFFF9342);
+    }
+
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       elevation: 3,
-      margin: const EdgeInsets.symmetric(vertical: 8),
+      margin: const EdgeInsets.symmetric(vertical: 4),
       child: Padding(
-        padding: const EdgeInsets.all(12.0),
+        padding: const EdgeInsets.symmetric(horizontal: 15.0, vertical: 12.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
                 Text(
-                  "10 Dec 2024, 10 a.m.",
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                  DateFormat('dd MMM yyyy, hh:mm a').format(appliedAt), // Display actual applied time
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const Spacer(),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: isDone ? Colors.green.withOpacity(0.2) : Colors.red.withOpacity(0.2),
+                    border: Border.all(color: statusColor, width: 1.5),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -263,18 +510,25 @@ class ApplicationCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
-                      color: isDone ? Colors.green : Colors.red,
+                      color: statusColor,
                     ),
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: 6),
+            Container(
+              height: 1, // Underline
+              color: Colors.grey.withOpacity(0.5),
             ),
             const SizedBox(height: 10),
             Row(
               children: [
                 CircleAvatar(
                   radius: 25,
-                  backgroundImage: NetworkImage(imageUrl),
+                  backgroundImage: imageUrl.isNotEmpty
+                      ? NetworkImage(imageUrl)
+                      : AssetImage("assets/default_profile.png") as ImageProvider,
                 ),
                 const SizedBox(width: 10),
                 Column(
@@ -282,23 +536,28 @@ class ApplicationCard extends StatelessWidget {
                   children: [
                     Text(
                       name,
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                     Row(
                       children: [
                         const Icon(Icons.location_on, size: 14, color: Colors.grey),
                         Text(
                           location,
-                          style: TextStyle(fontSize: 14, color: Colors.grey),
+                          style: const TextStyle(fontSize: 14, color: Colors.grey),
                         ),
                       ],
                     ),
                     Row(
                       children: [
                         const Icon(Icons.build, size: 14, color: Colors.grey),
-                        Text(
-                          services,
-                          style: TextStyle(fontSize: 14, color: Colors.grey),
+                        SizedBox(
+                          width: 180, // Restrict width to prevent overflow
+                          child: Text(
+                            services,
+                            style: const TextStyle(fontSize: 14, color: Colors.grey),
+                            overflow: TextOverflow.ellipsis, // Truncate long text
+                            maxLines: 1,
+                          ),
                         ),
                       ],
                     ),
@@ -307,24 +566,30 @@ class ApplicationCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 10),
-            Align(
-              alignment: Alignment.centerRight,
-              child: ElevatedButton(
-                onPressed: () {
-                  // Handle review button press
-                },
+            Center(
+              child: (status == "Approved" || status == "Rejected")
+                  ? TextButton(
+                onPressed: onReview,
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFFFF9442),
+                ),
+                child: const Text(
+                  "View Details",
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                ),
+              )
+                  : ElevatedButton(
+                onPressed: onReview,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: isDone ? Colors.grey : Colors.pinkAccent,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  backgroundColor: const Color(0xFFFF9442),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                 ),
-                child: Text(
+                child: const Text(
                   "Review",
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
                 ),
               ),
             ),
@@ -334,3 +599,4 @@ class ApplicationCard extends StatelessWidget {
     );
   }
 }
+

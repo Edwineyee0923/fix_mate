@@ -1,7 +1,23 @@
+import 'package:fix_mate/service_provider/p_register.dart';
+import 'package:fix_mate/service_seeker/s_register.dart';
 import 'package:flutter/material.dart';
 import 'package:fix_mate/reusable_widget/reusable_widget.dart';
 
 class register_option extends StatelessWidget {
+
+  void navigateNextPage1(BuildContext ctx) {
+    Navigator.of(ctx).push(MaterialPageRoute(builder: (_) {
+      return s_register();
+    }));
+  }
+
+  void navigateNextPage2(BuildContext ctx) {
+    Navigator.of(ctx).push(MaterialPageRoute(builder: (_) {
+      return p_register();
+    }));
+  }
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -50,6 +66,7 @@ class register_option extends StatelessWidget {
                 context: context,
                 title: "Service Seeker",
                 onTap: () {
+                  navigateNextPage1(context);
                   print("Service Seeker Clicked!");
                 },
                 leftIcon: Icons.person_outline, // User icon (Left)
@@ -62,6 +79,7 @@ class register_option extends StatelessWidget {
                 context: context,
                 title: "Service Provider",
                 onTap: () {
+                  navigateNextPage2(context);
                   print("Service Provider Clicked!");
                 },
                 rightIcon: Icons.handyman, // Handyman icon (Right)

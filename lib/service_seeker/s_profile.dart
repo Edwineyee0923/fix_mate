@@ -172,9 +172,6 @@ class _s_profileState extends State<s_profile> {
     );
   }
 
-
-
-
   void _toggleEditMode() {
     setState(() {
       isEditing = !isEditing;
@@ -206,7 +203,7 @@ class _s_profileState extends State<s_profile> {
             }
           },
         ),
-        title: Text("My Profile", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+        title: Text("My Profile", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white,)),
         titleSpacing: 2,
         actions: [
           Padding(

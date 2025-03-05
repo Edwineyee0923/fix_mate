@@ -201,20 +201,12 @@ class _p_profileState extends State<p_profile> {
     );
   }
 
-
-
-
   void _toggleEditMode() {
     setState(() {
       isEditing = !isEditing;
     });
   }
 
-  void navigateNextPage(BuildContext ctx) {
-    Navigator.of(ctx).push(MaterialPageRoute(builder: (_) {
-      return home_page();
-    }));
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -235,7 +227,7 @@ class _p_profileState extends State<p_profile> {
             }
           },
         ),
-        title: Text("My Profile", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+        title: Text("My Profile", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white,)),
         titleSpacing: 2, // Aligns title closer to the leading icon (left-aligned)
         actions: [
           Padding(
@@ -562,7 +554,12 @@ class _p_profileState extends State<p_profile> {
                   onTap: () {
                     if (addressController.text.isNotEmpty) {
                       Clipboard.setData(ClipboardData(text: addressController.text));
-                      ReusableSnackBar(context, "Address copied to clipboard!", icon: Icons.warning, iconColor: Colors.orange);
+                      ReusableSnackBar(
+                          context,
+                          "Address copied to clipboard!",
+                          icon: Icons.check_circle,
+                          iconColor: Colors.green,
+                      );
                     }
                   },
                   child: Container(

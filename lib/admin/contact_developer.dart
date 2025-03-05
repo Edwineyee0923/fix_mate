@@ -58,7 +58,7 @@ class _contact_developerState extends State<contact_developer> {
         // centerTitle: true,
         title: Text(
           "Contact Developers",
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white,),
         ),
         titleSpacing: 20,
       ),

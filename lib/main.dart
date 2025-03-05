@@ -17,6 +17,7 @@ import 'package:fix_mate/home_page/reset_password.dart';
 import 'package:fix_mate/home_page/login_option.dart';
 import 'package:fix_mate/service_seeker/s_register.dart';
 import 'package:fix_mate/routes.dart';
+import 'package:fix_mate/admin/application_detail.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -36,10 +37,10 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       routes: routes,
       theme: ThemeData(
-        primarySwatch: Colors.blue,
+        primarySwatch: Colors.orange,
         fontFamily: 'Poppins', // Set Poppins as the main font
       ),
-      home: p_register(),
+      home:   SP_application(),
     );
   }
 }

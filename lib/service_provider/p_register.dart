@@ -200,7 +200,7 @@ class _p_registerState extends State<p_register> {
         'selectedStates': selectedStates,
         'address': addressController.text.trim(),
         'selectedExpertiseFields': selectedExpertiseFields,
-        'status': "pending", // Set status as pending
+        'status': "Pending", // Set status as pending
       });
 
       // ✅ Send Email Notification
