@@ -913,6 +913,10 @@ class ConfirmationDialog extends StatelessWidget {
   final String confirmText;
   final String cancelText;
   final VoidCallback onConfirm;
+  final IconData icon;
+  final Color iconColor;
+  final Color confirmButtonColor;
+  final Color cancelButtonColor;
 
   const ConfirmationDialog({
     Key? key,
@@ -921,6 +925,10 @@ class ConfirmationDialog extends StatelessWidget {
     required this.confirmText,
     required this.cancelText,
     required this.onConfirm,
+    required this.icon,
+    required this.iconColor,
+    required this.confirmButtonColor,
+    required this.cancelButtonColor,
   }) : super(key: key);
 
   @override
@@ -937,8 +945,8 @@ class ConfirmationDialog extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              Icons.warning_amber_rounded, // Warning icon
-              color: Colors.orangeAccent, // Icon color
+              icon, // Dynamic icon
+              color: iconColor, // Dynamic icon color
               size: 60,
             ),
             const SizedBox(height: 15),
@@ -964,35 +972,12 @@ class ConfirmationDialog extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.pop(context); // Close dialog first
-                      onConfirm(); // Execute confirm action
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.redAccent, // Confirm button color
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30), // Rounded button
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                    ),
-                    child: Text(
-                      confirmText,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
                   child: OutlinedButton(
                     onPressed: () {
                       Navigator.pop(context); // Close dialog
                     },
                     style: OutlinedButton.styleFrom(
+                      backgroundColor: cancelButtonColor, // Dynamic cancel button color
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(30), // Rounded button
                       ),
@@ -1009,6 +994,30 @@ class ConfirmationDialog extends StatelessWidget {
                     ),
                   ),
                 ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(context); // Close dialog first
+                      onConfirm(); // Execute confirm action
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: confirmButtonColor, // Dynamic confirm button color
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30), // Rounded button
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    child: Text(
+                      confirmText,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ),
           ],
@@ -1017,6 +1026,7 @@ class ConfirmationDialog extends StatelessWidget {
     );
   }
 }
+
 
 
 

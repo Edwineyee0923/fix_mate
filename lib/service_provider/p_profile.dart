@@ -190,10 +190,15 @@ class _p_profileState extends State<p_profile> {
           message: "You have unsaved changes. Are you sure you want to discard them?",
           confirmText: "Discard",
           cancelText: "Cancel",
+          icon: Icons.warning_amber_rounded,
+          iconColor: Colors.orangeAccent,
+          confirmButtonColor: Colors.red,
+          cancelButtonColor: Colors.grey.shade300,
           onConfirm: () {
             setState(() {
               isEditing = false;
             });
+
             _loadProfileData(); // Reload original values
           },
         );

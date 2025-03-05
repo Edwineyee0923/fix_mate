@@ -161,6 +161,10 @@ class _s_profileState extends State<s_profile> {
           message: "You have unsaved changes. Are you sure you want to discard them?",
           confirmText: "Discard",
           cancelText: "Cancel",
+          icon: Icons.warning_amber_rounded,
+          iconColor: Colors.orangeAccent,
+          confirmButtonColor: Colors.red,
+          cancelButtonColor: Colors.grey.shade300,
           onConfirm: () {
             setState(() {
               isEditing = false;
@@ -191,7 +195,10 @@ class _s_profileState extends State<s_profile> {
       appBar: AppBar(
         backgroundColor: Color(0xFFfb9798),
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new_rounded),
+          icon: Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: Colors.white, // Makes the icon white
+          ),
           onPressed: () {
             if (isEditing) {
               _showDiscardChangesDialog(); // Ask user before discarding changes

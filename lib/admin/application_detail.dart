@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:fix_mate/reusable_widget/reusable_widget.dart';
 import 'package:flutter/services.dart';
+import 'package:fix_mate/services/send_email.dart';
 
 class ApplicationDetailsScreen extends StatefulWidget {
   final Map<String, dynamic> applicationData;
@@ -25,8 +26,10 @@ class _ApplicationDetailsScreenState extends State<ApplicationDetailsScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchApplicationDetails(); // Load the latest data
+    remark = widget.applicationData['remark']; // Initialize from passed data
+    _fetchApplicationDetails(); // Fetch latest data
   }
+
 
   Future<void> _fetchApplicationDetails() async {
     try {
@@ -43,6 +46,7 @@ class _ApplicationDetailsScreenState extends State<ApplicationDetailsScreen> {
     }
   }
   bool isApproved = false;
+  bool isLoading = true;
 
   @override
   Widget build(BuildContext context) {
@@ -86,77 +90,267 @@ class _ApplicationDetailsScreenState extends State<ApplicationDetailsScreen> {
                 ),
               ),
             ),
-            if (isApproved) _buildApprovalRemark(), // Show remark after approval
+            _buildApprovalRemark(), // Show remark after approval
             const SizedBox(height: 20),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildActionButton("Reject", Colors.red, () {}),
-                _buildActionButton("Approve", Colors.orange, () async {
+              children: widget.applicationData['status'] == "Approved" || widget.applicationData['status'] == "Rejected"
+                  ? [] // Hide buttons if approved or rejected
+                  : [
+                _buildActionButton("Reject", Colors.orange, false, () {}),
+                _buildActionButton("Approve", Colors.orange, true, () async {
                   bool confirm = await _showConfirmationDialog(context); // Show confirmation
                   if (confirm) {
                     await _approveApplication(); // Update Firestore
+                    setState(() {}); // Refresh UI to hide buttons
                   }
                 }),
               ],
             ),
+            const SizedBox(height: 10),
           ],
         ),
       ),
     );
   }
 
+  // Future<void> _approveApplication() async {
+  //   try {
+  //     String approvalRemark = "This registration application has been successfully approved.";
+  //     String additionalRemark = "The applicant meets all requirements, and the provided information is valid.";
+  //     String combinedRemark = "$approvalRemark\n\n$additionalRemark";
+  //
+  //     await FirebaseFirestore.instance.collection('service_providers').doc(widget.docId).update({
+  //       'status': 'Approved', // Change status
+  //       'remark': combinedRemark, // Store combined remark
+  //     });
+  //
+  //     setState(() {
+  //       remark = combinedRemark; // Update UI
+  //       isApproved = true;
+  //     });
+  //
+  //
+  //     ReusableSnackBar(
+  //       context,
+  //       "Application Approved!",
+  //       icon: Icons.check_circle,
+  //       iconColor: Colors.green,
+  //     );
+  //     Navigator.pop(context, true); // Go back and refresh the list
+  //   } catch (e) {
+  //     print("Error updating status: $e");
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       const SnackBar(content: Text("Failed to update application status.")),
+  //     );
+  //   }
+  // }
+
+
   Future<void> _approveApplication() async {
+    showDialog(
+      context: context,
+      barrierDismissible: false, // Prevent closing while loading
+      builder: (context) {
+        return const Center(
+          child: CircularProgressIndicator(), // Full-screen loading indicator
+        );
+      },
+    );
+
     try {
+      String approvalRemark = "This registration application has been successfully approved.";
+      String additionalRemark = "The applicant meets all requirements, and the provided information is valid.";
+      String combinedRemark = "$approvalRemark\n\n$additionalRemark";
+
+      // Update Firestore
       await FirebaseFirestore.instance.collection('service_providers').doc(widget.docId).update({
-        'status': 'Approved', // Change status
-        'remark': 'This registration application has been successfully approved.',
+        'status': 'Approved',
+        'remark': combinedRemark,
       });
 
       setState(() {
-        remark = 'This registration application has been successfully approved.'; // Update UI
+        remark = combinedRemark;
         isApproved = true;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Application Approved!")),
+
+      // Send approval email
+      String recipientEmail = widget.applicationData['email']; // Get provider's email
+      String subject = "FixMate - Application Approved!";
+      String emailBody =
+          "Dear ${widget.applicationData['name']},\n\n"
+          "Congratulations! Your registration application has been approved. "
+          "You can now access the FixMate platform as a verified service provider.\n\n"
+          "Best regards,\nFixMate Team";
+
+      bool emailSent = await EmailService.sendEmail(recipientEmail, subject, emailBody);
+
+      if (emailSent) {
+        print("✅ Approval email sent successfully.");
+      } else {
+        print("❌ Failed to send approval email.");
+      }
+
+      ReusableSnackBar(
+        context,
+        "Application Approved! Email notification sent.",
+        icon: Icons.check_circle,
+        iconColor: Colors.green,
       );
 
+      // Add a slight delay before navigating back
+      await Future.delayed(Duration(milliseconds: 200));
+
+      Navigator.pop(context); // Close the loading screen
       Navigator.pop(context, true); // Go back and refresh the list
+
     } catch (e) {
-      print("Error updating status: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Failed to update application status.")),
+      print("Error updating status or sending email: $e");
+      ReusableSnackBar(
+          context,
+          "Failed to update status or send notification.",
+          icon: Icons.error,
+          iconColor: Colors.red // Red icon for error
       );
+    } finally {
+      setState(() {
+        isLoading = false; // Stop loading
+      });
     }
   }
 
+
+
+
+  // Future<bool> _showConfirmationDialog(BuildContext context) async {
+  //   return await showDialog(
+  //     context: context,
+  //     builder: (context) {
+  //       return AlertDialog(
+  //         title: const Text("Confirm Approval"),
+  //         content: const Text("Are you sure you want to approve this application?"),
+  //         actions: [
+  //           TextButton(
+  //             onPressed: () => Navigator.pop(context, false),
+  //             child: const Text("Cancel"),
+  //           ),
+  //           TextButton(
+  //             onPressed: () => Navigator.pop(context, true),
+  //             child: const Text("Approve"),
+  //           ),
+  //         ],
+  //       );
+  //     },
+  //   ) ??
+  //       false;
+  // }
 
   Future<bool> _showConfirmationDialog(BuildContext context) async {
     return await showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: const Text("Confirm Approval"),
-          content: const Text("Are you sure you want to approve this application?"),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text("Cancel"),
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20), // Rounded corners
+          ),
+          elevation: 10, // Subtle shadow
+          backgroundColor: Colors.white, // Background color
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.how_to_reg, // Approval icon
+                  color: Colors.green,
+                  size: 60,
+                ),
+                const SizedBox(height: 15),
+                const Text(
+                  "Confirm Approval",
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  "Are you sure you want to approve this application?",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.black54,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () {
+                          Navigator.pop(context, false); // Return false if canceled
+                        },
+                        style: OutlinedButton.styleFrom(
+                          backgroundColor: Colors.grey.shade300, // Light grey button
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30), // Rounded button
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          side: const BorderSide(color: Colors.grey), // Outlined border
+                        ),
+                        child: const Text(
+                          "Cancel",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.pop(context, true); // Return true if confirmed
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green, // Green approve button
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30), // Rounded button
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        child: const Text(
+                          "Approve",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text("Approve"),
-            ),
-          ],
+          ),
         );
       },
-    ) ??
-        false;
+    ) ?? false; // Default to false if dismissed
   }
 
-
   Widget _buildApprovalRemark() {
-    if (remark == null || remark!.isEmpty) return const SizedBox(); // Hide if no remark
+    String? displayRemark = remark ?? widget.applicationData['remark'];
+    if (displayRemark == null || displayRemark.isEmpty) return const SizedBox();
+
+    // Splitting remark into two parts
+    List<String> remarkParts = displayRemark.split("\n\n");
+    String firstPart = remarkParts.isNotEmpty ? remarkParts[0] : "";
+    String secondPart = remarkParts.length > 1 ? remarkParts[1] : "";
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 16),
@@ -170,18 +364,24 @@ class _ApplicationDetailsScreenState extends State<ApplicationDetailsScreen> {
             children: [
               const Text("Remark:", style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 4),
+
+              // First part with italic teal style
               Text(
-                remark!,
+                firstPart,
                 style: const TextStyle(fontStyle: FontStyle.italic, color: Colors.teal),
               ),
+
               const SizedBox(height: 8),
-              const Text("The applicant meets all requirements, and the provided information is valid."),
+
+              // Second part with normal style
+              Text(secondPart),
             ],
           ),
         ),
       ),
     );
   }
+
 
 
   /// **Table layout for better alignment**
@@ -352,17 +552,28 @@ class _ApplicationDetailsScreenState extends State<ApplicationDetailsScreen> {
 
 
   /// **For the Approve & Reject buttons**
-  Widget _buildActionButton(String text, Color color, VoidCallback onPressed) {
-    return ElevatedButton(
-      onPressed: onPressed,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: color,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
+  Widget _buildActionButton(String text, Color color, bool isFilled, VoidCallback onPressed) {
+    return SizedBox(
+      width: 150, // Ensures both buttons have the same width
+      child: TextButton(
+        onPressed: onPressed,
+        style: TextButton.styleFrom(
+          backgroundColor: isFilled ? color : Colors.transparent,
+          side: BorderSide(color: color, width: 2), // Border for outlined button
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(50), // More rounded corners
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 14), // Keep vertical padding consistent
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        child: Text(
+          text,
+          style: TextStyle(
+            fontSize: 20,
+            color: isFilled ? Colors.white : color, // Text color based on fill type
+            fontWeight: FontWeight.w600, // Slightly bold text
+          ),
+        ),
       ),
-      child: Text(text, style: const TextStyle(color: Colors.white)),
     );
   }
 }

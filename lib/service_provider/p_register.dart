@@ -249,7 +249,10 @@ class _p_registerState extends State<p_register> {
       appBar: AppBar(
         backgroundColor: Color(0xFF464E65),
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new_rounded),
+          icon: Icon(
+              Icons.arrow_back_ios_new_rounded,
+              color: Colors.white,
+          ),
           onPressed: () {
             navigateNextPage(context); // Navigates back when pressed
           },
@@ -259,6 +262,7 @@ class _p_registerState extends State<p_register> {
           style: TextStyle(
             fontSize: 22,
             fontWeight: FontWeight.bold,
+            color: Colors.white,
           ),
         ),
         titleSpacing: 2, // Aligns title closer to the leading icon (left-aligned)

@@ -195,7 +195,7 @@ class _login_pageState extends State<login_page> {
                         String status = providerDoc['status']; // e.g., "approved", "pending", etc.
 
                         if (role == "Service Provider") {
-                          if (status == "approved") {
+                          if (status == "Approved") {
                             // Navigate to Service Provider dashboard if approved
                             Navigator.push(
                               context,

@@ -42,16 +42,21 @@ class _SP_applicationState extends State<SP_application> {
           status: data['status'] ?? "Pending",
           imageUrl: data['profilePic'] ?? "", // Default image if null
           appliedAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-          onReview: () {
-            Navigator.push(
+          onReview: () async {
+            final result = await Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (context) => ApplicationDetailsScreen(
-                    applicationData: data,
-                    docId: doc.id,
+                  applicationData: data,
+                  docId: doc.id,
                 ),
               ),
             );
+
+            // Check if the application was updated
+            if (result == true) {
+              _loadApplications(); // Refresh applications
+            }
           },
         );
       }).toList();
