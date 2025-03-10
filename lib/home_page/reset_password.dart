@@ -1,4 +1,4 @@
-import 'package:fix_mate/home_page/home_page.dart';
+import 'package:fix_mate/home_page/HomePage.dart';
 import 'package:flutter/material.dart';
 import 'package:fix_mate/reusable_widget/reusable_widget.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -99,7 +99,7 @@ class _reset_passwordState extends State<reset_password> {
                             onPressed: () {
                               Navigator.pushReplacement(
                                 context,
-                                MaterialPageRoute(builder: (context) => home_page()),
+                                MaterialPageRoute(builder: (context) => HomePage()),
                               );
                             },
                           );

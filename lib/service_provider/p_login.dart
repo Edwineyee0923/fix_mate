@@ -1,4 +1,4 @@
-import 'package:fix_mate/home_page/home_page.dart';
+import 'package:fix_mate/home_page/HomePage.dart';
 import 'package:fix_mate/home_page/reset_password.dart';
 import 'package:fix_mate/service_provider/p_profile.dart';
 import 'package:fix_mate/service_provider/p_register.dart';
@@ -107,7 +107,7 @@ Row signUpOption(BuildContext context) {
         onTap: () {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => home_page()),
+            MaterialPageRoute(builder: (context) => HomePage()),
           );
         },
         child: const Text(

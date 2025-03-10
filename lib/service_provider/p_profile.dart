@@ -5,7 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fix_mate/reusable_widget/reusable_widget.dart';
 import 'package:fix_mate/services/upload_service.dart';
-import 'package:fix_mate/home_page/home_page.dart';
+import 'package:fix_mate/home_page/HomePage.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/services.dart';
@@ -134,6 +134,7 @@ class _p_profileState extends State<p_profile> {
           'selectedStates': selectedStates,
           'selectedExpertiseFields' : selectedExpertiseFields,
           'address' : addressController.text.trim(),
+          'updatedAt': FieldValue.serverTimestamp(), // Store update timestamp
         });
 
         setState(() => isEditing = false);
@@ -220,14 +221,14 @@ class _p_profileState extends State<p_profile> {
       appBar: AppBar(
         backgroundColor: Color(0xFF464E65),
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new_rounded),
+          icon: Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
           onPressed: () {
             if (isEditing) {
               _showDiscardChangesDialog(); // Ask user before discarding changes
             } else {
               Navigator.pushReplacement(
                 context,
-                MaterialPageRoute(builder: (context) => home_page()),
+                MaterialPageRoute(builder: (context) => HomePage()),
               );
             }
           },

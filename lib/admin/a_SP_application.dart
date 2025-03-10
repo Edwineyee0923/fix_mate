@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
-import 'package:fix_mate/admin/application_detail.dart';
+import 'package:fix_mate/admin/a_application_detail.dart';
 
 class SP_application extends StatefulWidget {
   static String routeName = "/admin/SP_application";
@@ -82,7 +82,7 @@ class _SP_applicationState extends State<SP_application> {
     int totalApplications = allApplications.length;
     int reviewedApplications =
         allApplications.where((app) => app.status == "Rejected" || app.status == "Approved").length;
-    int notReviewedApplications = allApplications.where((app) => app.status == "Pending").length;
+    int notReviewedApplications = allApplications.where((app) => app.status == "Pending" ).length;
 
 
     return AdminLayout(

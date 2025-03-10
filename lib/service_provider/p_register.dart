@@ -1,5 +1,5 @@
 import 'dart:io';
-import 'package:fix_mate/home_page/home_page.dart';
+import 'package:fix_mate/home_page/HomePage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:fix_mate/services/upload_service.dart';
@@ -101,7 +101,7 @@ class _p_registerState extends State<p_register> {
 
   void navigateNextPage(BuildContext ctx) {
     Navigator.of(ctx).push(MaterialPageRoute(builder: (_) {
-      return home_page();
+      return HomePage();
     }));
   }
 
@@ -201,6 +201,7 @@ class _p_registerState extends State<p_register> {
         'address': addressController.text.trim(),
         'selectedExpertiseFields': selectedExpertiseFields,
         'status': "Pending", // Set status as pending
+        'resubmissionCount': 0, // Initialize resubmission count
       });
 
       // ✅ Send Email Notification

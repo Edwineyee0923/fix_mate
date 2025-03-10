@@ -3,16 +3,17 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
-class U_inquiries extends StatefulWidget {
-  static String routeName = "/admin/U_inquiries";
 
-  const U_inquiries({Key? key}) : super(key: key);
+class contact_developer extends StatefulWidget {
+  static String routeName = "/admin/contact_developer";
+
+  const contact_developer({Key? key}) : super(key: key);
 
   @override
-  _U_inquiriesState createState() => _U_inquiriesState();
+  _contact_developerState createState() => _contact_developerState();
 }
 
-class _U_inquiriesState extends State<U_inquiries> {
+class _contact_developerState extends State<contact_developer> {
   // Launch WhatsApp using the URL scheme
   void _launchWhatsApp() async {
     final whatsappUrl = "https://wa.me/60186231106";
@@ -43,7 +44,7 @@ class _U_inquiriesState extends State<U_inquiries> {
   @override
   Widget build(BuildContext context) {
     return AdminLayout(
-      selectedIndex: 1,
+      selectedIndex: 2,
       child: Scaffold(
       backgroundColor: Color(0xFFFFF8F2),
       appBar: AppBar(
@@ -54,12 +55,14 @@ class _U_inquiriesState extends State<U_inquiries> {
         //     Navigator.pop(context);
         //   },
         // ),
+        // centerTitle: true,
         title: Text(
-          "Contact Users",
+          "Contact Developers",
           style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white,),
         ),
         titleSpacing: 20,
       ),
+
       body: SingleChildScrollView(
         child: Center(
           child: Padding(
@@ -114,7 +117,7 @@ class _U_inquiriesState extends State<U_inquiries> {
                             icon: FaIcon(FontAwesomeIcons.whatsapp, color: Colors.white),
                             label: Text(
                               "Contact via WhatsApp",
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                              style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold),
                             ),
                             style: ElevatedButton.styleFrom(
                               primary: Colors.green,
@@ -131,7 +134,7 @@ class _U_inquiriesState extends State<U_inquiries> {
                             icon: Icon(Icons.email, color: Colors.white),
                             label: Text(
                               "Contact via Email",
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                              style: TextStyle(fontSize: 16, color:Colors.white, fontWeight: FontWeight.bold),
                             ),
                             style: ElevatedButton.styleFrom(
                               primary: Color(0xFFFF9342),

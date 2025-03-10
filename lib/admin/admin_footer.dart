@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:fix_mate/admin/SP_application.dart';
-import 'package:fix_mate/admin/U_inquiries.dart';
-import 'package:fix_mate/admin/contact_developer.dart';
+import 'package:fix_mate/admin/a_SP_application.dart';
+import 'package:fix_mate/admin/a_U_inquiries.dart';
+import 'package:fix_mate/admin/a_contact_developer.dart';
 
 class admin_footer extends StatelessWidget {
   final int selectedIndex;

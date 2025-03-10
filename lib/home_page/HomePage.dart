@@ -53,15 +53,15 @@ User of FixMate''')}'
 }
 
 
-class home_page extends StatefulWidget {
+class HomePage extends StatefulWidget {
 
-  const home_page({Key? key}) : super(key: key);
+  const HomePage({Key? key}) : super(key: key);
 
-  _home_pageState createState() => _home_pageState();
+  _HomePageState createState() => _HomePageState();
 
 }
 
-class _home_pageState extends State<home_page> {
+class _HomePageState extends State<HomePage> {
   void navigateNextPage(BuildContext ctx) {
     Navigator.of(ctx).push(MaterialPageRoute(builder: (_) {
       return login_page();
@@ -243,7 +243,7 @@ Row signUpOption(BuildContext context) { // ✅ Accept context as a parameter
         onTap: () {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => home_page()),
+            MaterialPageRoute(builder: (context) => HomePage()),
           );
         },
         child: const Text(

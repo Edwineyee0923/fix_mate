@@ -1,9 +1,10 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:fix_mate/admin/SP_application.dart';
+import 'package:fix_mate/admin/a_SP_application.dart';
+import 'package:fix_mate/admin/a_U_inquiries.dart';
 import 'package:fix_mate/admin/admin_footer.dart';
-import 'package:fix_mate/admin/contact_developer.dart';
-import 'package:fix_mate/home_page/home_page.dart';
+import 'package:fix_mate/admin/a_contact_developer.dart';
+import 'package:fix_mate/home_page/HomePage.dart';
 import 'package:fix_mate/home_page/login_page.dart';
 import 'package:fix_mate/home_page/register_option.dart';
 import 'package:fix_mate/service_provider/p_profile.dart';
@@ -17,7 +18,7 @@ import 'package:fix_mate/home_page/reset_password.dart';
 import 'package:fix_mate/home_page/login_option.dart';
 import 'package:fix_mate/service_seeker/s_register.dart';
 import 'package:fix_mate/routes.dart';
-import 'package:fix_mate/admin/application_detail.dart';
+import 'package:fix_mate/admin/a_application_detail.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();

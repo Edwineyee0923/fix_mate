@@ -1,4 +1,6 @@
-import 'package:fix_mate/home_page/home_page.dart';
+import 'package:fix_mate/admin/a_SP_application.dart';
+import 'package:fix_mate/home_page/HomePage.dart';
+import 'package:fix_mate/service_provider/p_ResubmitApplication.dart';
 import 'package:fix_mate/service_provider/p_login.dart';
 import 'package:fix_mate/service_seeker/s_login.dart';
 import 'package:flutter/material.dart';
@@ -41,7 +43,7 @@ class _login_pageState extends State<login_page> {
         Future.delayed(Duration.zero, () {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => p_login()),
+            MaterialPageRoute(builder: (context) => SP_application()),
           );
         });
       }
@@ -170,6 +172,93 @@ class _login_pageState extends State<login_page> {
                     }
                   }),
 
+                  // dk_button(context, "Login As Service Provider", () async {
+                  //   // Basic validation of email and password
+                  //   if (_emailTextController.text.isEmpty || _passwordTextController.text.isEmpty) {
+                  //     showValidationMessage(context, 'Please fill in both email and password.');
+                  //     return;
+                  //   }
+                  //
+                  //   try {
+                  //     UserCredential userCredential = await FirebaseAuth.instance
+                  //         .signInWithEmailAndPassword(
+                  //       email: _emailTextController.text,
+                  //       password: _passwordTextController.text,
+                  //     );
+                  //
+                  //     // Try to retrieve the document from the service_providers collection
+                  //     DocumentSnapshot providerDoc = await FirebaseFirestore.instance
+                  //         .collection('service_providers')
+                  //         .doc(userCredential.user!.uid)
+                  //         .get();
+                  //
+                  //     if (providerDoc.exists) {
+                  //       String role = providerDoc['role']; // Expected to be "Service Provider"
+                  //       String status = providerDoc['status']; // e.g., "approved", "pending", etc.
+                  //
+                  //       if (role == "Service Provider") {
+                  //         if (status == "Approved") {
+                  //           // Navigate to Service Provider dashboard if approved
+                  //           Navigator.push(
+                  //             context,
+                  //             MaterialPageRoute(builder: (context) => p_login()),
+                  //           );
+                  //         } else {
+                  //           // Account exists but is not approved
+                  //           showValidationMessage(
+                  //             context,
+                  //             'Your account is not approved yet. Please wait for approval.',
+                  //           );
+                  //         }
+                  //       } else {
+                  //         showValidationMessage(
+                  //           context,
+                  //           'This account is not registered as a Service Provider.',
+                  //         );
+                  //       }
+                  //     } else {
+                  //       // If not found in service_providers, check the service_seekers collection
+                  //       DocumentSnapshot seekerDoc = await FirebaseFirestore.instance
+                  //           .collection('service_seekers')
+                  //           .doc(userCredential.user!.uid)
+                  //           .get();
+                  //
+                  //       if (seekerDoc.exists) {
+                  //         // The account exists in the seekers collection
+                  //         showValidationMessage(
+                  //           context,
+                  //           'This account is registered as a Service Seeker. Please use the Service Seeker login.',
+                  //         );
+                  //       } else {
+                  //         // Account not found in either collection
+                  //         showValidationMessage(
+                  //           context,
+                  //           'This account is not registered as a Service Provider. Please use the Service Provider login.',
+                  //         );
+                  //       }
+                  //     }
+                  //   } catch (error) {
+                  //     print("Error: ${error.toString()}");
+                  //     if (error is FirebaseAuthException) {
+                  //       if (error.code == 'user-not-found') {
+                  //         showValidationMessage(
+                  //           context,
+                  //           'Email not found. If you don\'t have an account, please register.',
+                  //         );
+                  //       } else if (error.code == 'wrong-password') {
+                  //         showValidationMessage(
+                  //           context,
+                  //           'The password is incorrect. Please try again.',
+                  //         );
+                  //       } else {
+                  //         showValidationMessage(
+                  //           context,
+                  //           'Sign-in failed. Please check your email and password. If you don’t have an account, click Sign Up.',
+                  //         );
+                  //       }
+                  //     }
+                  //   }
+                  // }),
                   dk_button(context, "Login As Service Provider", () async {
                     // Basic validation of email and password
                     if (_emailTextController.text.isEmpty || _passwordTextController.text.isEmpty) {
@@ -184,25 +273,55 @@ class _login_pageState extends State<login_page> {
                         password: _passwordTextController.text,
                       );
 
-                      // Try to retrieve the document from the service_providers collection
+                      // Retrieve service provider details
                       DocumentSnapshot providerDoc = await FirebaseFirestore.instance
                           .collection('service_providers')
                           .doc(userCredential.user!.uid)
                           .get();
 
                       if (providerDoc.exists) {
-                        String role = providerDoc['role']; // Expected to be "Service Provider"
-                        String status = providerDoc['status']; // e.g., "approved", "pending", etc.
+                        String role = providerDoc['role'];
+                        String status = providerDoc['status'];
+                        int resubmissionCount = providerDoc['resubmissionCount'] ?? 0;
 
                         if (role == "Service Provider") {
                           if (status == "Approved") {
-                            // Navigate to Service Provider dashboard if approved
+                            // Navigate to Service Provider dashboard
                             Navigator.push(
                               context,
                               MaterialPageRoute(builder: (context) => p_login()),
                             );
+                          } else if (status == "Rejected") {
+                            if (resubmissionCount < 3) {
+                              // Show confirmation dialog for resubmission
+                              showDialog(
+                                context: context,
+                                builder: (context) => ConfirmationDialog(
+                                  title: "Resubmit Application?",
+                                  message:
+                                  "Your application was rejected. Do you want to resubmit it based on the reason stated in your email? (Attempts left: ${3 - resubmissionCount})",
+                                  confirmText: "Resubmit",
+                                  cancelText: "Cancel",
+                                  icon: Icons.warning_amber_rounded,
+                                  iconColor: Color(0xFFFF9342),
+                                  confirmButtonColor: Color(0xFFFF9342),
+                                  cancelButtonColor: Colors.grey.shade300,
+                                  onConfirm: () {
+                                    Navigator.pop(context); // Close dialog
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(builder: (context) => p_ResubmitApplication()),
+                                    );
+                                  },
+                                ),
+                              );
+                            } else {
+                              showValidationMessage(
+                                context,
+                                "You have reached the maximum resubmission attempts (3). Please back to the homepage and contact the customer service.",
+                              );
+                            }
                           } else {
-                            // Account exists but is not approved
                             showValidationMessage(
                               context,
                               'Your account is not approved yet. Please wait for approval.',
@@ -215,23 +334,21 @@ class _login_pageState extends State<login_page> {
                           );
                         }
                       } else {
-                        // If not found in service_providers, check the service_seekers collection
+                        // Check if user is a service seeker
                         DocumentSnapshot seekerDoc = await FirebaseFirestore.instance
                             .collection('service_seekers')
                             .doc(userCredential.user!.uid)
                             .get();
 
                         if (seekerDoc.exists) {
-                          // The account exists in the seekers collection
                           showValidationMessage(
                             context,
                             'This account is registered as a Service Seeker. Please use the Service Seeker login.',
                           );
                         } else {
-                          // Account not found in either collection
                           showValidationMessage(
                             context,
-                            'This account is not registered as a Service Provider. Please use the Service Provider login.',
+                            'This account is not registered as a Service Provider.',
                           );
                         }
                       }
@@ -257,6 +374,7 @@ class _login_pageState extends State<login_page> {
                       }
                     }
                   }),
+
                   signUpOption(context),
                     SizedBox(height: 20), // Extra spacing to prevent bottom cut-off
                   ],
@@ -283,7 +401,7 @@ Row signUpOption(BuildContext context) {
         onTap: () {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => home_page()),
+            MaterialPageRoute(builder: (context) => HomePage()),
           );
         },
         child: const Text(

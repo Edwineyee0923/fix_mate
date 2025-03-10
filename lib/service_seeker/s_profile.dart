@@ -5,7 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fix_mate/reusable_widget/reusable_widget.dart';
 import 'package:fix_mate/services/upload_service.dart';
-import 'package:fix_mate/home_page/home_page.dart';
+import 'package:fix_mate/home_page/HomePage.dart';
 import 'package:intl/intl.dart';
 
 class s_profile extends StatefulWidget {
@@ -113,6 +113,7 @@ class _s_profileState extends State<s_profile> {
           'dob': dobController.text.trim(),
           'gender': selectedGender,
           'profilePic': _imageUrl ?? '',
+          'updatedAt': FieldValue.serverTimestamp(), // Store update timestamp
         });
 
         setState(() => isEditing = false);
@@ -184,7 +185,7 @@ class _s_profileState extends State<s_profile> {
 
   void navigateNextPage(BuildContext ctx) {
     Navigator.of(ctx).push(MaterialPageRoute(builder: (_) {
-      return home_page();
+      return HomePage();
     }));
   }
 
@@ -205,7 +206,7 @@ class _s_profileState extends State<s_profile> {
             } else {
               Navigator.pushReplacement(
                 context,
-                MaterialPageRoute(builder: (context) => home_page()),
+                MaterialPageRoute(builder: (context) => HomePage()),
               );
             }
           },

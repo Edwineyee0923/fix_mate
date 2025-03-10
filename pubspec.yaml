@@ -73,6 +73,8 @@ flutter:
     - lib/assets/images/sp_login.png
     - lib/assets/images/reset_password.png
     - lib/assets/images/LoginImage.png
+    - lib/assets/images/email_profile.png
+    - lib/assets/images/email_bottom.png
 
 
 
