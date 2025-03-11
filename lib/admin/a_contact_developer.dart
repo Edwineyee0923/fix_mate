@@ -60,7 +60,8 @@ class _contact_developerState extends State<contact_developer> {
           "Contact Developers",
           style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white,),
         ),
-        titleSpacing: 20,
+        titleSpacing: 25,
+        automaticallyImplyLeading: false,
       ),
 
       body: SingleChildScrollView(

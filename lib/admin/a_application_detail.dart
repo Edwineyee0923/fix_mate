@@ -21,7 +21,8 @@ class ApplicationDetailsScreen extends StatefulWidget {
 
 class _ApplicationDetailsScreenState extends State<ApplicationDetailsScreen> {
 
-  String? remark; // Store the remark
+  String? approvalRemark; // Store the approval remark
+  String? rejectionRemark; // Store the rejection remark
   String? rejectionReason;
   List<Map<String, dynamic>>? rejectionHistory = []; // Store rejection history as a list
 
@@ -29,7 +30,8 @@ class _ApplicationDetailsScreenState extends State<ApplicationDetailsScreen> {
   @override
   void initState() {
     super.initState();
-    remark = widget.applicationData['remark']; // Initialize from passed data
+    approvalRemark = widget.applicationData['approvalRemark']; // Initialize from passed data
+    rejectionRemark = widget.applicationData['rejectionRemark'];
     rejectionReason = widget.applicationData['rejectionReason'];
     var historyData = widget.applicationData['rejectionHistory'];
     if (historyData is List) {
@@ -49,7 +51,8 @@ class _ApplicationDetailsScreenState extends State<ApplicationDetailsScreen> {
           .get();
 
       setState(() {
-        remark = doc['remark']; // Get the remark
+        approvalRemark = doc['approvalRemark']; // Get the approval remark
+        rejectionRemark = doc['rejectionRemark']; // Get the rejection remark
         rejectionReason = doc['rejectionReason'] ?? ''; // Get the rejection reason separately
         rejectionHistory = List<Map<String, dynamic>>.from(doc['rejectionHistory'] ?? []);
       });
@@ -383,13 +386,13 @@ class _ApplicationDetailsScreenState extends State<ApplicationDetailsScreen> {
       // Update Firestore with new rejection details
       await FirebaseFirestore.instance.collection('service_providers').doc(widget.docId).update({
         'status': 'Rejected',
-        'remark': rejectionMessage,
+        'rejectionRemark': rejectionMessage,
         'rejectionHistory': rejectionHistory, // Store updated history
         'rejectedAt': FieldValue.serverTimestamp(),
       });
 
       setState(() {
-        remark = rejectionMessage;
+        rejectionRemark = rejectionMessage;
       });
 
       // Send rejection email
@@ -403,7 +406,9 @@ We regret to inform you that your application has been rejected.
 **Reason:**
 $rejectionReason
 
-For further inquiries, please contact us through this email.
+If your are still interested in applying as service provider in FixMate, kindly resubmit your application by login to our FixMate with your applied email and password if your still have remaining resubmission attempts.
+
+If still have any inquiry, please contact us through this email.
 
 Best regards,  
 FixMate Team
@@ -463,12 +468,12 @@ FixMate Team
       // Update Firestore
       await FirebaseFirestore.instance.collection('service_providers').doc(widget.docId).update({
         'status': 'Approved',
-        'remark': combinedRemark,
+        'approvalRemark': combinedRemark,
         'approvedAt': FieldValue.serverTimestamp(),
       });
 
       setState(() {
-        remark = combinedRemark;
+        approvalRemark = combinedRemark;
         isApproved = true;
       });
 
@@ -1099,144 +1104,147 @@ FixMate Team
   }*/
 
   Widget _buildRemarkCard() {
-    // Fetch values from Firebase
     List<dynamic> rejectionHistory = widget.applicationData['rejectionHistory'] ?? [];
-    String? remark = widget.applicationData['remark'];
+    String? rejectionRemark = widget.applicationData['rejectionRemark'];
+    String? approvalRemark = widget.applicationData['approvalRemark'];
     Timestamp? rejectedAt = widget.applicationData['rejectedAt'];
     Timestamp? approvedAt = widget.applicationData['approvedAt'];
     String status = widget.applicationData['status'] ?? '';
 
-    bool hasRemark = remark != null && remark.isNotEmpty;
+    bool hasRejectionRemark = rejectionRemark != null && rejectionRemark.isNotEmpty;
+    bool hasApprovalRemark = approvalRemark != null && approvalRemark.isNotEmpty;
     bool hasRejectionHistory = rejectionHistory.isNotEmpty;
 
-    // If no remarks or history exist, return an empty widget
-    if (!hasRemark && !hasRejectionHistory) {
+    // Return empty widget if there are no remarks at all
+    if (!hasRejectionRemark && !hasRejectionHistory && !hasApprovalRemark) {
       return const SizedBox();
     }
 
     // Function to format timestamps
     String formatTimestamp(Timestamp? timestamp) {
       if (timestamp == null) return "N/A";
-      DateTime dateTime = timestamp.toDate().toLocal();
+      DateTime dateTime = timestamp.toDate().add(const Duration(hours: 8));
       List<String> monthNames = ["Jan", "Feb", "Mac", "Apr", "Mei", "Jun", "Jul", "Ogo", "Sep", "Okt", "Nov", "Dis"];
       return "${dateTime.day.toString().padLeft(2, '0')} ${monthNames[dateTime.month - 1]} ${dateTime.year}, "
           "${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}";
     }
 
+    List<Widget> remarkWidgets = [];
+
+    // 🔴 REJECTION UI (Always show if there’s rejection history or remark)
     if (status == "Rejected" || hasRejectionHistory) {
-      // 🔴 **REJECTION UI**
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        child: Card(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: const BorderSide(color: Colors.red, width: 1.5),
-          ),
-          color: Colors.red.shade50,
-          elevation: 3,
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (hasRemark) ...[
-                  Text("Rejection Remark:", style: const TextStyle(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 4),
-                  Text(remark!, style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontStyle: FontStyle.italic)),
-                  const SizedBox(height: 4),
-                ],
-
-                // 🔥 **Rejection History**
-                if (hasRejectionHistory) ...[
-                  const SizedBox(height: 16),
-                  const Text("Rejection History:", style: TextStyle(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-                  ...rejectionHistory.asMap().entries.map((entry) {
-                    int index = entry.key + 1;
-                    var rejection = entry.value;
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text("Rejection $index Reason:", style: const TextStyle(fontWeight: FontWeight.bold)),
-                          const SizedBox(height: 4),
-                          Text(
-                            rejection is Map<String, dynamic>
-                                ? (rejection['reason'] ?? "No reason provided")
-                                : "No reason provided",
-                            style: const TextStyle(fontWeight: FontWeight.w500),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            "Rejected At: ${formatTimestamp(rejection['rejectedAt'])}",
-                            style: const TextStyle(fontSize: 12, color: Colors.black54, fontStyle: FontStyle.italic),
-                          ),
-                          if (index < rejectionHistory.length) const Divider(color: Colors.black26, thickness: 1),
-                        ],
-                      ),
-                    );
-                  }).toList(),
-                ],
-              ],
+      remarkWidgets.add(
+        Padding(
+          padding: const EdgeInsets.only(top: 12, bottom: 8),
+          child: Card(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: const BorderSide(color: Colors.red, width: 1.5),
             ),
-          ),
-        ),
-      );
-    } else if (status == "Approved") {
-      // 🟢 **APPROVAL UI**
-      // Splitting the remark into two parts (if necessary)
-      List<String> remarkParts = remark!.split("\n\n");
-      String firstPart = remarkParts.isNotEmpty ? remarkParts.first : remark!;
-      String secondPart = remarkParts.length > 1 ? remarkParts.sublist(1).join('. ') : '';
-
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        child: Card(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: const BorderSide(color: Colors.teal, width: 1.5),
-          ),
-          color: Colors.teal.shade50,
-          elevation: 3,
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text("Approval Remark:", style: const TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 4),
-
-                // 🔥 Italic & Bold first part
-                Text(
-                  firstPart,
-                  style: const TextStyle(
-                    fontStyle: FontStyle.italic,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.teal,
-                  ),
-                ),
-
-                if (secondPart.isNotEmpty) const SizedBox(height: 8),
-                if (secondPart.isNotEmpty)
-                  Text(
-                    secondPart,
-                  ),
-
-                const SizedBox(height: 8),
-                Text(
-                  "Approved At: ${formatTimestamp(approvedAt)}",
-                  style: const TextStyle(fontSize: 12, color: Colors.black54, fontStyle: FontStyle.italic),
-                ),
-              ],
+            color: Colors.red.shade50,
+            elevation: 3,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (hasRejectionRemark) ...[
+                    Text("Rejection Remark:", style: const TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 4),
+                    Text(rejectionRemark!, style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontStyle: FontStyle.italic)),
+                    const SizedBox(height: 4),
+                  ],
+                  if (hasRejectionHistory) ...[
+                    const SizedBox(height: 16),
+                    const Text("Rejection History:", style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    ...rejectionHistory.asMap().entries.map((entry) {
+                      int index = entry.key + 1;
+                      var rejection = entry.value;
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text("Rejection $index Reason:", style: const TextStyle(fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 4),
+                            Text(
+                              rejection is Map<String, dynamic>
+                                  ? (rejection['reason'] ?? "No reason provided")
+                                  : "No reason provided",
+                              style: const TextStyle(fontWeight: FontWeight.w500),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              "Rejected At: ${formatTimestamp(rejection['rejectedAt'])}",
+                              style: const TextStyle(fontSize: 12, color: Colors.black54, fontStyle: FontStyle.italic),
+                            ),
+                            if (index < rejectionHistory.length) const Divider(color: Colors.black26, thickness: 1),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ],
+                ],
+              ),
             ),
           ),
         ),
       );
     }
 
-    return const SizedBox();
+    // 🟢 APPROVAL UI (Always show if status is "Approved")
+    if (status == "Approved" && hasApprovalRemark) {
+      List<String> remarkParts = (approvalRemark ?? "").split("\n\n");
+      String firstPart = remarkParts.isNotEmpty ? remarkParts.first : approvalRemark!;
+      String secondPart = remarkParts.length > 1 ? remarkParts.sublist(1).join('. ') : '';
+
+      remarkWidgets.add(
+        Padding(
+          padding: const EdgeInsets.only(top: 8, bottom: 8),
+          child: Card(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: const BorderSide(color: Colors.teal, width: 1.5),
+            ),
+            color: Colors.teal.shade50,
+            elevation: 3,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text("Approval Remark:", style: const TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 4),
+                  Text(
+                    firstPart,
+                    style: const TextStyle(
+                      fontStyle: FontStyle.italic,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.teal,
+                    ),
+                  ),
+                  if (secondPart.isNotEmpty) const SizedBox(height: 8),
+                  if (secondPart.isNotEmpty)
+                    Text(
+                      secondPart,
+                    ),
+                  const SizedBox(height: 8),
+                  Text(
+                    "Approved At: ${formatTimestamp(approvedAt)}",
+                    style: const TextStyle(fontSize: 12, color: Colors.black54, fontStyle: FontStyle.italic),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Column(children: remarkWidgets);
   }
+
 
 
 

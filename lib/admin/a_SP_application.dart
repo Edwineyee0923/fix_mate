@@ -95,7 +95,8 @@ class _SP_applicationState extends State<SP_application> {
             "Manage Application",
             style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white,),
           ),
-          titleSpacing: 20,
+          titleSpacing: 25,
+          automaticallyImplyLeading: false,
         ),
         body: Padding(
           padding: const EdgeInsets.all(20.0),
@@ -528,6 +529,48 @@ class ApplicationCard extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             Row(
+              // children: [
+              //   CircleAvatar(
+              //     radius: 25,
+              //     backgroundImage: imageUrl.isNotEmpty
+              //         ? NetworkImage(imageUrl)
+              //         : AssetImage("assets/default_profile.png") as ImageProvider,
+              //   ),
+              //   const SizedBox(width: 10),
+              //   Column(
+              //     crossAxisAlignment: CrossAxisAlignment.start,
+              //     children: [
+              //       Text(
+              //         name,
+              //         style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              //       ),
+              //       Row(
+              //         children: [
+              //           const Icon(Icons.location_on, size: 14, color: Colors.grey),
+              //           Text(
+              //             location,
+              //             style: const TextStyle(fontSize: 14, color: Colors.grey),
+              //           ),
+              //         ],
+              //       ),
+              //       Row(
+              //         children: [
+              //           const Icon(Icons.build, size: 14, color: Colors.grey),
+              //           SizedBox(
+              //             width: 180, // Restrict width to prevent overflow
+              //             child: Text(
+              //               services,
+              //               style: const TextStyle(fontSize: 14, color: Colors.grey),
+              //               overflow: TextOverflow.ellipsis, // Truncate long text
+              //               maxLines: 1,
+              //             ),
+              //           ),
+              //         ],
+              //       ),
+              //     ],
+              //   ),
+              // ],
+
               children: [
                 CircleAvatar(
                   radius: 25,
@@ -539,16 +582,25 @@ class ApplicationCard extends StatelessWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      name,
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    SizedBox(
+                      width: 180, // Restrict width to prevent overflow
+                      child: Text(
+                        name,
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        softWrap: true, // Allows text to wrap to the next line
+                      ),
                     ),
                     Row(
                       children: [
                         const Icon(Icons.location_on, size: 14, color: Colors.grey),
-                        Text(
-                          location,
-                          style: const TextStyle(fontSize: 14, color: Colors.grey),
+                        SizedBox(
+                          width: 180, // Ensure consistent width
+                          child: Text(
+                            location,
+                            style: const TextStyle(fontSize: 14, color: Colors.grey),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          ),
                         ),
                       ],
                     ),
@@ -556,11 +608,11 @@ class ApplicationCard extends StatelessWidget {
                       children: [
                         const Icon(Icons.build, size: 14, color: Colors.grey),
                         SizedBox(
-                          width: 180, // Restrict width to prevent overflow
+                          width: 180,
                           child: Text(
                             services,
                             style: const TextStyle(fontSize: 14, color: Colors.grey),
-                            overflow: TextOverflow.ellipsis, // Truncate long text
+                            overflow: TextOverflow.ellipsis,
                             maxLines: 1,
                           ),
                         ),
@@ -569,6 +621,9 @@ class ApplicationCard extends StatelessWidget {
                   ],
                 ),
               ],
+
+
+
             ),
             const SizedBox(height: 10),
             Center(

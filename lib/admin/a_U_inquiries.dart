@@ -47,7 +47,8 @@ class _U_inquiriesState extends State<U_inquiries> {
             "Contact Users",
             style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
           ),
-          titleSpacing: 20,
+          titleSpacing: 25,
+          automaticallyImplyLeading: false,
         ),
         body: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),

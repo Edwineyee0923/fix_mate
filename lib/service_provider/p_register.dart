@@ -321,11 +321,11 @@ class _p_registerState extends State<p_register> {
                     crossAxisAlignment: CrossAxisAlignment.start, // Labels are aligned left
                     children: [
                       InternalTextField(
-                        labelText: "User Name",
-                        hintText: "Enter your name",
-                        icon: Icons.person,
+                        labelText: "Company Name (or User Name)",
+                        hintText: "Enter your company name or username",
+                        icon: Icons.domain,
                         controller: nameController,
-                        validationMessage: "Please enter your user name",
+                        validationMessage: "Please enter your company name or user name",
                         isValid: isNameValid,
                         enabled: isEditing,
                         onChanged: (value) {
@@ -340,7 +340,7 @@ class _p_registerState extends State<p_register> {
                         controller: bioController,
                         enabled: isEditing,
                         isRequired: true, // ✅ Required field
-                        maxWords: 300,
+                        maxWords: 500,
                         width: 340,
                         placeholder: "Please describe your services in detail...",
                         height: 150,
@@ -515,7 +515,7 @@ class _p_registerState extends State<p_register> {
                             style: const TextStyle(fontSize: 14,fontWeight: FontWeight.w500, fontStyle: FontStyle.italic, color: Colors.black54),
                           ),
                           CustomRadioGroup(
-                            options: ['Cleaning', 'Electrical', 'Plumbing','Painting', 'Door Install', 'Roofing', 'Flooring', 'Home Security', 'Others'],
+                            options: ['Cleaning', 'Electrical', 'Plumbing','Painting', 'Door Install', 'Roofing', 'Flooring', 'Home Security', 'Renovation', 'Others'],
                             selectedValues: selectedExpertiseFields,
                             isRequired: true,
                             requiredMessage: "Please select at least one expertise field!",
@@ -569,7 +569,7 @@ class _p_registerState extends State<p_register> {
                       ),
                       SizedBox(height: 15),
                       LongInputContainer(
-                        labelText: "Certificate Link (Google Drive)",
+                        labelText: "Google Drive Link (Supporting Document Upload)",
                         controller: certificateController,
                         placeholder: "Enter a Google Drive link for supporting documents as a valid service providers.",
                         isRequired: true, // ✅ Required field

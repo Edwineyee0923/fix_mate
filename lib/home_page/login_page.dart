@@ -41,7 +41,7 @@ class _login_pageState extends State<login_page> {
         _isAdminRedirected = true;
         // Delay a tick to ensure the context is stable
         Future.delayed(Duration.zero, () {
-          Navigator.push(
+          Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (context) => SP_application()),
           );

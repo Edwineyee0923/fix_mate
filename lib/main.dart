@@ -41,7 +41,7 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.orange,
         fontFamily: 'Poppins', // Set Poppins as the main font
       ),
-      home: SP_application(),
+      home: HomePage(),
     );
   }
 }
