@@ -7,8 +7,11 @@ import 'package:fix_mate/admin/a_contact_developer.dart';
 import 'package:fix_mate/home_page/HomePage.dart';
 import 'package:fix_mate/home_page/login_page.dart';
 import 'package:fix_mate/home_page/register_option.dart';
+import 'package:fix_mate/service_provider/p_HomePage.dart';
+import 'package:fix_mate/service_provider/p_footer.dart';
 import 'package:fix_mate/service_provider/p_profile.dart';
 import 'package:fix_mate/service_provider/p_register.dart';
+import 'package:fix_mate/service_seeker/s_HomePage.dart';
 import 'package:fix_mate/service_seeker/s_profile.dart';
 import 'firebase_options.dart';
 import 'package:flutter/material.dart';
@@ -41,7 +44,7 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.orange,
         fontFamily: 'Poppins', // Set Poppins as the main font
       ),
-      home: HomePage(),
+      home: s_HomePage(),
     );
   }
 }
