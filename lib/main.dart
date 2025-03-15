@@ -45,7 +45,7 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.orange,
         fontFamily: 'Poppins', // Set Poppins as the main font
       ),
-      home: p_EditInstantPost(),
+      home: p_HomePage(),
     );
   }
 }
