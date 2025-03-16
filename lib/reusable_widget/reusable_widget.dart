@@ -599,157 +599,8 @@ class _InternalTextFieldState extends State<InternalTextField> {
   }
 }
 
-
-
-
-// class LongInputContainer extends StatefulWidget {
-//   final String? labelText; // ✅ Made optional
-//   final TextEditingController controller;
-//   final int? maxWords;
-//   final double width;
-//   final double height;
-//   final String placeholder;
-//   final bool isRequired;
-//   final String? requiredMessage;
-//   final bool enabled;
-//   final bool isUrl;
-//   final String? errorMessage;
-//   final ValueChanged<String>? onChanged;
-//
-//   const LongInputContainer({
-//     Key? key,
-//     this.labelText, // ✅ No longer required
-//     required this.controller,
-//     this.maxWords,
-//     this.width = 340,
-//     this.height = 100,
-//     this.placeholder = "Enter here...",
-//     this.isRequired = false,
-//     this.requiredMessage = "This field is required.",
-//     this.enabled = true,
-//     this.isUrl = false,
-//     this.errorMessage,
-//     this.onChanged,
-//   }) : super(key: key);
-//
-//   @override
-//   _LongInputContainerState createState() => _LongInputContainerState();
-// }
-//
-// class _LongInputContainerState extends State<LongInputContainer> {
-//   FocusNode focusNode = FocusNode();
-//   String? internalErrorMessage;
-//
-//   bool validate() {
-//     String text = widget.controller.text.trim();
-//     setState(() {
-//       if (widget.isRequired && text.isEmpty) {
-//         internalErrorMessage = widget.requiredMessage!;
-//         return;
-//       }
-//
-//       if (widget.isUrl) {
-//         final urlRegex = RegExp(r"^(https?:\/\/)?([\w\-]+\.)+[\w-]+(\/[\w\- ./?%&=]*)?$");
-//         if (!urlRegex.hasMatch(text)) {
-//           internalErrorMessage = "Enter a valid URL!";
-//           return;
-//         }
-//       }
-//
-//       if (widget.maxWords != null) {
-//         int wordCount = text.split(RegExp(r"\s+")).length;
-//         if (wordCount > widget.maxWords!) {
-//           internalErrorMessage = "Maximum ${widget.maxWords} words allowed!";
-//           return;
-//         }
-//       }
-//
-//       internalErrorMessage = widget.errorMessage;
-//     });
-//
-//     return internalErrorMessage == null;
-//   }
-//
-//   @override
-//   Widget build(BuildContext context) {
-//     String? displayError = widget.errorMessage ?? internalErrorMessage;
-//
-//     return Column(
-//       crossAxisAlignment: CrossAxisAlignment.start,
-//       children: [
-//         if (widget.labelText != null) // ✅ Only show if labelText is provided
-//           Text(
-//             widget.labelText!,
-//             style: const TextStyle(
-//               fontSize: 16,
-//               fontWeight: FontWeight.w600,
-//               color: Colors.black,
-//             ),
-//           ),
-//         if (widget.labelText != null) const SizedBox(height: 5), // ✅ Space only if label exists
-//         AnimatedBuilder(
-//           animation: focusNode,
-//           builder: (context, child) {
-//             return Container(
-//               width: widget.width,
-//               height: widget.height,
-//               padding: const EdgeInsets.symmetric(horizontal: 15),
-//               decoration: BoxDecoration(
-//                 color: Colors.white,
-//                 borderRadius: BorderRadius.circular(25.0),
-//                 border: Border.all(color: Colors.black),
-//                 boxShadow: [
-//                   if (focusNode.hasFocus)
-//                     BoxShadow(
-//                       color: const Color(0xFFD19C86).withOpacity(1),
-//                       blurRadius: 15,
-//                       offset: const Offset(0, 2),
-//                     ),
-//                 ],
-//               ),
-//               child: TextField(
-//                 controller: widget.controller,
-//                 cursorColor: Colors.brown,
-//                 focusNode: focusNode,
-//                 maxLines: null,
-//                 keyboardType: widget.isUrl ? TextInputType.url : TextInputType.multiline,
-//                 enabled: widget.enabled,
-//                 style: TextStyle(
-//                   color: widget.enabled ? Colors.black.withOpacity(0.9) : Colors.brown.withOpacity(0.6),
-//                   fontSize: 16,
-//                 ),
-//                 decoration: InputDecoration(
-//                   border: InputBorder.none,
-//                   hintText: widget.placeholder,
-//                   hintStyle: TextStyle(color: Colors.grey.withOpacity(0.9), fontSize: 14),
-//                 ),
-//                 onChanged: (text) {
-//                   validate(); // ✅ Validate input
-//                   if (widget.onChanged != null) {
-//                     widget.onChanged!(text); // ✅ Call the `onChanged` callback
-//                   // widget.onChanged?.call(text);
-//                   }
-//                 },
-//               ),
-//             );
-//           },
-//         ),
-//         if (displayError != null)
-//           Padding(
-//             padding: const EdgeInsets.only(top: 5, left: 10),
-//             child: Text(
-//               displayError,
-//               style: const TextStyle(color: Colors.red, fontSize: 12),
-//             ),
-//           ),
-//       ],
-//     );
-//   }
-// }
-
-
 class LongInputContainer extends StatefulWidget {
-  final String? labelText;
+  final String? labelText; // ✅ Made optional
   final TextEditingController controller;
   final int? maxWords;
   final double width;
@@ -764,7 +615,7 @@ class LongInputContainer extends StatefulWidget {
 
   const LongInputContainer({
     Key? key,
-    this.labelText,
+    this.labelText, // ✅ No longer required
     required this.controller,
     this.maxWords,
     this.width = 340,
@@ -790,7 +641,7 @@ class _LongInputContainerState extends State<LongInputContainer> {
     String text = widget.controller.text.trim();
     setState(() {
       if (widget.isRequired && text.isEmpty) {
-        internalErrorMessage = widget.errorMessage ?? widget.requiredMessage; // ✅ Fix applied
+        internalErrorMessage = widget.requiredMessage!;
         return;
       }
 
@@ -810,7 +661,7 @@ class _LongInputContainerState extends State<LongInputContainer> {
         }
       }
 
-      internalErrorMessage = null;
+      internalErrorMessage = widget.errorMessage;
     });
 
     return internalErrorMessage == null;
@@ -823,7 +674,7 @@ class _LongInputContainerState extends State<LongInputContainer> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (widget.labelText != null)
+        if (widget.labelText != null) // ✅ Only show if labelText is provided
           Text(
             widget.labelText!,
             style: const TextStyle(
@@ -832,7 +683,7 @@ class _LongInputContainerState extends State<LongInputContainer> {
               color: Colors.black,
             ),
           ),
-        if (widget.labelText != null) const SizedBox(height: 5),
+        if (widget.labelText != null) const SizedBox(height: 5), // ✅ Space only if label exists
         AnimatedBuilder(
           animation: focusNode,
           builder: (context, child) {
@@ -870,9 +721,10 @@ class _LongInputContainerState extends State<LongInputContainer> {
                   hintStyle: TextStyle(color: Colors.grey.withOpacity(0.9), fontSize: 14),
                 ),
                 onChanged: (text) {
-                  validate();
+                  validate(); // ✅ Validate input
                   if (widget.onChanged != null) {
-                    widget.onChanged!(text);
+                    widget.onChanged!(text); // ✅ Call the `onChanged` callback
+                  // widget.onChanged?.call(text);
                   }
                 },
               ),
@@ -891,6 +743,11 @@ class _LongInputContainerState extends State<LongInputContainer> {
     );
   }
 }
+
+
+
+
+
 
 
 void ReusableSnackBar(BuildContext context, String message, {
@@ -1301,7 +1158,123 @@ class _PriceInputContainerState extends State<PriceInputContainer> {
 }
 
 
+class ResponsiveTextArea extends StatefulWidget {
+  final String labelText;
+  final TextEditingController controller;
+  final String placeholder;
+  final bool isRequired;
+  final String? requiredMessage;
+  final ValueChanged<String>? onChanged;
 
+  const ResponsiveTextArea({
+    Key? key,
+    required this.labelText,
+    required this.controller,
+    this.placeholder = "Enter here...",
+    this.isRequired = false,
+    this.requiredMessage = "This field is required.",
+    this.onChanged,
+  }) : super(key: key);
+
+  @override
+  _ResponsiveTextAreaState createState() => _ResponsiveTextAreaState();
+}
+
+class _ResponsiveTextAreaState extends State<ResponsiveTextArea> {
+  FocusNode focusNode = FocusNode();
+  String? internalErrorMessage;
+
+  bool validate() {
+    String text = widget.controller.text.trim();
+    setState(() {
+      if (widget.isRequired && text.isEmpty) {
+        internalErrorMessage = widget.requiredMessage;
+        return;
+      }
+      internalErrorMessage = null;
+    });
+
+    return internalErrorMessage == null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          widget.labelText,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: Colors.black,
+          ),
+        ),
+        const SizedBox(height: 5),
+
+        AnimatedBuilder(
+          animation: focusNode,
+          builder: (context, child) {
+            return Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 0),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(25.0),
+                border: Border.all(color: Colors.black),
+                boxShadow: [
+                  if (focusNode.hasFocus)
+                    BoxShadow(
+                      color: const Color(0xFFD19C86).withOpacity(1),
+                      blurRadius: 15,
+                      offset: const Offset(0, 2),
+                    ),
+                ],
+              ),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: 20, // ✅ Starts with a small height
+                ),
+                child: Scrollbar(
+                  child: TextField(
+                    controller: widget.controller,
+                    focusNode: focusNode,
+                    cursorColor: Colors.brown,
+                    maxLines: null, // ✅ Expands automatically
+                    keyboardType: TextInputType.multiline,
+                    style: const TextStyle(fontSize: 16, color: Colors.black),
+                    decoration: InputDecoration(
+                      border: InputBorder.none,
+                      hintText: widget.placeholder,
+                      hintStyle: TextStyle(color: Colors.grey.withOpacity(0.9), fontSize: 14),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
+                    onChanged: (text) {
+                      validate();
+                      setState(() {}); // ✅ Ensures real-time height adjustment
+                      if (widget.onChanged != null) {
+                        widget.onChanged!(text);
+                      }
+                    },
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+
+        if (internalErrorMessage != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 5, left: 10),
+            child: Text(
+              internalErrorMessage!,
+              style: const TextStyle(color: Colors.red, fontSize: 12),
+            ),
+          ),
+      ],
+    );
+  }
+}
 
 
 

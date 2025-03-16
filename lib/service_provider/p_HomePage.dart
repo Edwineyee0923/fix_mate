@@ -1,9 +1,10 @@
-import 'package:fix_mate/service_provider/p_EditInstantPost.dart';
+import 'package:fix_mate/service_provider/p_AddInstantPost.dart';
 import 'package:fix_mate/service_provider/p_InstantPostsList.dart';
 import 'package:fix_mate/service_provider/p_layout.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:fix_mate/reusable_widget/reusable_widget.dart';
 
 
 class p_HomePage extends StatefulWidget {
@@ -27,88 +28,6 @@ class _p_HomePageState extends State<p_HomePage> {
     _loadInstantPosts(); // Load posts when the page initializes
   }
 
-
-  // Future<void> _loadInstantPosts() async {
-  //   try {
-  //     User? user = _auth.currentUser;
-  //     if (user == null) {
-  //       print("User not logged in");
-  //       return;
-  //     }
-  //
-  //     print("Fetching posts for userId: ${user.uid}"); // ✅ Debugging
-  //
-  //     QuerySnapshot snapshot = await _firestore
-  //         .collection('instant_booking')
-  //         .where('userId', isEqualTo: user.uid) // 🔹 Get only the logged-in provider’s posts
-  //         .get();
-  //
-  //
-  //
-  //
-  //     if (snapshot.docs.isEmpty) {
-  //       print("No instant booking posts found for user: ${user.uid}");
-  //     } else {
-  //       print("Fetched ${snapshot.docs.length} posts");
-  //     }
-  //
-  //     List<Widget> instantPosts = snapshot.docs.map((doc) {
-  //       Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-  //       print("Post Data: $data");
-  //
-  //       return buildInstantBookingCard(
-  //         SPname: data['SPname'] ?? "Unknown",
-  //         ServiceStates: (data['ServiceStates'] as List<dynamic>?)?.join(", ") ?? "Unknown",
-  //         ServiceCategory: (data['ServiceCategory'] as List<dynamic>?)?.join(", ") ?? "No services listed",
-  //         imageUrl: data['IPImage'] ?? "", // Default image if null
-  //         IPPrice: (data['IPPrice'] as num?)?.toInt() ?? 0,
-  //         onEdit: () async { // 🔹 Replacing 'onReview' with 'onEdit'
-  //           final result = await Navigator.push(
-  //             context,
-  //             MaterialPageRoute(
-  //               builder: (context) => p_EditInstantPost(
-  //                 // applicationData: data,
-  //                 // docId: doc.id,
-  //               ),
-  //             ),
-  //           );
-  //           if (result == true) {
-  //             _loadInstantPosts(); // Refresh after editing
-  //           }
-  //         },
-  //         onDelete: () {
-  //           // 🔹 Add your delete logic here
-  //           showDialog(
-  //             context: context,
-  //             builder: (context) => AlertDialog(
-  //               title: const Text("Delete Post"),
-  //               content: const Text("Are you sure you want to delete this post?"),
-  //               actions: [
-  //                 TextButton(
-  //                   onPressed: () => Navigator.pop(context), // Cancel
-  //                   child: const Text("Cancel"),
-  //                 ),
-  //                 TextButton(
-  //                   onPressed: () {
-  //                     // TODO: Implement delete functionality
-  //                     Navigator.pop(context);
-  //                   },
-  //                   child: const Text("Delete", style: TextStyle(color: Colors.red)),
-  //                 ),
-  //               ],
-  //             ),
-  //           );
-  //         },
-  //       );
-  //     }).toList();
-  //
-  //     setState(() {
-  //       allInstantPosts = instantPosts;
-  //     });
-  //   } catch (e) {
-  //     print("Error loading Instant Booking Posts: $e");
-  //   }
-  // }
 
 
   Future<void> _loadInstantPosts() async {
@@ -155,7 +74,7 @@ class _p_HomePageState extends State<p_HomePage> {
             final result = await Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => p_EditInstantPost(),
+                builder: (context) => p_AddInstantPost(),
               ),
             );
             if (result == true) {
@@ -177,29 +96,51 @@ class _p_HomePageState extends State<p_HomePage> {
   }
 
 
+  // void _confirmDelete(String docId) {
+  //   showDialog(
+  //     context: context,
+  //     builder: (context) => AlertDialog(
+  //       title: const Text("Delete Post"),
+  //       content: const Text("Are you sure you want to delete this post?"),
+  //       actions: [
+  //         TextButton(
+  //           onPressed: () => Navigator.pop(context), // Cancel
+  //           child: const Text("Cancel"),
+  //         ),
+  //         TextButton(
+  //           onPressed: () async {
+  //             Navigator.pop(context); // Close dialog
+  //             await _deletePost(docId); // ✅ Call delete function
+  //           },
+  //           child: const Text("Delete", style: TextStyle(color: Colors.red)),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
+
   void _confirmDelete(String docId) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Delete Post"),
-        content: const Text("Are you sure you want to delete this post?"),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context), // Cancel
-            child: const Text("Cancel"),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context); // Close dialog
-              await _deletePost(docId); // ✅ Call delete function
-            },
-            child: const Text("Delete", style: TextStyle(color: Colors.red)),
-          ),
-        ],
+      builder: (context) => ConfirmationDialog(
+        title: "Delete Post",
+        message: "Are you sure you want to delete this post?",
+        confirmText: "Delete",
+        cancelText: "Cancel",
+        onConfirm: () async {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => p_HomePage()),
+          ); // Close dialog
+          await _deletePost(docId); // ✅ Call delete function
+        },
+        icon: Icons.delete,
+        iconColor: Colors.red,
+        confirmButtonColor: Colors.red,
+        cancelButtonColor: Colors.grey.shade300,
       ),
     );
   }
-
 
   Future<void> _deletePost(String docId) async {
     try {
@@ -280,7 +221,7 @@ class _p_HomePageState extends State<p_HomePage> {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => p_EditInstantPost()),
+                  MaterialPageRoute(builder: (context) => p_AddInstantPost()),
                 ).then((value) {
                   if (value == true) {
                     setState(() {
@@ -455,12 +396,14 @@ Widget buildInstantBookingCard({
                     Row(
                       children: [
                         const Icon(Icons.location_on, size: 14, color: Colors.grey),
-                        const SizedBox(width: 4), // Add spacing between icon and text
-                        Text(
-                          ServiceStates,
-                          style: const TextStyle(fontSize: 14, color: Colors.grey, fontWeight: FontWeight.w400),
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 1,
+                        const SizedBox(width: 4), // Spacing
+                        Expanded( // ✅ Ensures text truncates within available space
+                          child: Text(
+                            ServiceStates,
+                            style: const TextStyle(fontSize: 14, color: Colors.grey, fontWeight: FontWeight.w400),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          ),
                         ),
                       ],
                     ),
@@ -470,15 +413,18 @@ Widget buildInstantBookingCard({
                     Row(
                       children: [
                         const Icon(Icons.build, size: 14, color: Colors.grey),
-                        const SizedBox(width: 4), // Add spacing
-                        Text(
-                          ServiceCategory,
-                          style: const TextStyle(fontSize: 14, color: Colors.grey, fontWeight: FontWeight.w400),
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 1,
+                        const SizedBox(width: 4), // Spacing
+                        Expanded( // ✅ Ensures text truncates properly
+                          child: Text(
+                            ServiceCategory,
+                            style: const TextStyle(fontSize: 14, color: Colors.grey, fontWeight: FontWeight.w400),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          ),
                         ),
                       ],
                     ),
+
                   ],
                 ),
               ),

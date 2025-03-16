@@ -8,27 +8,43 @@ import 'package:fix_mate/reusable_widget/reusable_widget.dart';
 import 'package:flutter/services.dart';
 
 
-class p_EditInstantPost extends StatefulWidget {
+class p_AddInstantPost extends StatefulWidget {
   @override
-  _p_EditInstantPostState createState() => _p_EditInstantPostState();
+  _p_AddInstantPostState createState() => _p_AddInstantPostState();
 }
 
-class TitleWithDescriptions {
-  String title;
-  List<String> descriptions;
+// class TitleWithDescriptions {
+//   String title;
+//   List<String> descriptions;
+//
+//   TitleWithDescriptions({required this.title, required this.descriptions});
+//
+//   Map<String, dynamic> toMap() {
+//     return {
+//       "title": title,
+//       "descriptions": descriptions,
+//     };
+//   }
+// }
 
-  TitleWithDescriptions({required this.title, required this.descriptions});
+
+class TitleWithDescriptions {
+  TextEditingController titleController;
+  List<TextEditingController> descriptionControllers;
+
+  TitleWithDescriptions({String title = "", List<String> descriptions = const []})
+      : titleController = TextEditingController(text: title),
+        descriptionControllers = descriptions.map((desc) => TextEditingController(text: desc)).toList();
 
   Map<String, dynamic> toMap() {
     return {
-      "title": title,
-      "descriptions": descriptions,
+      "title": titleController.text,
+      "descriptions": descriptionControllers.map((controller) => controller.text).toList(),
     };
   }
 }
 
-
-class _p_EditInstantPostState extends State<p_EditInstantPost> {
+class _p_AddInstantPostState extends State<p_AddInstantPost> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
@@ -98,25 +114,37 @@ class _p_EditInstantPostState extends State<p_EditInstantPost> {
   }
 
 
+  // void addDescriptionField(int titleIndex) {
+  //   setState(() {
+  //     entries[titleIndex].descriptions.add("");
+  //   });
+  // }
+  //
+  // void removeDescriptionField(int titleIndex, int descIndex) {
+  //   setState(() {
+  //     entries[titleIndex].descriptions.removeAt(descIndex);
+  //   });
+  // }
+
   void addDescriptionField(int titleIndex) {
     setState(() {
-      entries[titleIndex].descriptions.add("");
+      entries[titleIndex].descriptionControllers.add(TextEditingController()); // ✅ Corrected
     });
   }
 
   void removeDescriptionField(int titleIndex, int descIndex) {
     setState(() {
-      entries[titleIndex].descriptions.removeAt(descIndex);
+      entries[titleIndex].descriptionControllers[descIndex].dispose(); // ✅ Dispose controller before removing
+      entries[titleIndex].descriptionControllers.removeAt(descIndex); // ✅ Corrected
     });
   }
+
 
   void removeTitleEntry(int index) {
     setState(() {
       entries.removeAt(index);
     });
   }
-
-
 
   Future<void> _pickAndUploadImage() async {
     final List<XFile>? pickedFiles = await _picker.pickMultiImage(); // ✅ Allows multiple selection
@@ -144,36 +172,104 @@ class _p_EditInstantPostState extends State<p_EditInstantPost> {
 
 
   Future<void> addInstantPost() async {
-      setState(() {
-        selectedStatesError = selectedStates.isEmpty ? "Please select at least one operation state!" : null;
-        selectedExpertiseError = selectedExpertiseFields.isEmpty ? "Please select at least one expertise field!" : null;
-      });
+
+    setState(() {
+      selectedStatesError = selectedStates.isEmpty ? "Please select at least one operation state!" : null;
+      selectedExpertiseError = selectedExpertiseFields.isEmpty ? "Please select at least one expertise field!" : null;
+    });
+
 
     if (userId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("User not found. Please log in again.")));
+      ReusableSnackBar(
+          context,
+          "User not found. Please log in again.",
+          icon: Icons.warning,
+          iconColor: Colors.orange
+      );
       return;
     }
 
-    print("Adding post for userId: $userId"); // ✅ Debugging
+    // ✅ Validate if each title has at least one description
+    bool hasValidDescriptions = entries.every((entry) => entry.descriptionControllers.isNotEmpty);
 
-    await _firestore.collection('instant_booking').add({
-      'userId': userId,
-      'SPname': spName,
-      'SPimageURL': spImageUrl,
-      'IPImage': _imageUrls,
-      'IPTitle': titleController.text.trim(),
-      'IPPrice': int.tryParse(priceController.text.trim()) ?? 0, // ✅ Convert to int
-      'IPDescriptions': entries.map((entry) => entry.toMap()).toList(),
-      'ServiceStates': List.from(selectedStates),
-      'ServiceCategory': List.from(selectedExpertiseFields),
-      'createdAt': FieldValue.serverTimestamp(),
-    });
+    if (entries.isEmpty || !hasValidDescriptions) {
+      ReusableSnackBar(
+          context,
+          "Each title must have at least one description.",
+          icon: Icons.warning,
+          iconColor: Colors.orange
+      );
+      return;
+    }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Instant Booking Post Added Successfully!")));
-    Navigator.pop(context);
+    if (IPTitleError != null ||
+        titleController.text.trim().isEmpty ||
+        priceController.text.trim().isEmpty ||
+        selectedStates.isEmpty || selectedExpertiseFields.isEmpty ||
+        selectedStatesError != null || selectedExpertiseError != null ||
+        _imageUrls == null || _imageUrls!.isEmpty) {  // ✅ Check for empty image list
+        ReusableSnackBar(
+            context,
+            "Please fill in all fields and upload an image.",
+            icon: Icons.warning,
+            iconColor: Colors.orange
+        );
+        return;
+      }
+
+    // Show loading dialog (blocking UI until post is added)
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      // Add to Firestore
+      await _firestore.collection('instant_booking').add({
+        'userId': userId,
+        'SPname': spName,
+        'SPimageURL': spImageUrl,
+        'IPImage': _imageUrls,
+        'IPTitle': titleController.text.trim(),
+        'IPPrice': int.tryParse(priceController.text.trim()) ?? 0,
+        'IPDescriptions': entries.map((entry) => entry.toMap()).toList(),
+        'ServiceStates': List.from(selectedStates),
+        'ServiceCategory': List.from(selectedExpertiseFields),
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      // Close loading dialog
+      Navigator.pop(context);
+
+      // Notify user
+      ReusableSnackBar(
+        context,
+        "Instant Booking Post Added Successfully!",
+        icon: Icons.check_circle,
+        iconColor: Colors.green,
+      );
+
+      // Delay a bit to ensure smooth UI transition
+      await Future.delayed(Duration(milliseconds: 100));
+
+      // Pop the current screen and pass `true` to indicate successful addition
+      Navigator.pop(context, true);
+    } catch (error) {
+      Navigator.pop(context); // Close loading dialog on error
+      print("Error adding post: $error");
+      ReusableSnackBar(
+          context,
+          "Failed to add post. Please try again. ",
+          icon: Icons.error,
+          iconColor: Colors.red // Red icon for error
+      );
+    }
   }
+
+
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -368,6 +464,16 @@ class _p_EditInstantPostState extends State<p_EditInstantPost> {
             ),
             SizedBox(height: 20),
 
+            Text(
+              "Service Description",
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              "(Add a title and supporting descriptions for clarity. Use '+ Add Description' to include more details and '- Remove Section' to delete this section.)",
+              style: const TextStyle(fontSize: 14,fontWeight: FontWeight.w500, fontStyle: FontStyle.italic, color: Colors.black54),
+            ),
+            SizedBox(height: 10),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -375,44 +481,45 @@ class _p_EditInstantPostState extends State<p_EditInstantPost> {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Title Input
-                      TextField(
-                        decoration: InputDecoration(
-                          labelText: "Title",
-                          hintText: "e.g. Clog Removal",
-                          border: OutlineInputBorder(),
-                        ),
-                        onChanged: (value) => setState(() {
-                          entries[titleIndex].title = value;
-                        }),
+                      // Title Input (✅ Uses Persistent Controller)
+                      LongInputContainer(
+                        labelText: "Title",
+                        controller: entries[titleIndex].titleController, // ✅ Uses existing controller
+                        placeholder: "e.g. Clog Removal",
+                        width: double.infinity,
+                        height: 50,
+                        isRequired: true,
+                        requiredMessage: "Title is required.",
                       ),
 
                       SizedBox(height: 10),
 
-                      // Description Inputs
-                      ...List.generate(entries[titleIndex].descriptions.length, (descIndex) {
+                      // Description Inputs (✅ Uses Persistent Controllers)
+                      ...List.generate(entries[titleIndex].descriptionControllers.length, (descIndex) {
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 10),
                           child: Row(
                             children: [
                               Expanded(
-                                child: TextField(
-                                  decoration: InputDecoration(
-                                    labelText: "Description ${descIndex + 1}",
-                                    hintText: "e.g. Quick and thorough clearing of blockages...",
-                                    border: OutlineInputBorder(),
-                                  ),
-                                  maxLines: null,
-                                  onChanged: (value) => setState(() {
-                                    entries[titleIndex].descriptions[descIndex] = value;
-                                  }),
+                                child: ResponsiveTextArea(
+                                  labelText: "Description ${descIndex + 1}",
+                                  controller: entries[titleIndex].descriptionControllers[descIndex],
+                                  placeholder: "e.g. Quick and thorough clearing of blockages...",
+                                  isRequired: true,
+                                  requiredMessage: "Description ${descIndex + 1} is required.",
+                                  onChanged: (value) {
+                                    setState(() {}); // ✅ Triggers rebuild for dynamic height
+                                  },
                                 ),
                               ),
+
                               SizedBox(width: 10),
                               IconButton(
                                 icon: Icon(Icons.delete, color: Colors.red),
                                 onPressed: () {
-                                  removeDescriptionField(titleIndex, descIndex);
+                                  setState(() {
+                                    entries[titleIndex].descriptionControllers.removeAt(descIndex);
+                                  });
                                 },
                               ),
                             ],
@@ -424,35 +531,102 @@ class _p_EditInstantPostState extends State<p_EditInstantPost> {
                       Align(
                         alignment: Alignment.centerRight,
                         child: TextButton(
-                          onPressed: () => addDescriptionField(titleIndex),
-                          child: Text("+ Add Description"),
+                          onPressed: () {
+                            setState(() {
+                              entries[titleIndex].descriptionControllers.add(TextEditingController());
+                            });
+                          },
+                          child: Text(
+                            "+ Add Description",
+                            style: TextStyle(
+                              fontSize: 15,
+                              color: const Color(0xFF464E65).withOpacity(0.8), // ✅ Fixed: Removed `const`
+                              fontWeight: FontWeight.w600, // Medium bold
+
+                            ),
+                          ),
                         ),
                       ),
 
-                      // Remove Title Section Button
                       Align(
                         alignment: Alignment.centerRight,
-                        child: TextButton(
-                          onPressed: () => removeTitleEntry(titleIndex),
-                          child: Text("Remove Title", style: TextStyle(color: Colors.red)),
+                        child: SizedBox(
+                          width: 150, // Adjust width as needed
+                          height: 45, // Set fixed height
+                          child: TextButton(
+                            onPressed: () {
+                              setState(() {
+                                entries.removeAt(titleIndex);
+                              });
+                            },
+                            style: TextButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              side: const BorderSide(color: Color(0xFF464E65), width: 2.0), // Thin border
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(30), // Smooth rounded corners
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 8), // Compact padding
+                            ),
+                            child: const Text(
+                              "- Remove Section",
+                              style: TextStyle(
+                                fontSize: 16, // Set to 16
+                                color: Color(0xFF464E65), // Keep red color for remove action
+                                fontWeight: FontWeight.w600, // Medium bold
+                              ),
+                            ),
+                          ),
                         ),
                       ),
 
-                      Divider(),
+                      Divider(
+                        color: Color(0xFF464E65), // ✅ Makes it grey
+                        thickness: 2,       // ✅ Makes it thicker
+                        height: 20,         // ✅ Adjusts spacing
+                      ),
+
                     ],
                   );
                 }),
 
-                SizedBox(height: 20),
+                SizedBox(height: 10),
               ],
             ),
 
-            ElevatedButton(
-                onPressed: addTitleEntry,
-                child: Text("+ Add Title")),
-            ElevatedButton(
-              onPressed: addInstantPost,
-              child: Text("Submit Post"),
+            SizedBox(
+              width: 130, // Slightly wider for better aesthetics
+              height: 45, // Balanced height
+              child: Material(
+                elevation: 5, // Shadow for depth
+                borderRadius: BorderRadius.circular(30), // Smooth rounded corners
+                shadowColor: Colors.black38, // Soft shadow effect
+                child: TextButton(
+                  onPressed: addTitleEntry,
+                  style: TextButton.styleFrom(
+                    backgroundColor: const Color(0xFF464E65), // Dark bluish-gray background
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30), // Smooth rounded corners
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 10), // Compact padding
+                  ),
+                  child: const Text(
+                    "+ Add Section",
+                    style: TextStyle(
+                      fontSize: 16, // Readable size
+                      color: Colors.white, // White text for contrast
+                      fontWeight: FontWeight.w600, // Slightly bolder for emphasis
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            SizedBox(height: 30),
+            dk_button(
+              context,
+              "Submit Post", // ✅ Update the label
+                  () async {
+                addInstantPost(); // ✅ Call the same function when button is pressed
+              },
             ),
           ],
         ),

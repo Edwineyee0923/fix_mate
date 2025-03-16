@@ -251,8 +251,8 @@ class _p_registerState extends State<p_register> {
         backgroundColor: Color(0xFF464E65),
         leading: IconButton(
           icon: Icon(
-              Icons.arrow_back_ios_new_rounded,
-              color: Colors.white,
+            Icons.arrow_back_ios_new_rounded,
+            color: Colors.white,
           ),
           onPressed: () {
             navigateNextPage(context); // Navigates back when pressed
@@ -605,6 +605,6 @@ class _p_registerState extends State<p_register> {
           ),
         ),
       ),
-      );
+    );
   }
 }

@@ -7,7 +7,7 @@ import 'package:fix_mate/admin/a_contact_developer.dart';
 import 'package:fix_mate/home_page/HomePage.dart';
 import 'package:fix_mate/home_page/login_page.dart';
 import 'package:fix_mate/home_page/register_option.dart';
-import 'package:fix_mate/service_provider/p_EditInstantPost.dart';
+import 'package:fix_mate/service_provider/p_AddInstantPost.dart';
 import 'package:fix_mate/service_provider/p_HomePage.dart';
 import 'package:fix_mate/service_provider/p_footer.dart';
 import 'package:fix_mate/service_provider/p_profile.dart';
