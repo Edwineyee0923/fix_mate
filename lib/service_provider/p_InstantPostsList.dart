@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class p_InstantPostList extends StatefulWidget {
   @override
@@ -7,7 +8,8 @@ class p_InstantPostList extends StatefulWidget {
 }
 
 class _p_InstantPostListState extends State<p_InstantPostList> {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance; // ✅ Initialize FirebaseAuth
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance; // ✅ Initialize Firestore
   List<Map<String, dynamic>> allInstantPosts = [];
   List<Map<String, dynamic>> filteredPosts = [];
   String searchQuery = "";
@@ -19,11 +21,40 @@ class _p_InstantPostListState extends State<p_InstantPostList> {
     _loadInstantPosts();
   }
 
+  // Future<void> _loadInstantPosts() async {
+  //   try {
+  //     QuerySnapshot snapshot = await _firestore
+  //         .collection('instant_booking')
+  //         .where('userId', isEqualTo: user.uid) // ✅ Corrected
+  //         .get();
+  //
+  //     List<Map<String, dynamic>> posts = snapshot.docs.map((doc) {
+  //       Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+  //       data['id'] = doc.id; // Store doc ID for deletion/edit
+  //       return data;
+  //     }).toList();
+  //
+  //     setState(() {
+  //       allInstantPosts = posts;
+  //       _applyFilters(); // Apply search & sorting
+  //     });
+  //   } catch (e) {
+  //     print("Error fetching instant booking posts: $e");
+  //   }
+  // }
   Future<void> _loadInstantPosts() async {
     try {
+      User? user = _auth.currentUser; // ✅ Get the logged-in user
+      if (user == null) {
+        print("User not logged in");
+        return;
+      }
+
+      print("Fetching posts for userId: ${user.uid}");
+
       QuerySnapshot snapshot = await _firestore
           .collection('instant_booking')
-          .orderBy('createdAt', descending: true)
+          .where('userId', isEqualTo: user.uid) // ✅ Correct usage
           .get();
 
       List<Map<String, dynamic>> posts = snapshot.docs.map((doc) {
@@ -40,6 +71,8 @@ class _p_InstantPostListState extends State<p_InstantPostList> {
       print("Error fetching instant booking posts: $e");
     }
   }
+
+
 
   void _applyFilters() {
     List<Map<String, dynamic>> tempPosts = allInstantPosts

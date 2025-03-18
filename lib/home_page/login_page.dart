@@ -4,6 +4,7 @@ import 'package:fix_mate/service_provider/p_HomePage.dart';
 import 'package:fix_mate/service_provider/p_ResubmitApplication.dart';
 import 'package:fix_mate/service_provider/p_login.dart';
 import 'package:fix_mate/service_provider/p_profile.dart';
+import 'package:fix_mate/service_seeker/s_HomePage.dart';
 import 'package:fix_mate/service_seeker/s_login.dart';
 import 'package:flutter/material.dart';
 import 'package:fix_mate/reusable_widget/reusable_widget.dart';
@@ -126,7 +127,7 @@ class _login_pageState extends State<login_page> {
                           // Navigate to Service Seeker dashboard
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) => s_login()),
+                            MaterialPageRoute(builder: (context) => s_HomePage()),
                           );
                         } else {
                           showValidationMessage(

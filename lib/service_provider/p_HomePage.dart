@@ -1,4 +1,5 @@
 import 'package:fix_mate/service_provider/p_AddInstantPost.dart';
+import 'package:fix_mate/service_provider/p_EditInstantPost.dart';
 import 'package:fix_mate/service_provider/p_InstantPostsList.dart';
 import 'package:fix_mate/service_provider/p_layout.dart';
 import 'package:flutter/material.dart';
@@ -20,7 +21,6 @@ class _p_HomePageState extends State<p_HomePage> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   List<Widget> allInstantPosts = [];
-
 
   @override
   void initState() {
@@ -70,17 +70,22 @@ class _p_HomePageState extends State<p_HomePage> {
 
 
           IPPrice: (data['IPPrice'] as num?)?.toInt() ?? 0,
+
+
           onEdit: () async {
             final result = await Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => p_AddInstantPost(),
+                builder: (context) => p_EditInstantPost(docId: doc.id), // Pass docId
               ),
             );
+
             if (result == true) {
               _loadInstantPosts(); // Refresh after editing
             }
           },
+
+
           onDelete: () {
             _confirmDelete(doc.id); // ✅ Call delete confirmation
           },
@@ -94,30 +99,6 @@ class _p_HomePageState extends State<p_HomePage> {
       print("Error loading Instant Booking Posts: $e");
     }
   }
-
-
-  // void _confirmDelete(String docId) {
-  //   showDialog(
-  //     context: context,
-  //     builder: (context) => AlertDialog(
-  //       title: const Text("Delete Post"),
-  //       content: const Text("Are you sure you want to delete this post?"),
-  //       actions: [
-  //         TextButton(
-  //           onPressed: () => Navigator.pop(context), // Cancel
-  //           child: const Text("Cancel"),
-  //         ),
-  //         TextButton(
-  //           onPressed: () async {
-  //             Navigator.pop(context); // Close dialog
-  //             await _deletePost(docId); // ✅ Call delete function
-  //           },
-  //           child: const Text("Delete", style: TextStyle(color: Colors.red)),
-  //         ),
-  //       ],
-  //     ),
-  //   );
-  // }
 
   void _confirmDelete(String docId) {
     showDialog(
@@ -527,9 +508,6 @@ Widget buildInstantBookingCard({
     ),
   );
 }
-
-
-
 
 
 class EditPromotionPostPage extends StatelessWidget {

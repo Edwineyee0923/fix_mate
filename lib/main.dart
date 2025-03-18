@@ -13,6 +13,7 @@ import 'package:fix_mate/service_provider/p_footer.dart';
 import 'package:fix_mate/service_provider/p_profile.dart';
 import 'package:fix_mate/service_provider/p_register.dart';
 import 'package:fix_mate/service_seeker/s_HomePage.dart';
+import 'package:fix_mate/service_seeker/s_InstantPostInfo2.dart';
 import 'package:fix_mate/service_seeker/s_profile.dart';
 import 'firebase_options.dart';
 import 'package:flutter/material.dart';
@@ -45,7 +46,7 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.orange,
         fontFamily: 'Poppins', // Set Poppins as the main font
       ),
-      home: p_HomePage(),
+      home: s_HomePage(),
     );
   }
 }

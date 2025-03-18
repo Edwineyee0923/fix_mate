@@ -8,24 +8,14 @@ import 'package:fix_mate/reusable_widget/reusable_widget.dart';
 import 'package:flutter/services.dart';
 
 
-class p_AddInstantPost extends StatefulWidget {
-  @override
-  _p_AddInstantPostState createState() => _p_AddInstantPostState();
-}
+class p_EditInstantPost extends StatefulWidget {
+  final String docId; // Accept document ID for fetching data
 
-// class TitleWithDescriptions {
-//   String title;
-//   List<String> descriptions;
-//
-//   TitleWithDescriptions({required this.title, required this.descriptions});
-//
-//   Map<String, dynamic> toMap() {
-//     return {
-//       "title": title,
-//       "descriptions": descriptions,
-//     };
-//   }
-// }
+  const p_EditInstantPost({Key? key, required this.docId}) : super(key: key);
+
+  @override
+  _p_EditInstantPostState createState() => _p_EditInstantPostState();
+}
 
 
 class TitleWithDescriptions {
@@ -44,7 +34,7 @@ class TitleWithDescriptions {
   }
 }
 
-class _p_AddInstantPostState extends State<p_AddInstantPost> {
+class _p_EditInstantPostState extends State<p_EditInstantPost> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
@@ -53,8 +43,6 @@ class _p_AddInstantPostState extends State<p_AddInstantPost> {
   List<File> _images = [];
   List<String> _imageUrls = [];
 
-  File? _image;
-  String? _imageUrl;
   String? userId;
   String? spName;
   String? spImageUrl;
@@ -74,11 +62,54 @@ class _p_AddInstantPostState extends State<p_AddInstantPost> {
   String? selectedStatesError;
   String? selectedExpertiseError;
 
+
   @override
   void initState() {
     super.initState();
-    _loadSPData();
+    _loadSPData().then((_) {
+      _fetchIPData();
+    });
   }
+
+  Future<void> _fetchIPData() async {
+    DocumentSnapshot snapshot =
+    await _firestore.collection('instant_booking').doc(widget.docId).get();
+
+    if (snapshot.exists) {
+      Map<String, dynamic> data = snapshot.data() as Map<String, dynamic>;
+
+      setState(() {
+        titleController.text = data['IPTitle'] ?? '';
+        priceController.text = (data['IPPrice'] ?? '').toString();
+        _imageUrls = List<String>.from(data['IPImage'] ?? []);
+        selectedStates = List<String>.from(data['ServiceStates'] ?? []);
+        selectedExpertiseFields = List<String>.from(data['ServiceCategory'] ?? []);
+
+        // Ensure the fetched values exist in the options lists
+        // selectedStates = List<String>.from(data['ServiceStates'] ?? [])
+        //     .where((state) => stateOptions.contains(state))
+        //     .toList();
+        // selectedExpertiseFields = List<String>.from(data['ServiceCategory'] ?? [])
+        //     .where((category) => expertiseOptions.contains(category))
+        //     .toList();
+
+        entries = (data['IPDescriptions'] as List<dynamic>?)
+            ?.map((entry) => TitleWithDescriptions(
+          title: entry['title'],
+          descriptions: List<String>.from(entry['descriptions']),
+        ))
+            .toList() ??
+            [];
+      });
+
+      // 🔥 Force UI rebuild
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        setState(() {});
+      });
+    }
+  }
+
+
 
   void validatePrice() {
     setState(() {
@@ -114,18 +145,6 @@ class _p_AddInstantPostState extends State<p_AddInstantPost> {
   }
 
 
-  // void addDescriptionField(int titleIndex) {
-  //   setState(() {
-  //     entries[titleIndex].descriptions.add("");
-  //   });
-  // }
-  //
-  // void removeDescriptionField(int titleIndex, int descIndex) {
-  //   setState(() {
-  //     entries[titleIndex].descriptions.removeAt(descIndex);
-  //   });
-  // }
-
   void addDescriptionField(int titleIndex) {
     setState(() {
       entries[titleIndex].descriptionControllers.add(TextEditingController()); // ✅ Corrected
@@ -146,36 +165,65 @@ class _p_AddInstantPostState extends State<p_AddInstantPost> {
     });
   }
 
+
   Future<void> _pickAndUploadImage() async {
     final List<XFile>? pickedFiles = await _picker.pickMultiImage(); // ✅ Allows multiple selection
 
     if (pickedFiles != null && pickedFiles.isNotEmpty) {
       List<File> selectedImages = pickedFiles.map((file) => File(file.path)).toList();
-      setState(() => _images.addAll(selectedImages)); // ✅ Stores images
+      setState(() => _images.addAll(selectedImages)); // ✅ Temporarily store local images
 
       UploadService uploadService = UploadService();
-      for (var imageFile in selectedImages) {
-        String? uploadedImageUrl = await uploadService.uploadImage(imageFile);
-        if (uploadedImageUrl != null) {
-          setState(() => _imageUrls.add(uploadedImageUrl)); // ✅ Stores uploaded URLs
-        }
-      }
+
+      // ✅ Upload images in parallel
+      List<Future<String?>> uploadTasks = selectedImages.map((imageFile) {
+        return uploadService.uploadImage(imageFile);
+      }).toList();
+
+      List<String?> uploadedUrls = await Future.wait(uploadTasks);
+
+      // ✅ Remove null URLs
+      uploadedUrls.removeWhere((url) => url == null);
+
+      // ✅ Update state: add URLs & remove local images
+      setState(() {
+        _imageUrls.addAll(uploadedUrls.cast<String>());
+        _images.clear(); // ✅ Clear local images after successful upload
+      });
     }
   }
 
+
   void _removeImage(int index) {
     setState(() {
-      _images.removeAt(index);
-      _imageUrls.removeAt(index); // ✅ Removes from the uploaded list
+      if (index < _imageUrls.length) {
+        // ✅ Removing an uploaded image
+        _imageUrls.removeAt(index);
+      } else {
+        // ✅ Removing a newly picked image
+        int localIndex = index - _imageUrls.length; // Adjust index for _images
+        _images.removeAt(localIndex);
+      }
     });
   }
 
 
-  Future<void> addInstantPost() async {
+
+  Future<void> updateInstantPost() async {
+
+    if (widget.docId.isEmpty) return;
+    // setState(() {
+    //   selectedStatesError = selectedStates.isEmpty ? "Please select at least one operation state!" : null;
+    //   selectedExpertiseError = selectedExpertiseFields.isEmpty ? "Please select at least one expertise field!" : null;
+    // });
+
 
     setState(() {
       selectedStatesError = selectedStates.isEmpty ? "Please select at least one operation state!" : null;
       selectedExpertiseError = selectedExpertiseFields.isEmpty ? "Please select at least one expertise field!" : null;
+
+      print("selectedStatesError: $selectedStatesError");
+      print("selectedExpertiseError: $selectedExpertiseError");
     });
 
     if (selectedStates.isEmpty || selectedExpertiseFields.isEmpty) {
@@ -192,6 +240,7 @@ class _p_AddInstantPostState extends State<p_AddInstantPost> {
       return;
     }
 
+
     if (userId == null) {
       ReusableSnackBar(
           context,
@@ -202,23 +251,18 @@ class _p_AddInstantPostState extends State<p_AddInstantPost> {
       return;
     }
 
-    // ✅ Validate if each title has content and at least one description
-    bool hasValidEntries = entries.every((entry) =>
-    entry.titleController.text.trim().isNotEmpty && // ✅ Ensure title is not empty
-        entry.descriptionControllers.isNotEmpty && // ✅ Ensure at least one description
-        entry.descriptionControllers.any((desc) => desc.text.trim().isNotEmpty) // ✅ Ensure at least one non-empty description
-    );
+    // ✅ Validate if each title has at least one description
+    bool hasValidDescriptions = entries.every((entry) => entry.descriptionControllers.isNotEmpty);
 
-    if (entries.isEmpty || !hasValidEntries) {
+    if (entries.isEmpty || !hasValidDescriptions) {
       ReusableSnackBar(
-        context,
-        "Each section must have a title and at least one description.",
-        icon: Icons.warning,
-        iconColor: Colors.orange,
+          context,
+          "Each title must have at least one description.",
+          icon: Icons.warning,
+          iconColor: Colors.orange
       );
       return;
     }
-
 
     if (IPTitleError != null ||
         titleController.text.trim().isEmpty ||
@@ -226,14 +270,14 @@ class _p_AddInstantPostState extends State<p_AddInstantPost> {
         selectedStates.isEmpty || selectedExpertiseFields.isEmpty ||
         selectedStatesError != null || selectedExpertiseError != null ||
         _imageUrls == null || _imageUrls!.isEmpty) {  // ✅ Check for empty image list
-        ReusableSnackBar(
-            context,
-            "Please fill in all fields and upload an image.",
-            icon: Icons.warning,
-            iconColor: Colors.orange
-        );
-        return;
-      }
+      ReusableSnackBar(
+          context,
+          "Please fill in all fields and upload an image.",
+          icon: Icons.warning,
+          iconColor: Colors.orange
+      );
+      return;
+    }
 
     // Show loading dialog (blocking UI until post is added)
     showDialog(
@@ -244,9 +288,9 @@ class _p_AddInstantPostState extends State<p_AddInstantPost> {
 
     try {
       // Add to Firestore
-      await _firestore.collection('instant_booking').add({
-        'userId': userId,
-        'SPname': spName,
+      await _firestore.collection('instant_booking').doc(widget.docId).update({
+        // 'userId': userId,
+        // 'SPname': spName,
         'SPimageURL': spImageUrl,
         'IPImage': _imageUrls,
         'IPTitle': titleController.text.trim(),
@@ -254,7 +298,7 @@ class _p_AddInstantPostState extends State<p_AddInstantPost> {
         'IPDescriptions': entries.map((entry) => entry.toMap()).toList(),
         'ServiceStates': List.from(selectedStates),
         'ServiceCategory': List.from(selectedExpertiseFields),
-        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
       });
 
       // Close loading dialog
@@ -263,7 +307,7 @@ class _p_AddInstantPostState extends State<p_AddInstantPost> {
       // Notify user
       ReusableSnackBar(
         context,
-        "Instant Booking Post Added Successfully!",
+        "Instant Booking Post Updated Successfully!",
         icon: Icons.check_circle,
         iconColor: Colors.green,
       );
@@ -284,10 +328,6 @@ class _p_AddInstantPostState extends State<p_AddInstantPost> {
       );
     }
   }
-
-
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -310,12 +350,12 @@ class _p_AddInstantPostState extends State<p_AddInstantPost> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // ✅ Scrollable uploaded images
-            if (_images.isNotEmpty)
+            if (_imageUrls.isNotEmpty || _images.isNotEmpty)
               SizedBox(
                 height: 150,
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
-                  itemCount: _images.length,
+                  itemCount: _imageUrls.length + _images.length, // ✅ Count both lists
                   itemBuilder: (context, index) {
                     return Stack(
                       children: [
@@ -326,7 +366,9 @@ class _p_AddInstantPostState extends State<p_AddInstantPost> {
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(12),
                             image: DecorationImage(
-                              image: FileImage(_images[index]),
+                              image: index < _imageUrls.length
+                                  ? NetworkImage(_imageUrls[index]) // ✅ Fetch from Firestore
+                                  : FileImage(_images[index - _imageUrls.length]) as ImageProvider<Object>, // ✅ Local File
                               fit: BoxFit.cover,
                             ),
                           ),
@@ -430,6 +472,7 @@ class _p_AddInstantPostState extends State<p_AddInstantPost> {
                   style: const TextStyle(fontSize: 14,fontWeight: FontWeight.w500, fontStyle: FontStyle.italic, color: Colors.black54),
                 ),
                 CustomRadioGroup(
+                  key: ValueKey(selectedStates.hashCode), // Force rebuild when selectedStates change
                   options: stateOptions, // ✅ This ensures options are loaded
                   selectedValues: selectedStates, // ✅ Creates a fresh instance
                   isRequired: true,
@@ -439,14 +482,20 @@ class _p_AddInstantPostState extends State<p_AddInstantPost> {
                       selectedStates = List.from(selectedList); // ✅ Ensure it's a new instance
                     });
                   },
-                  onValidation: (value) {
+                  onValidation: (error) {
                     setState(() {
-                      IPTitleError = titleController.text.trim().isEmpty ? "Title of the service is required!" : null;
-                      print("Current text: $value");
-                      print("Current error: $IPTitleError");
+                      selectedStatesError = error;
                     });
                   },
                 ),
+                if (selectedStatesError != null) // 🔥 Ensure this error message is rendered
+                  Padding(
+                    padding: EdgeInsets.only(top: 5),
+                    child: Text(
+                      selectedStatesError!,
+                      style: TextStyle(color: Colors.red, fontSize: 12),
+                    ),
+                  ),
               ],
             ),
             const SizedBox(height: 15),
@@ -463,8 +512,9 @@ class _p_AddInstantPostState extends State<p_AddInstantPost> {
                   style: const TextStyle(fontSize: 14,fontWeight: FontWeight.w500, fontStyle: FontStyle.italic, color: Colors.black54),
                 ),
                 CustomRadioGroup(
-                  options: expertiseOptions, // ✅ This ensures options are loaded
-                  selectedValues: selectedExpertiseFields, // ✅ Creates a fresh instance
+                  key: ValueKey(selectedExpertiseFields.hashCode), // Force rebuild when selectedExpertiseFields change
+                  options: expertiseOptions, // This ensures options are loaded
+                  selectedValues: selectedExpertiseFields, // Creates a fresh instance
                   isRequired: true,
                   requiredMessage: "Please select at least one service category!",
                   onSelected: (newSelection) {
@@ -474,10 +524,18 @@ class _p_AddInstantPostState extends State<p_AddInstantPost> {
                   },
                   onValidation: (error) {
                     setState(() {
-                      selectedStatesError = error;
+                      selectedExpertiseError = error;
                     });
                   },
                 ),
+                if (selectedExpertiseError != null) // 🔥 Ensure this error message is rendered
+                  Padding(
+                    padding: EdgeInsets.only(top: 5),
+                    child: Text(
+                      selectedExpertiseError!,
+                      style: TextStyle(color: Colors.red, fontSize: 12),
+                    ),
+                  ),
               ],
             ),
             SizedBox(height: 20),
@@ -641,9 +699,9 @@ class _p_AddInstantPostState extends State<p_AddInstantPost> {
             SizedBox(height: 30),
             dk_button(
               context,
-              "Submit Post", // ✅ Update the label
+              "Update Post", // ✅ Update the label
                   () async {
-                addInstantPost(); // ✅ Call the same function when button is pressed
+                updateInstantPost(); // ✅ Call the same function when button is pressed
               },
             ),
           ],
