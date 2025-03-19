@@ -262,225 +262,225 @@ Widget _buildPromotionSection(BuildContext context) {
   );
 }
 
-// Widget buildInstantBookingCard({
-//   required String IPTitle,
-//   required String ServiceStates,
-//   required String ServiceCategory,
-//   required List<String> imageUrls,
-//   required int IPPrice,
-//   required VoidCallback onTap, // ✅ Added onTap
-// }) {
-//   return GestureDetector(
-//     onTap: onTap, // ✅ Calls the navigation function
-//     child: Container(
-//     width: 220, // Adjust width for better spacing in horizontal scroll
-//     margin: const EdgeInsets.symmetric(horizontal: 8),
-//     child: Card(
-//       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-//       elevation: 3,
-//       child: Stack(
-//         children: [
-//           Column(
-//             crossAxisAlignment: CrossAxisAlignment.start,
-//             children: [
-//               // 📌 Image with rounded corners
-//               ClipRRect(
-//                 borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-//                 child: Image.network(
-//                   (imageUrls.isNotEmpty) ? imageUrls.first : "https://via.placeholder.com/150",
-//                   width: double.infinity,
-//                   height: 130, // Adjust height for better fit
-//                   fit: BoxFit.cover,
-//                 ),
-//               ),
-//               Padding(
-//                 padding: const EdgeInsets.all(12),
-//                 child: Column(
-//                   crossAxisAlignment: CrossAxisAlignment.start,
-//                   children: [
-//                     Text(
-//                       IPTitle,
-//                       style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-//                       overflow: TextOverflow.ellipsis,
-//                       maxLines: 2,
-//                     ),
-//                     const SizedBox(height: 4),
-//
-//                     // 📌 Location with Icon
-//                     Row(
-//                       children: [
-//                         const Icon(Icons.location_on, size: 14, color: Colors.grey),
-//                         const SizedBox(width: 4), // Spacing
-//                         Expanded( // ✅ Ensures text truncates within available space
-//                           child: Text(
-//                             ServiceStates,
-//                             style: const TextStyle(fontSize: 14, color: Colors.grey, fontWeight: FontWeight.w400),
-//                             overflow: TextOverflow.ellipsis,
-//                             maxLines: 1,
-//                           ),
-//                         ),
-//                       ],
-//                     ),
-//                     const SizedBox(height: 2),
-//
-//                     // 📌 Service Category with Icon
-//                     Row(
-//                       children: [
-//                         const Icon(Icons.build, size: 14, color: Colors.grey),
-//                         const SizedBox(width: 4), // Spacing
-//                         Expanded( // ✅ Ensures text truncates properly
-//                           child: Text(
-//                             ServiceCategory,
-//                             style: const TextStyle(fontSize: 14, color: Colors.grey, fontWeight: FontWeight.w400),
-//                             overflow: TextOverflow.ellipsis,
-//                             maxLines: 1,
-//                           ),
-//                         ),
-//                       ],
-//                     ),
-//                   ],
-//                 ),
-//               ),
-//             ],
-//           ),
-//           Positioned(
-//             top: 6,
-//             right: 6,
-//             child: Builder(
-//               builder: (BuildContext context) {
-//                 return ClipRRect(
-//                   borderRadius: BorderRadius.circular(6), // ✅ Smaller rounding
-//                   child: Material(
-//                     color: Colors.white, // ✅ Button background
-//                     child: StatefulBuilder(
-//                       builder: (context, setState) {
-//                         return FavoriteButton(setState: setState);
-//                       },
-//                     ),
-//                   ),
-//
-//                 );
-//               },
-//             ),
-//           ),
-//
-//           // 📌 Price (Bottom-right of the card)
-//           Positioned(
-//             bottom: 15,
-//             right: 20,
-//             child: Text(
-//               "RM $IPPrice", // Directly use the stored integer
-//               style: const TextStyle(
-//                 color: Color(0xFF464E65),
-//                 fontSize: 26,
-//                 fontWeight: FontWeight.bold,
-//               ),
-//             ),
-//           ),
-//         ],
-//       ),
-//     ),
-//     ),
-//   );
-// }
-
-
 Widget buildInstantBookingCard({
-  String? IPTitle,  // Nullable
-  String? ServiceStates,  // Nullable
-  String? ServiceCategory,  // Nullable
-  List<String>? imageUrls,  // Nullable
-  int? IPPrice,  // Nullable
-  required VoidCallback onTap,
+  required String IPTitle,
+  required String ServiceStates,
+  required String ServiceCategory,
+  required List<String> imageUrls,
+  required int IPPrice,
+  required VoidCallback onTap, // ✅ Added onTap
 }) {
   return GestureDetector(
-    onTap: onTap,
+    onTap: onTap, // ✅ Calls the navigation function
     child: Container(
-      width: 220,
-      margin: const EdgeInsets.symmetric(horizontal: 8),
-      child: Card(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        elevation: 3,
-        child: Stack(
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ClipRRect(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                  child: Image.network(
-                    (imageUrls != null && imageUrls.isNotEmpty)
-                        ? imageUrls.first
-                        : "https://via.placeholder.com/150",
-                    width: double.infinity,
-                    height: 130,
-                    fit: BoxFit.cover,
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        IPTitle ?? "Unknown Title",
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                        overflow: TextOverflow.ellipsis,
-                        maxLines: 2,
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          const Icon(Icons.location_on, size: 14, color: Colors.grey),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Text(
-                              ServiceStates ?? "Unknown Location",
-                              style: const TextStyle(fontSize: 14, color: Colors.grey),
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 1,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 2),
-                      Row(
-                        children: [
-                          const Icon(Icons.build, size: 14, color: Colors.grey),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Text(
-                              ServiceCategory ?? "No Category",
-                              style: const TextStyle(fontSize: 14, color: Colors.grey),
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 1,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            Positioned(
-              bottom: 15,
-              right: 20,
-              child: Text(
-                "RM ${IPPrice ?? 0}",
-                style: const TextStyle(
-                  color: Color(0xFF464E65),
-                  fontSize: 26,
-                  fontWeight: FontWeight.bold,
+    width: 220, // Adjust width for better spacing in horizontal scroll
+    margin: const EdgeInsets.symmetric(horizontal: 8),
+    child: Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 3,
+      child: Stack(
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 📌 Image with rounded corners
+              ClipRRect(
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                child: Image.network(
+                  (imageUrls.isNotEmpty) ? imageUrls.first : "https://via.placeholder.com/150",
+                  width: double.infinity,
+                  height: 130, // Adjust height for better fit
+                  fit: BoxFit.cover,
                 ),
               ),
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      IPTitle,
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 2,
+                    ),
+                    const SizedBox(height: 4),
+
+                    // 📌 Location with Icon
+                    Row(
+                      children: [
+                        const Icon(Icons.location_on, size: 14, color: Colors.grey),
+                        const SizedBox(width: 4), // Spacing
+                        Expanded( // ✅ Ensures text truncates within available space
+                          child: Text(
+                            ServiceStates,
+                            style: const TextStyle(fontSize: 14, color: Colors.grey, fontWeight: FontWeight.w400),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+
+                    // 📌 Service Category with Icon
+                    Row(
+                      children: [
+                        const Icon(Icons.build, size: 14, color: Colors.grey),
+                        const SizedBox(width: 4), // Spacing
+                        Expanded( // ✅ Ensures text truncates properly
+                          child: Text(
+                            ServiceCategory,
+                            style: const TextStyle(fontSize: 14, color: Colors.grey, fontWeight: FontWeight.w400),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          Positioned(
+            top: 6,
+            right: 6,
+            child: Builder(
+              builder: (BuildContext context) {
+                return ClipRRect(
+                  borderRadius: BorderRadius.circular(6), // ✅ Smaller rounding
+                  child: Material(
+                    color: Colors.white, // ✅ Button background
+                    child: StatefulBuilder(
+                      builder: (context, setState) {
+                        return FavoriteButton(setState: setState);
+                      },
+                    ),
+                  ),
+
+                );
+              },
             ),
-          ],
-        ),
+          ),
+
+          // 📌 Price (Bottom-right of the card)
+          Positioned(
+            bottom: 15,
+            right: 20,
+            child: Text(
+              "RM $IPPrice", // Directly use the stored integer
+              style: const TextStyle(
+                color: Color(0xFF464E65),
+                fontSize: 26,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
       ),
+    ),
     ),
   );
 }
+
+
+// Widget buildInstantBookingCard({
+//   String? IPTitle,  // Nullable
+//   String? ServiceStates,  // Nullable
+//   String? ServiceCategory,  // Nullable
+//   List<String>? imageUrls,  // Nullable
+//   int? IPPrice,  // Nullable
+//   required VoidCallback onTap,
+// }) {
+//   return GestureDetector(
+//     onTap: onTap,
+//     child: Container(
+//       width: 220,
+//       margin: const EdgeInsets.symmetric(horizontal: 8),
+//       child: Card(
+//         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+//         elevation: 3,
+//         child: Stack(
+//           children: [
+//             Column(
+//               crossAxisAlignment: CrossAxisAlignment.start,
+//               children: [
+//                 ClipRRect(
+//                   borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+//                   child: Image.network(
+//                     (imageUrls != null && imageUrls.isNotEmpty)
+//                         ? imageUrls.first
+//                         : "https://via.placeholder.com/150",
+//                     width: double.infinity,
+//                     height: 130,
+//                     fit: BoxFit.cover,
+//                   ),
+//                 ),
+//                 Padding(
+//                   padding: const EdgeInsets.all(12),
+//                   child: Column(
+//                     crossAxisAlignment: CrossAxisAlignment.start,
+//                     children: [
+//                       Text(
+//                         IPTitle ?? "Unknown Title",
+//                         style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+//                         overflow: TextOverflow.ellipsis,
+//                         maxLines: 2,
+//                       ),
+//                       const SizedBox(height: 4),
+//                       Row(
+//                         children: [
+//                           const Icon(Icons.location_on, size: 14, color: Colors.grey),
+//                           const SizedBox(width: 4),
+//                           Expanded(
+//                             child: Text(
+//                               ServiceStates ?? "Unknown Location",
+//                               style: const TextStyle(fontSize: 14, color: Colors.grey),
+//                               overflow: TextOverflow.ellipsis,
+//                               maxLines: 1,
+//                             ),
+//                           ),
+//                         ],
+//                       ),
+//                       const SizedBox(height: 2),
+//                       Row(
+//                         children: [
+//                           const Icon(Icons.build, size: 14, color: Colors.grey),
+//                           const SizedBox(width: 4),
+//                           Expanded(
+//                             child: Text(
+//                               ServiceCategory ?? "No Category",
+//                               style: const TextStyle(fontSize: 14, color: Colors.grey),
+//                               overflow: TextOverflow.ellipsis,
+//                               maxLines: 1,
+//                             ),
+//                           ),
+//                         ],
+//                       ),
+//                     ],
+//                   ),
+//                 ),
+//               ],
+//             ),
+//             Positioned(
+//               bottom: 15,
+//               right: 20,
+//               child: Text(
+//                 "RM ${IPPrice ?? 0}",
+//                 style: const TextStyle(
+//                   color: Color(0xFF464E65),
+//                   fontSize: 26,
+//                   fontWeight: FontWeight.bold,
+//                 ),
+//               ),
+//             ),
+//           ],
+//         ),
+//       ),
+//     ),
+//   );
+// }
 
 
 class EditPromotionPostPage extends StatelessWidget {

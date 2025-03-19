@@ -148,6 +148,7 @@
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:fix_mate/reusable_widget/reusable_widget.dart';
 
 class InstantPost {
   final String title;
@@ -157,6 +158,8 @@ class InstantPost {
   final int price;
   final String docId;
   final List<TitleWithDescriptions> descriptions;
+  String? spName;
+  String? spImageURL;
 
   InstantPost({
     required this.title,
@@ -166,6 +169,8 @@ class InstantPost {
     required this.price,
     required this.docId,
     required this.descriptions,
+    required this.spName,
+    required this.spImageURL,
   });
 
   factory InstantPost.fromFirestore(DocumentSnapshot doc) {
@@ -180,6 +185,10 @@ class InstantPost {
           : [],
       price: (data['IPPrice'] as num?)?.toInt() ?? 0,
       docId: doc.id,
+      /// **🔹 Retrieving SPname and SPimageURL**
+      spName: data['SPname'] ?? 'Unknown Service Provider',
+      spImageURL: data['SPimageURL'] ?? '',
+
       descriptions: (data['IPDescriptions'] as List<dynamic>?)
           ?.map((entry) => TitleWithDescriptions(
         title: entry['title'] ?? '',
@@ -212,6 +221,8 @@ class _s_InstantPostInfo2State extends State<s_InstantPostInfo2> with TickerProv
   InstantPost? post;
   PageController _pageController = PageController();
   int _currentPage = 0;
+  bool _isFavorite = false; // Track favorite state
+
 
   @override
   void initState() {
@@ -222,6 +233,7 @@ class _s_InstantPostInfo2State extends State<s_InstantPostInfo2> with TickerProv
     );
     animationController.forward();
     fetchPost();
+
   }
 
   Future<void> fetchPost() async {
@@ -266,7 +278,7 @@ class _s_InstantPostInfo2State extends State<s_InstantPostInfo2> with TickerProv
 
                     /// **Page Indicator (e.g., 1/3)**
                     Positioned(
-                      bottom: 16,
+                      bottom: 60,
                       left: 16,
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 10),
@@ -288,7 +300,7 @@ class _s_InstantPostInfo2State extends State<s_InstantPostInfo2> with TickerProv
 
           /// **Main Content Container**
           Positioned(
-            top: MediaQuery.of(context).size.width / 1.2 - 24.0,
+            top: MediaQuery.of(context).size.width / 1.3 - 24.0,
             bottom: 0,
             left: 0,
             right: 0,
@@ -307,36 +319,9 @@ class _s_InstantPostInfo2State extends State<s_InstantPostInfo2> with TickerProv
                   ),
                 ],
               ),
+
               child: Column(
                 children: [
-                  /// **SP Info Section (Profile Image + Name)**
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Row(
-                      children: [
-                        /// **Circular Profile Image**
-                        CircleAvatar(
-                          radius: 28,
-                          backgroundImage: post!.SPimageURL.isNotEmpty
-                              ? NetworkImage(post!.SPimageURL)
-                              : const AssetImage('assets/default_profile.png') as ImageProvider,
-                        ),
-                        const SizedBox(width: 12),
-
-                        /// **SP Name**
-                        Expanded(
-                          child: Text(
-                            post!.SPname,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
                   /// **Scrollable Description Section**
                   Expanded(
                     child: SingleChildScrollView(
@@ -344,6 +329,77 @@ class _s_InstantPostInfo2State extends State<s_InstantPostInfo2> with TickerProv
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+                            child: Row(
+                              children: [
+                                /// **Circular Profile Image**
+                                CircleAvatar(
+                                  radius: 28,
+                                  backgroundImage: (post!.spImageURL != null && post!.spImageURL!.isNotEmpty)
+                                      ? NetworkImage(post!.spImageURL!)
+                                      : const AssetImage('assets/default_profile.png') as ImageProvider,
+                                ),
+                                const SizedBox(width: 12),
+
+                                /// **SP Name & Rating**
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      /// **SP Name**
+                                      Text(
+                                        post!.spName ?? 'Unknown Service Provider',
+                                        style: const TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+
+                                      // /// **Rating in 5 stars**
+                                      // Row(
+                                      //   children: List.generate(5, (index) {
+                                      //     double rating = post!.rating ?? 0; // Ensure rating is not null
+                                      //     return Icon(
+                                      //       index < rating ? Icons.star : Icons.star_border,
+                                      //       color: Colors.orange,
+                                      //       size: 18,
+                                      //     );
+                                      //   }),
+                                      // ),
+
+                                      /// **Static Rating UI (Placeholder)**
+                                      Row(
+                                        children: [
+                                          /// **Placeholder Rating Text**
+                                          const Text(
+                                            "0.0",
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.black,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 6), // Add spacing between rating text and stars
+                                          /// **Stars**
+                                          Row(
+                                            children: List.generate(5, (index) {
+                                              return const Icon(
+                                                Icons.star_border, // Empty stars for now
+                                                color: Colors.orange,
+                                                size: 18,
+                                              );
+                                            }),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
                           Text(
                             post!.title,
                             style: const TextStyle(
@@ -371,11 +427,6 @@ class _s_InstantPostInfo2State extends State<s_InstantPostInfo2> with TickerProv
                                   fontWeight: FontWeight.w600,
                                   color: Colors.blue,
                                 ),
-                              ),
-                              const Icon(
-                                Icons.star,
-                                color: Colors.orange,
-                                size: 24,
                               ),
                             ],
                           ),
@@ -442,51 +493,114 @@ class _s_InstantPostInfo2State extends State<s_InstantPostInfo2> with TickerProv
                     ),
                   ),
 
-                  /// **Fixed "Join Cart" Section**
-                  Container(
-                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: const BorderRadius.only(
-                        bottomLeft: Radius.circular(32.0),
-                        bottomRight: Radius.circular(32.0),
-                      ),
-                      boxShadow: <BoxShadow>[
-                        BoxShadow(
-                          color: Colors.grey.withOpacity(0.2),
-                          offset: const Offset(0, -1),
-                          blurRadius: 6.0,
-                        ),
-                      ],
+                   pk_button(
+                      context,
+                      "Next",
+                          () {
+                        print("Joined ${post!.title}");
+                      },
                     ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          "\$${post!.price}",
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.blue,
-                          ),
-                        ),
-                        ElevatedButton(
-                          onPressed: () {
-                            print("Joined ${post!.title}");
-                          },
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            backgroundColor: Colors.blue,
-                          ),
-                          child: const Text("Join Cart", style: TextStyle(fontSize: 16)),
-                        ),
-                      ],
+                ],
+              ),
+            ),
+          ),
+          // /// **🔹 Animated Floating Favorite Button**
+          // Positioned(
+          //   top: MediaQuery.of(context).size.width / 1.3 - 24.0 - 35,
+          //   right: 35,
+          //   child: GestureDetector(
+          //     onTap: () {
+          //       setState(() {
+          //         _isFavorite = !_isFavorite; // Toggle favorite state
+          //       });
+          //     },
+          //     child: ScaleTransition(
+          //       alignment: Alignment.center,
+          //       scale: CurvedAnimation(
+          //         parent: animationController!,
+          //         curve: Curves.fastOutSlowIn,
+          //       ),
+          //       child: Card(
+          //         color: _isFavorite ? Colors.white : Color(0xFFF06275), // Change background color
+          //         shape: RoundedRectangleBorder(
+          //           borderRadius: BorderRadius.circular(50.0),
+          //           side: _isFavorite ? const BorderSide(color: Color(0xFFF06275), width: 2) : BorderSide.none, // Add border when favorited
+          //         ),
+          //         elevation: 10.0,
+          //         child: Container(
+          //           width: 60,
+          //           height: 60,
+          //           child: Center(
+          //             child: Icon(
+          //               _isFavorite ? Icons.favorite : Icons.favorite_border, // Change icon
+          //               color: _isFavorite ? const Color(0xFFF06275) : Colors.white, // Change icon color
+          //               size: 30,
+          //             ),
+          //           ),
+          //         ),
+          //       ),
+          //     ),
+          //   ),
+          // ),
+
+
+          /// **🔹 Animated Floating Favorite Button**
+          Positioned(
+            top: MediaQuery.of(context).size.width / 1.3 - 24.0 - 35,
+            right: 35,
+            child: GestureDetector(
+              onTap: () {
+                setState(() {
+                  _isFavorite = !_isFavorite; // Toggle favorite state
+                });
+              },
+              child: ScaleTransition(
+                alignment: Alignment.center,
+                scale: CurvedAnimation(
+                  parent: animationController!,
+                  curve: Curves.fastOutSlowIn,
+                ),
+                child: Card(
+                  color: _isFavorite ? Colors.white : Colors.grey, // Background changes
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(50.0),
+                    side: _isFavorite ? const BorderSide(color: Color(0xFFF06275), width: 2) : BorderSide.none, // Border when favorited
+                  ),
+                  elevation: 10.0,
+                  child: Container(
+                    width: 60,
+                    height: 60,
+                    child: Center(
+                      child: Icon(
+                        _isFavorite ? Icons.favorite : Icons.favorite, // Always filled heart
+                        color: _isFavorite ? const Color(0xFFF06275) : Colors.white, // White heart before click, red after
+                        size: 30,
+                      ),
                     ),
                   ),
-                ],
+                ),
+              ),
+            ),
+          ),
+
+          /// **🔹 Styled Back Button**
+          Padding(
+            padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
+            child: SizedBox(
+              width: AppBar().preferredSize.height,
+              height: AppBar().preferredSize.height,
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(AppBar().preferredSize.height),
+                  child: const Icon(
+                    Icons.arrow_back_ios,
+                    color: Colors.black,
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                  },
+                ),
               ),
             ),
           ),
@@ -494,7 +608,9 @@ class _s_InstantPostInfo2State extends State<s_InstantPostInfo2> with TickerProv
       ),
     );
   }
-}
+  }
+
+
 
 
 
