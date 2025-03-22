@@ -283,12 +283,12 @@ class _s_InstantPostInfo2State extends State<s_InstantPostInfo2> with TickerProv
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 10),
                         decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.6),
-                          borderRadius: BorderRadius.circular(12),
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
                           "${_currentPage + 1}/${post!.imageUrls.isNotEmpty ? post!.imageUrls.length : 1}",
-                          style: const TextStyle(color: Colors.white, fontSize: 14),
+                          style: const TextStyle(color: Colors.black, fontSize: 14),
                         ),
                       ),
                     ),
@@ -330,7 +330,7 @@ class _s_InstantPostInfo2State extends State<s_InstantPostInfo2> with TickerProv
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
                           Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+                            padding: const EdgeInsets.symmetric(vertical: 2.0, horizontal: 2.0),
                             child: Row(
                               children: [
                                 /// **Circular Profile Image**
@@ -400,47 +400,78 @@ class _s_InstantPostInfo2State extends State<s_InstantPostInfo2> with TickerProv
                             ),
                           ),
 
+                          /// **Thick Grey Divider**
+                          const Divider(
+                            color: Colors.grey, // Grey color
+                            thickness: 1.5, // Make it thicker
+                            height: 10, // Adjust spacing above and below the divider
+                          ),
+                          const SizedBox(height: 5),
                           Text(
                             post!.title,
                             style: const TextStyle(
                               fontWeight: FontWeight.w600,
-                              fontSize: 22,
+                              fontSize: 20,
                               letterSpacing: 0.27,
                             ),
                           ),
-                          const SizedBox(height: 8),
-                          Text(
-                            post!.serviceCategory,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              color: Colors.grey,
-                            ),
+
+                          const SizedBox(height: 5),
+                          // 📌 Location with Icon
+                          Row(
+                            children: [
+                              const Icon(Icons.location_on, size: 16, color: Colors.black45),
+                              const SizedBox(width: 4), // Spacing
+                              Expanded( // ✅ Ensures text truncates within available space
+                                child: Text(
+                                  post!.serviceStates,
+                                  style: const TextStyle(fontSize: 16, color: Colors.black45, fontWeight: FontWeight.w500),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 5),
+                          // 📌 Service Category with Icon
+                          Row(
+                            children: [
+                              const Icon(Icons.build, size: 16, color: Colors.black45),
+                              const SizedBox(width: 4), // Spacing
+                              Expanded( // ✅ Ensures text truncates properly
+                                child: Text(
+                                  post!.serviceCategory,
+                                  style: const TextStyle(fontSize: 16, color: Colors.black45, fontWeight: FontWeight.w500),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                ),
+                              ),
+                            ],
                           ),
                           const SizedBox(height: 8),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: <Widget>[
                               Text(
-                                "\$${post!.price}",
+                                "RM ${post!.price}",
                                 style: const TextStyle(
                                   fontSize: 22,
                                   fontWeight: FontWeight.w600,
-                                  color: Colors.blue,
+                                  color: Color(0xFFfb9798),
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 16),
-                          Text(
-                            post!.serviceStates,
-                            textAlign: TextAlign.justify,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: Colors.black54,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 5),
 
+                          /// **Thick Grey Divider**
+                          const Divider(
+                            color: Colors.grey, // Grey color
+                            thickness: 1.5, // Make it thicker
+                            height: 10, // Adjust spacing above and below the divider
+                          ),
+
+                          const SizedBox(height: 5),
                           /// **Bullet Point Descriptions**
                           if (post!.descriptions.isNotEmpty)
                             Column(
@@ -453,7 +484,8 @@ class _s_InstantPostInfo2State extends State<s_InstantPostInfo2> with TickerProv
                                       desc.title,
                                       style: const TextStyle(
                                         fontWeight: FontWeight.bold,
-                                        fontSize: 16,
+                                        color: Colors.black54,
+                                        fontSize: 20,
                                       ),
                                     ),
                                     const SizedBox(height: 4),
@@ -467,7 +499,9 @@ class _s_InstantPostInfo2State extends State<s_InstantPostInfo2> with TickerProv
                                             children: [
                                               const Text(
                                                 "• ",
-                                                style: TextStyle(fontSize: 14),
+                                                style: TextStyle(
+                                                    fontSize: 16
+                                                ),
                                               ),
                                               Expanded(
                                                 child: Text(
@@ -546,7 +580,7 @@ class _s_InstantPostInfo2State extends State<s_InstantPostInfo2> with TickerProv
 
           /// **🔹 Animated Floating Favorite Button**
           Positioned(
-            top: MediaQuery.of(context).size.width / 1.3 - 24.0 - 35,
+            top: MediaQuery.of(context).size.width / 1.3 - 24.0 - 45,
             right: 35,
             child: GestureDetector(
               onTap: () {
@@ -585,25 +619,38 @@ class _s_InstantPostInfo2State extends State<s_InstantPostInfo2> with TickerProv
 
           /// **🔹 Styled Back Button**
           Padding(
-            padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
-            child: SizedBox(
-              width: AppBar().preferredSize.height,
-              height: AppBar().preferredSize.height,
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(AppBar().preferredSize.height),
-                  child: const Icon(
-                    Icons.arrow_back_ios,
-                    color: Colors.black,
+            padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top, left: 10), // Move button slightly right
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(20), // Ensure smooth tap effect
+                onTap: () {
+                  Navigator.pop(context);
+                },
+                child: Container(
+                  width: 34, // Small circular background
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFfb9798), // Background color
+                    shape: BoxShape.circle, // Makes it circular
                   ),
-                  onTap: () {
-                    Navigator.pop(context);
-                  },
+                  child: Align( // Adjust the icon position inside the circle
+                    alignment: Alignment.centerRight, // Move the icon slightly to the right
+                    child: const Padding(
+                      padding: EdgeInsets.only(right: 5), // Fine-tune position
+                      child: Icon(
+                        Icons.arrow_back_ios,
+                        color: Colors.white, // Contrast against background
+                        size: 18, // Smaller size
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
           ),
+
+
         ],
       ),
     );

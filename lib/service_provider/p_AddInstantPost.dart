@@ -13,21 +13,6 @@ class p_AddInstantPost extends StatefulWidget {
   _p_AddInstantPostState createState() => _p_AddInstantPostState();
 }
 
-// class TitleWithDescriptions {
-//   String title;
-//   List<String> descriptions;
-//
-//   TitleWithDescriptions({required this.title, required this.descriptions});
-//
-//   Map<String, dynamic> toMap() {
-//     return {
-//       "title": title,
-//       "descriptions": descriptions,
-//     };
-//   }
-// }
-
-
 class TitleWithDescriptions {
   TextEditingController titleController;
   List<TextEditingController> descriptionControllers;
@@ -113,18 +98,6 @@ class _p_AddInstantPostState extends State<p_AddInstantPost> {
     });
   }
 
-
-  // void addDescriptionField(int titleIndex) {
-  //   setState(() {
-  //     entries[titleIndex].descriptions.add("");
-  //   });
-  // }
-  //
-  // void removeDescriptionField(int titleIndex, int descIndex) {
-  //   setState(() {
-  //     entries[titleIndex].descriptions.removeAt(descIndex);
-  //   });
-  // }
 
   void addDescriptionField(int titleIndex) {
     setState(() {
@@ -255,6 +228,7 @@ class _p_AddInstantPostState extends State<p_AddInstantPost> {
         'ServiceStates': List.from(selectedStates),
         'ServiceCategory': List.from(selectedExpertiseFields),
         'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
       });
 
       // Close loading dialog

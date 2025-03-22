@@ -785,8 +785,8 @@ class CustomRadioGroup extends StatefulWidget {
   final List<String> options;
   final Function(List<String>) onSelected;
   final List<String>? selectedValues;
-  final Color activeColor;
-  final Color inactiveColor;
+  final Color? activeColor;
+  final Color? inactiveColor;
   final bool isRequired;
   final String requiredMessage;
   final Function(String?)? onValidation;
@@ -797,8 +797,10 @@ class CustomRadioGroup extends StatefulWidget {
     required this.options,
     required this.onSelected,
     this.selectedValues,
-    this.activeColor = const Color(0xFF464E65),
-    this.inactiveColor = const Color(0xFF464E65),
+    // this.activeColor = const Color(0xFF464E65),
+    // this.inactiveColor = const Color(0xFF464E65),
+    this.activeColor,
+    this.inactiveColor,
     this.isRequired = false,
     this.requiredMessage = "This field is required",
     this.onValidation,
@@ -834,6 +836,8 @@ class _CustomRadioGroupState extends State<CustomRadioGroup> {
 
   @override
   Widget build(BuildContext context) {
+    Color activeColor = widget.activeColor ?? const Color(0xFF464E65);
+    Color inactiveColor = widget.inactiveColor ?? const Color(0xFF464E65);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -870,10 +874,12 @@ class _CustomRadioGroupState extends State<CustomRadioGroup> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
                 decoration: BoxDecoration(
-                  color: isSelected ? widget.activeColor : Colors.white,
+                  // color: isSelected ? widget.activeColor : Colors.white,
+                  color: isSelected ? (widget.activeColor ?? const Color(0xFFfb9798)) : Colors.white,
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: isSelected ? widget.activeColor : widget.inactiveColor,
+                    // color: isSelected ? widget.activeColor : widget.inactiveColor,
+                    color: isSelected ? (widget.activeColor ?? const Color(0xFFfb9798)) : (widget.inactiveColor ?? const Color(0xFF464E65)),
                     width: 2,
                   ),
                 ),
@@ -881,7 +887,8 @@ class _CustomRadioGroupState extends State<CustomRadioGroup> {
                   option,
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: isSelected ? Colors.white : widget.inactiveColor,
+                    // color: isSelected ? Colors.white : widget.inactiveColor,
+                    color: isSelected ? Colors.white : (widget.inactiveColor ?? const Color(0xFF464E65)),
                     fontSize: 14,
                     fontWeight: FontWeight.w400,
                     letterSpacing: -0.30,

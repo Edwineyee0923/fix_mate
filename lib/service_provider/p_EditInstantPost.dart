@@ -340,9 +340,10 @@ class _p_EditInstantPostState extends State<p_EditInstantPost> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          "Add Instant Booking Post",
+          "Edit Instant Booking Post",
           style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
         ),
+        titleSpacing: 2,
       ),
       body: SingleChildScrollView(
         padding: EdgeInsets.all(16),
@@ -697,13 +698,16 @@ class _p_EditInstantPostState extends State<p_EditInstantPost> {
               ),
             ),
             SizedBox(height: 30),
-            dk_button(
-              context,
-              "Update Post", // ✅ Update the label
-                  () async {
-                updateInstantPost(); // ✅ Call the same function when button is pressed
-              },
+            Center(
+              child: dk_button(
+                context,
+                "Update Post",
+                    () async {
+                  updateInstantPost();
+                },
+              ),
             ),
+
           ],
         ),
       ),

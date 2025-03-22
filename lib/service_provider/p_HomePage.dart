@@ -21,14 +21,21 @@ class _p_HomePageState extends State<p_HomePage> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   List<Widget> allInstantPosts = [];
+  List<Widget> latestInstantPosts = [];
+
 
   @override
   void initState() {
     super.initState();
     _loadInstantPosts(); // Load posts when the page initializes
+    updateLatestPosts();
   }
 
-
+  void updateLatestPosts() {
+    setState(() {
+      latestInstantPosts = allInstantPosts.reversed.take(4).toList();
+    });
+  }
 
   Future<void> _loadInstantPosts() async {
     try {
@@ -40,10 +47,13 @@ class _p_HomePageState extends State<p_HomePage> {
 
       print("Fetching posts for userId: ${user.uid}");
 
-      QuerySnapshot snapshot = await _firestore
-          .collection('instant_booking')
-          .where('userId', isEqualTo: user.uid)
-          .get();
+      // Start with a Query
+      Query query = _firestore.collection('instant_booking').where('userId', isEqualTo: user.uid);
+
+      // Apply Sorting Based on `updatedAt`
+      query = query.orderBy('updatedAt', descending: true); // ✅ Always get the latest posts first
+
+      QuerySnapshot snapshot = await query.get();
 
       if (snapshot.docs.isEmpty) {
         print("No instant booking posts found for user: ${user.uid}");
@@ -136,6 +146,9 @@ class _p_HomePageState extends State<p_HomePage> {
 
 
   Widget _buildInstantBookingSection() {
+    // ✅ Take only the first 4 newest posts (no need for `.reversed`)
+    List<Widget> latestInstantPosts = allInstantPosts.take(4).toList();
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10),
       child: Column(
@@ -181,7 +194,7 @@ class _p_HomePageState extends State<p_HomePage> {
           const SizedBox(height: 8),
 
           // ✅ Display message if no posts exist
-          allInstantPosts.isEmpty
+          latestInstantPosts.isEmpty
               ? const Text(
             "No instant booking post found.\nPlease click on the + button to add an instant booking post.",
             style: TextStyle(color: Colors.black54),
@@ -190,7 +203,7 @@ class _p_HomePageState extends State<p_HomePage> {
             height: 280,
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
-              child: Row(children: allInstantPosts),
+              child: Row(children: latestInstantPosts), // ✅ Only latest 4 posts
             ),
           ),
 
@@ -221,8 +234,6 @@ class _p_HomePageState extends State<p_HomePage> {
   }
 
 
-
-
   @override
   Widget build(BuildContext context) {
     return ProviderLayout(
@@ -244,7 +255,7 @@ class _p_HomePageState extends State<p_HomePage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildSearchBar(),
+                // _buildSearchBar(),
                 const SizedBox(height: 16),
                 _buildPromotionSection(context),
                 const SizedBox(height: 20),
@@ -258,25 +269,25 @@ class _p_HomePageState extends State<p_HomePage> {
 }
 
 
-Widget _buildSearchBar() {
-  return Container(
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(25),
-      boxShadow: [
-        BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
-      ],
-    ),
-    child: TextField(
-      decoration: InputDecoration(
-        hintText: "Search your post.......",
-        border: InputBorder.none,
-        prefixIcon: const Icon(Icons.search, color: Color(0xFF464E65)),
-        contentPadding: const EdgeInsets.symmetric(vertical: 14),
-      ),
-    ),
-  );
-}
+// Widget _buildSearchBar() {
+//   return Container(
+//     decoration: BoxDecoration(
+//       color: Colors.white,
+//       borderRadius: BorderRadius.circular(25),
+//       boxShadow: [
+//         BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
+//       ],
+//     ),
+//     child: TextField(
+//       decoration: InputDecoration(
+//         hintText: "Search your post.......",
+//         border: InputBorder.none,
+//         prefixIcon: const Icon(Icons.search, color: Color(0xFF464E65)),
+//         contentPadding: const EdgeInsets.symmetric(vertical: 14),
+//       ),
+//     ),
+//   );
+// }
 
 
 Widget _buildPromotionSection(BuildContext context) {
@@ -480,11 +491,6 @@ Widget buildInstantBookingCard({
             ),
           ),
 
-
-
-
-
-
           // 📌 Price (Bottom-right of the card)
           Positioned(
             bottom: 15,
@@ -498,11 +504,6 @@ Widget buildInstantBookingCard({
               ),
             ),
           ),
-
-
-
-
-
         ],
       ),
     ),

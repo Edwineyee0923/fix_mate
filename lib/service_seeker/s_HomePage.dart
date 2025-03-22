@@ -1,8 +1,6 @@
-import 'package:fix_mate/service_provider/p_AddInstantPost.dart';
 import 'package:fix_mate/service_provider/p_InstantPostsList.dart';
-import 'package:fix_mate/service_seeker/s_Account.dart';
-import 'package:fix_mate/service_seeker/s_InstantPostInfo.dart';
 import 'package:fix_mate/service_seeker/s_InstantPostInfo2.dart';
+import 'package:fix_mate/service_seeker/s_InstantPostList.dart';
 import 'package:fix_mate/service_seeker/s_layout.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -23,13 +21,13 @@ class _s_HomePageState extends State<s_HomePage> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   List<Widget> allInstantPosts = [];
+  List<Widget> latestInstantPosts = [];
 
   @override
   void initState() {
     super.initState();
     _loadInstantPosts(); // Load posts when the page initializes
   }
-
 
   Future<void> _loadInstantPosts() async {
     try {
@@ -39,16 +37,25 @@ class _s_HomePageState extends State<s_HomePage> {
         return;
       }
 
-      print("Fetching posts for userId: ${user.uid}");
+      // print("Fetching posts for userId: ${user.uid}");
 
-      QuerySnapshot snapshot = await _firestore
-          .collection('instant_booking')
-          .get();
+      // QuerySnapshot snapshot = await _firestore
+      //     .collection('instant_booking')
+      //     .get();
+
+      // Start with a Query (Fetching all instant booking posts)
+      Query query = _firestore.collection('instant_booking');
+
+      // Apply Sorting Based on `updatedAt`
+      query = query.orderBy('updatedAt', descending: true); // ✅ Always get the latest posts first
+
+      // Execute Query
+      QuerySnapshot snapshot = await query.get();
 
       if (snapshot.docs.isEmpty) {
-        print("No instant booking posts found for user: ${user.uid}");
+        print("No instant booking posts found.");
       } else {
-        print("Fetched ${snapshot.docs.length} posts");
+        print("Fetched ${snapshot.docs.length} instant booking posts");
       }
 
       List<Widget> instantPosts = snapshot.docs.map((doc) {
@@ -82,6 +89,7 @@ class _s_HomePageState extends State<s_HomePage> {
 
       setState(() {
         allInstantPosts = instantPosts;
+        latestInstantPosts = allInstantPosts.take(4).toList(); // ✅ Only take the latest 4
       });
     } catch (e) {
       print("Error loading Instant Booking Posts: $e");
@@ -111,7 +119,7 @@ class _s_HomePageState extends State<s_HomePage> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => p_InstantPostList(),
+                      builder: (context) => s_InstantPostList(),
                     ),
                   );
                 }
@@ -122,10 +130,10 @@ class _s_HomePageState extends State<s_HomePage> {
                     children: const [
                       Text(
                         "See more",
-                        style: TextStyle(color: Color(0xFF464E65), fontSize: 16, fontWeight: FontWeight.w600),
+                        style: TextStyle(color: Color(0xFFfb9798), fontSize: 16, fontWeight: FontWeight.w600),
                       ),
                       SizedBox(width: 4), // ✅ Adds spacing between text and icon
-                      Icon(Icons.arrow_forward_ios, size: 16, color: Color(0xFF464E65)),
+                      Icon(Icons.arrow_forward_ios, size: 16, color: Color(0xFFfb9798)),
                     ],
                   ),
                 ),
@@ -136,16 +144,16 @@ class _s_HomePageState extends State<s_HomePage> {
           const SizedBox(height: 8),
 
           // ✅ Display message if no posts exist
-          allInstantPosts.isEmpty
+          latestInstantPosts.isEmpty
               ? const Text(
-            "No instant booking post found.\nPlease click on the + button to add an instant booking post.",
+            "No instant booking post found.",
             style: TextStyle(color: Colors.black54),
           )
               : SizedBox(
             height: 280,
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
-              child: Row(children: allInstantPosts),
+              child: Row(children: latestInstantPosts),
             ),
           ),
 
@@ -180,7 +188,7 @@ class _s_HomePageState extends State<s_HomePage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildSearchBar(),
+                // _buildSearchBar(),
                 const SizedBox(height: 16),
                 _buildPromotionSection(context),
                 const SizedBox(height: 20),
@@ -194,25 +202,25 @@ class _s_HomePageState extends State<s_HomePage> {
 }
 
 
-Widget _buildSearchBar() {
-  return Container(
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(25),
-      boxShadow: [
-        BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
-      ],
-    ),
-    child: TextField(
-      decoration: InputDecoration(
-        hintText: "Search your post.......",
-        border: InputBorder.none,
-        prefixIcon: const Icon(Icons.search, color: Color(0xFF464E65)),
-        contentPadding: const EdgeInsets.symmetric(vertical: 14),
-      ),
-    ),
-  );
-}
+// Widget _buildSearchBar() {
+//   return Container(
+//     decoration: BoxDecoration(
+//       color: Colors.white,
+//       borderRadius: BorderRadius.circular(25),
+//       boxShadow: [
+//         BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
+//       ],
+//     ),
+//     child: TextField(
+//       decoration: InputDecoration(
+//         hintText: "Search your post.......",
+//         border: InputBorder.none,
+//         prefixIcon: const Icon(Icons.search, color: Color(0xFF464E65)),
+//         contentPadding: const EdgeInsets.symmetric(vertical: 14),
+//       ),
+//     ),
+//   );
+// }
 
 
 Widget _buildPromotionSection(BuildContext context) {
@@ -253,7 +261,7 @@ Widget _buildPromotionSection(BuildContext context) {
                 MaterialPageRoute(builder: (context) => EditPromotionPostPage()),
               );
             },
-            backgroundColor: const Color(0xFF464E65),
+            backgroundColor: const Color(0xFFfb9798),
             child: const Icon(Icons.add, size: 28, color: Colors.white),
           ),
         ),
@@ -371,7 +379,7 @@ Widget buildInstantBookingCard({
             child: Text(
               "RM $IPPrice", // Directly use the stored integer
               style: const TextStyle(
-                color: Color(0xFF464E65),
+                color: Color(0xFFfb9798),
                 fontSize: 26,
                 fontWeight: FontWeight.bold,
               ),
