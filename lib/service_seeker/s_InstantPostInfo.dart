@@ -1,16 +1,214 @@
-import 'dart:io';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:fix_mate/services/upload_service.dart';
-import 'package:fix_mate/reusable_widget/reusable_widget.dart';
-import 'package:flutter/services.dart';
+// import 'package:cloud_firestore/cloud_firestore.dart';
+// import 'package:flutter/material.dart';
+//
+// class s_InstantPostInfo2 extends StatefulWidget {
+//   final String docId;
+//
+//   const s_InstantPostInfo2({Key? key, required this.docId}) : super(key: key);
+//
+//   @override
+//   _s_InstantPostInfo2State createState() => _s_InstantPostInfo2State();
+// }
+//
+// class _s_InstantPostInfo2State extends State<s_InstantPostInfo2> {
+//   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+//   Map<String, dynamic>? postData;
+//   bool isLoading = true;
+//
+//   @override
+//   void initState() {
+//     super.initState();
+//     fetchPostData();
+//   }
+//
+//   Future<void> fetchPostData() async {
+//     try {
+//       DocumentSnapshot docSnapshot =
+//       await _firestore.collection('instant_booking').doc(widget.docId).get();
+//
+//       if (docSnapshot.exists) {
+//         setState(() {
+//           postData = docSnapshot.data() as Map<String, dynamic>;
+//           isLoading = false;
+//         });
+//       } else {
+//         setState(() {
+//           isLoading = false;
+//         });
+//       }
+//     } catch (e) {
+//       print("Error fetching data: $e");
+//       setState(() {
+//         isLoading = false;
+//       });
+//     }
+//   }
+//
+//   @override
+//   Widget build(BuildContext context) {
+//     return Scaffold(
+//       appBar: AppBar(title: const Text("Instant Booking Details")),
+//       body: isLoading
+//           ? const Center(child: CircularProgressIndicator())
+//           : postData == null
+//           ? const Center(child: Text("No data available"))
+//           : Padding(
+//         padding: const EdgeInsets.all(16.0),
+//         child: ListView(
+//           children: [
+//             // 📌 Safe Image Handling
+//             ClipRRect(
+//               borderRadius: BorderRadius.circular(12),
+//               child: Image.network(
+//                 (postData!['IPImage'] is List<dynamic> &&
+//                     (postData!['IPImage'] as List<dynamic>).isNotEmpty)
+//                     ? (postData!['IPImage'] as List<dynamic>).first.toString()
+//                     : "https://via.placeholder.com/150",
+//                 width: double.infinity,
+//                 height: 200,
+//                 fit: BoxFit.cover,
+//               ),
+//             ),
+//
+//             const SizedBox(height: 16),
+//
+//             // 📌 Title
+//             Text(
+//               postData!['IPTitle']?.toString() ?? "Unknown",
+//               style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+//             ),
+//
+//             const SizedBox(height: 8),
+//
+//             // 📌 Price
+//             Text(
+//               "Price: RM ${postData!['IPPrice']?.toString() ?? '0'}",
+//               style: const TextStyle(fontSize: 18, color: Colors.blue),
+//             ),
+//
+//             const SizedBox(height: 8),
+//
+//             // 📌 Location
+//             Text(
+//               "Location: ${(postData!['ServiceStates'] as List<dynamic>?)?.join(", ") ?? "Unknown"}",
+//               style: const TextStyle(fontSize: 16, color: Colors.grey),
+//             ),
+//
+//             const SizedBox(height: 8),
+//
+//             // 📌 Category
+//             Text(
+//               "Category: ${(postData!['ServiceCategory'] as List<dynamic>?)?.join(", ") ?? "No category"}",
+//               style: const TextStyle(fontSize: 16, color: Colors.grey),
+//             ),
+//
+//             const SizedBox(height: 16),
+//
+//             // 📌 Description
+//             Text(
+//               "Description:",
+//               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+//             ),
+//
+//             const SizedBox(height: 8),
+//
+//             // 📌 Description Entries
+//             ...(postData!['IPDescriptions'] as List<dynamic>? ?? []).map((entry) {
+//               return Column(
+//                 crossAxisAlignment: CrossAxisAlignment.start,
+//                 children: [
+//                   // Entry Title
+//                   Text(
+//                     entry['title']?.toString() ?? "No Title",
+//                     style: const TextStyle(
+//                         fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black),
+//                   ),
+//
+//                   const SizedBox(height: 4),
+//
+//                   // Entry Description Bullet Points
+//                   ...(entry['descriptions'] as List<dynamic>? ?? []).map((desc) {
+//                     return Padding(
+//                       padding: const EdgeInsets.only(bottom: 4),
+//                       child: Text("• ${desc.toString()}",
+//                           style: const TextStyle(fontSize: 16, color: Colors.black54)),
+//                     );
+//                   }).toList(),
+//
+//                   const SizedBox(height: 8),
+//                 ],
+//               );
+//             }).toList(),
+//           ],
+//         ),
+//       ),
+//     );
+//   }
+// }
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
+import 'package:fix_mate/reusable_widget/reusable_widget.dart';
+
+class InstantPost {
+  final String title;
+  final String serviceStates;
+  final String serviceCategory;
+  final List<String> imageUrls;
+  final int price;
+  final String docId;
+  final List<TitleWithDescriptions> descriptions;
+  String? spName;
+  String? spImageURL;
+
+  InstantPost({
+    required this.title,
+    required this.serviceStates,
+    required this.serviceCategory,
+    required this.imageUrls,
+    required this.price,
+    required this.docId,
+    required this.descriptions,
+    required this.spName,
+    required this.spImageURL,
+  });
+
+  factory InstantPost.fromFirestore(DocumentSnapshot doc) {
+    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+
+    return InstantPost(
+      title: data['IPTitle'] ?? 'Unknown',
+      serviceStates: (data['ServiceStates'] as List<dynamic>?)?.join(", ") ?? 'Unknown',
+      serviceCategory: (data['ServiceCategory'] as List<dynamic>?)?.join(", ") ?? 'No services listed',
+      imageUrls: (data['IPImage'] != null && data['IPImage'] is List<dynamic>)
+          ? List<String>.from(data['IPImage'])
+          : [],
+      price: (data['IPPrice'] as num?)?.toInt() ?? 0,
+      docId: doc.id,
+      /// **🔹 Retrieving SPname and SPimageURL**
+      spName: data['SPname'] ?? 'Unknown Service Provider',
+      spImageURL: data['SPimageURL'] ?? '',
+
+      descriptions: (data['IPDescriptions'] as List<dynamic>?)
+          ?.map((entry) => TitleWithDescriptions(
+        title: entry['title'] ?? '',
+        descriptions: List<String>.from(entry['descriptions'] ?? []),
+      ))
+          .toList() ??
+          [],
+    );
+  }
+}
+
+class TitleWithDescriptions {
+  final String title;
+  final List<String> descriptions;
+
+  TitleWithDescriptions({required this.title, required this.descriptions});
+}
 
 class s_InstantPostInfo extends StatefulWidget {
   final String docId;
-
   const s_InstantPostInfo({Key? key, required this.docId}) : super(key: key);
 
   @override
@@ -18,696 +216,448 @@ class s_InstantPostInfo extends StatefulWidget {
 }
 
 
-
-class TitleWithDescriptions {
-  TextEditingController titleController;
-  List<TextEditingController> descriptionControllers;
-
-  TitleWithDescriptions({String title = "", List<String> descriptions = const []})
-      : titleController = TextEditingController(text: title),
-        descriptionControllers = descriptions.map((desc) => TextEditingController(text: desc)).toList();
-
-  Map<String, dynamic> toMap() {
-    return {
-      "title": titleController.text,
-      "descriptions": descriptionControllers.map((controller) => controller.text).toList(),
-    };
-  }
-}
-
-class _s_InstantPostInfoState extends State<s_InstantPostInfo> {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-
-
-  final ImagePicker _picker = ImagePicker();
-  List<File> _images = [];
-  List<String> _imageUrls = [];
-
-  String? userId;
-  String? spName;
-  String? spImageUrl;
-
-  TextEditingController titleController = TextEditingController();
-  TextEditingController priceController = TextEditingController();
-
-  List<String> stateOptions = [];
-  List<String> selectedStates = [];
-  List<String> expertiseOptions = [];
-  List<String> selectedExpertiseFields = [];
-  List<TitleWithDescriptions> entries = [];
-  String? IPTitleError;
-  String? priceError;
-  bool isEditing = true;
-
-  String? selectedStatesError;
-  String? selectedExpertiseError;
+class _s_InstantPostInfoState extends State<s_InstantPostInfo> with TickerProviderStateMixin {
+  late AnimationController animationController;
+  InstantPost? post;
+  PageController _pageController = PageController();
+  int _currentPage = 0;
+  bool _isFavorite = false; // Track favorite state
 
 
   @override
   void initState() {
     super.initState();
-    _loadSPData().then((_) {
-      _fetchIPData();
-    });
-  }
-
-  Future<void> _fetchIPData() async {
-    DocumentSnapshot snapshot =
-    await _firestore.collection('instant_booking').doc(widget.docId).get();
-
-    if (snapshot.exists) {
-      Map<String, dynamic> data = snapshot.data() as Map<String, dynamic>;
-
-      setState(() {
-        titleController.text = data['IPTitle'] ?? '';
-        priceController.text = (data['IPPrice'] ?? '').toString();
-        _imageUrls = List<String>.from(data['IPImage'] ?? []);
-        selectedStates = List<String>.from(data['ServiceStates'] ?? []);
-        selectedExpertiseFields = List<String>.from(data['ServiceCategory'] ?? []);
-
-        // Ensure the fetched values exist in the options lists
-        // selectedStates = List<String>.from(data['ServiceStates'] ?? [])
-        //     .where((state) => stateOptions.contains(state))
-        //     .toList();
-        // selectedExpertiseFields = List<String>.from(data['ServiceCategory'] ?? [])
-        //     .where((category) => expertiseOptions.contains(category))
-        //     .toList();
-
-        entries = (data['IPDescriptions'] as List<dynamic>?)
-            ?.map((entry) => TitleWithDescriptions(
-          title: entry['title'],
-          descriptions: List<String>.from(entry['descriptions']),
-        ))
-            .toList() ??
-            [];
-      });
-
-      // 🔥 Force UI rebuild
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        setState(() {});
-      });
-    }
-  }
-
-
-
-  void validatePrice() {
-    setState(() {
-      priceError = priceController.text.trim().isEmpty ? "Price is required!" : null;
-    });
-  }
-
-  Future<void> _loadSPData() async {
-    User? user = _auth.currentUser;
-    if (user != null) {
-      userId = user.uid;
-      DocumentSnapshot snapshot = await _firestore.collection('service_providers').doc(user.uid).get();
-
-      if (snapshot.exists) {
-        Map<String, dynamic> data = snapshot.data() as Map<String, dynamic>;
-        setState(() {
-          spName = data['name'];
-          spImageUrl = data['profilePic'];
-          stateOptions = (data['selectedStates'] as List<dynamic>?)?.cast<String>() ?? [];
-          selectedStates = List.from(stateOptions);
-          expertiseOptions = (data['selectedExpertiseFields'] as List<dynamic>?)?.cast<String>() ?? [];
-          selectedExpertiseFields = List.from(expertiseOptions);
-        });
-      }
-    }
-  }
-
-
-  void addTitleEntry() {
-    setState(() {
-      entries.add(TitleWithDescriptions(title: "", descriptions: [""]));
-    });
-  }
-
-
-  void addDescriptionField(int titleIndex) {
-    setState(() {
-      entries[titleIndex].descriptionControllers.add(TextEditingController()); // ✅ Corrected
-    });
-  }
-
-  void removeDescriptionField(int titleIndex, int descIndex) {
-    setState(() {
-      entries[titleIndex].descriptionControllers[descIndex].dispose(); // ✅ Dispose controller before removing
-      entries[titleIndex].descriptionControllers.removeAt(descIndex); // ✅ Corrected
-    });
-  }
-
-
-  void removeTitleEntry(int index) {
-    setState(() {
-      entries.removeAt(index);
-    });
-  }
-
-
-  Future<void> _pickAndUploadImage() async {
-    final List<XFile>? pickedFiles = await _picker.pickMultiImage(); // ✅ Allows multiple selection
-
-    if (pickedFiles != null && pickedFiles.isNotEmpty) {
-      List<File> selectedImages = pickedFiles.map((file) => File(file.path)).toList();
-      setState(() => _images.addAll(selectedImages)); // ✅ Temporarily store local images
-
-      UploadService uploadService = UploadService();
-
-      // ✅ Upload images in parallel
-      List<Future<String?>> uploadTasks = selectedImages.map((imageFile) {
-        return uploadService.uploadImage(imageFile);
-      }).toList();
-
-      List<String?> uploadedUrls = await Future.wait(uploadTasks);
-
-      // ✅ Remove null URLs
-      uploadedUrls.removeWhere((url) => url == null);
-
-      // ✅ Update state: add URLs & remove local images
-      setState(() {
-        _imageUrls.addAll(uploadedUrls.cast<String>());
-        _images.clear(); // ✅ Clear local images after successful upload
-      });
-    }
-  }
-
-
-  void _removeImage(int index) {
-    setState(() {
-      if (index < _imageUrls.length) {
-        // ✅ Removing an uploaded image
-        _imageUrls.removeAt(index);
-      } else {
-        // ✅ Removing a newly picked image
-        int localIndex = index - _imageUrls.length; // Adjust index for _images
-        _images.removeAt(localIndex);
-      }
-    });
-  }
-
-
-
-  Future<void> updateInstantPost() async {
-
-    if (widget.docId.isEmpty) return;
-    // setState(() {
-    //   selectedStatesError = selectedStates.isEmpty ? "Please select at least one operation state!" : null;
-    //   selectedExpertiseError = selectedExpertiseFields.isEmpty ? "Please select at least one expertise field!" : null;
-    // });
-
-
-    setState(() {
-      selectedStatesError = selectedStates.isEmpty ? "Please select at least one operation state!" : null;
-      selectedExpertiseError = selectedExpertiseFields.isEmpty ? "Please select at least one expertise field!" : null;
-
-      print("selectedStatesError: $selectedStatesError");
-      print("selectedExpertiseError: $selectedExpertiseError");
-    });
-
-    if (selectedStates.isEmpty || selectedExpertiseFields.isEmpty) {
-      ReusableSnackBar(
-        context,
-        selectedStates.isEmpty && selectedExpertiseFields.isEmpty
-            ? "Please select at least one operation state and one service category."
-            : selectedStates.isEmpty
-            ? "Please select at least one operation state."
-            : "Please select at least one service category.",
-        icon: Icons.warning,
-        iconColor: Colors.orange,
-      );
-      return;
-    }
-
-
-    if (userId == null) {
-      ReusableSnackBar(
-          context,
-          "User not found. Please log in again.",
-          icon: Icons.warning,
-          iconColor: Colors.orange
-      );
-      return;
-    }
-
-    // ✅ Validate if each title has at least one description
-    bool hasValidDescriptions = entries.every((entry) => entry.descriptionControllers.isNotEmpty);
-
-    if (entries.isEmpty || !hasValidDescriptions) {
-      ReusableSnackBar(
-          context,
-          "Each title must have at least one description.",
-          icon: Icons.warning,
-          iconColor: Colors.orange
-      );
-      return;
-    }
-
-    if (IPTitleError != null ||
-        titleController.text.trim().isEmpty ||
-        priceController.text.trim().isEmpty ||
-        selectedStates.isEmpty || selectedExpertiseFields.isEmpty ||
-        selectedStatesError != null || selectedExpertiseError != null ||
-        _imageUrls == null || _imageUrls!.isEmpty) {  // ✅ Check for empty image list
-      ReusableSnackBar(
-          context,
-          "Please fill in all fields and upload an image.",
-          icon: Icons.warning,
-          iconColor: Colors.orange
-      );
-      return;
-    }
-
-    // Show loading dialog (blocking UI until post is added)
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const Center(child: CircularProgressIndicator()),
+    animationController = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
     );
+    animationController.forward();
+    fetchPost();
 
-    try {
-      // Add to Firestore
-      await _firestore.collection('instant_booking').doc(widget.docId).update({
-        // 'userId': userId,
-        // 'SPname': spName,
-        'SPimageURL': spImageUrl,
-        'IPImage': _imageUrls,
-        'IPTitle': titleController.text.trim(),
-        'IPPrice': int.tryParse(priceController.text.trim()) ?? 0,
-        'IPDescriptions': entries.map((entry) => entry.toMap()).toList(),
-        'ServiceStates': List.from(selectedStates),
-        'ServiceCategory': List.from(selectedExpertiseFields),
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
+  }
 
-      // Close loading dialog
-      Navigator.pop(context);
-
-      // Notify user
-      ReusableSnackBar(
-        context,
-        "Instant Booking Post Updated Successfully!",
-        icon: Icons.check_circle,
-        iconColor: Colors.green,
-      );
-
-      // Delay a bit to ensure smooth UI transition
-      await Future.delayed(Duration(milliseconds: 100));
-
-      // Pop the current screen and pass `true` to indicate successful addition
-      Navigator.pop(context, true);
-    } catch (error) {
-      Navigator.pop(context); // Close loading dialog on error
-      print("Error adding post: $error");
-      ReusableSnackBar(
-          context,
-          "Failed to add post. Please try again. ",
-          icon: Icons.error,
-          iconColor: Colors.red // Red icon for error
-      );
-    }
+  Future<void> fetchPost() async {
+    DocumentSnapshot doc = await FirebaseFirestore.instance
+        .collection('instant_booking')
+        .doc(widget.docId)
+        .get();
+    setState(() {
+      post = InstantPost.fromFirestore(doc);
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFFFFFF2),
-      appBar: AppBar(
-        backgroundColor: Color(0xFF464E65),
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          "Add Instant Booking Post",
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
-        ),
-      ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ✅ Scrollable uploaded images
-            if (_imageUrls.isNotEmpty || _images.isNotEmpty)
-              SizedBox(
-                height: 150,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: _imageUrls.length + _images.length, // ✅ Count both lists
-                  itemBuilder: (context, index) {
-                    return Stack(
-                      children: [
-                        Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 10),
-                          width: 120,
-                          height: 150,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
-                            image: DecorationImage(
-                              image: index < _imageUrls.length
-                                  ? NetworkImage(_imageUrls[index]) // ✅ Fetch from Firestore
-                                  : FileImage(_images[index - _imageUrls.length]) as ImageProvider<Object>, // ✅ Local File
-                              fit: BoxFit.cover,
-                            ),
-                          ),
-                        ),
-                        Positioned(
-                          top: 6,
-                          right: 15,
-                          child: GestureDetector(
-                            onTap: () => _removeImage(index),
-                            child: Container(
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: Colors.white,
-                              ),
-                              padding: const EdgeInsets.all(4),
-                              child: const Icon(
-                                Icons.close,
-                                color: Colors.black,
-                                size: 18,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
-              ),
-            Center(
-              child: TextButton(
-                onPressed: _pickAndUploadImage,
-                child: const Text(
-                  "Upload Service Picture",
-                  style: TextStyle(
-                    color: Color(0xFF464E65),
-                    decoration: TextDecoration.underline,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 15),
-            LongInputContainer(
-              labelText: "Title of the Service",
-              controller: titleController,
-              enabled:  isEditing, // Or use isEditing
-              isRequired: true, // ✅ Required field
-              placeholder: "Enter the title of the service",
-              height: 50,
-              width: 380,
-              errorMessage: IPTitleError, // ✅ Dynamic error message
-              onChanged: (value) {
-                setState(() {
-                  IPTitleError = value.trim().isEmpty ? "Title of the service is required!" : null;
-                });
-              },
-            ),
-
-            const SizedBox(height: 15),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "Price",
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black),
-                ),
-                Text(
-                  "(Only accept whole number e.g 12)",
-                  style: const TextStyle(fontSize: 14,fontWeight: FontWeight.w500, fontStyle: FontStyle.italic, color: Colors.black54),
-                ),
-                const SizedBox(height: 2),
-                PriceInputContainer(
-                  // labelText: "Price (Only accept whole number e.g 12)",
-                  controller: priceController,
-                  enabled: isEditing, // Enable/Disable input
-                  isRequired: true, // Make it required
-                  errorMessage: priceError,
-                  onChanged: (value) {
-                    setState(() {
-                      priceError = value.trim().isEmpty ? "Price is required!" : null;
-                    });
-                  },
-                ),
-              ],
-            ),
-
-            SizedBox(height: 15),
-
-            // Operation State Selection
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "Service Operation State",
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  "(May select more than one service operation state.)",
-                  style: const TextStyle(fontSize: 14,fontWeight: FontWeight.w500, fontStyle: FontStyle.italic, color: Colors.black54),
-                ),
-                CustomRadioGroup(
-                  key: ValueKey(selectedStates.hashCode), // Force rebuild when selectedStates change
-                  options: stateOptions, // ✅ This ensures options are loaded
-                  selectedValues: selectedStates, // ✅ Creates a fresh instance
-                  isRequired: true,
-                  requiredMessage: "Please select at least one operation state!",
-                  onSelected: (selectedList) {
-                    setState(() {
-                      selectedStates = List.from(selectedList); // ✅ Ensure it's a new instance
-                    });
-                  },
-                  onValidation: (error) {
-                    setState(() {
-                      selectedStatesError = error;
-                    });
-                  },
-                ),
-                if (selectedStatesError != null) // 🔥 Ensure this error message is rendered
-                  Padding(
-                    padding: EdgeInsets.only(top: 5),
-                    child: Text(
-                      selectedStatesError!,
-                      style: TextStyle(color: Colors.red, fontSize: 12),
+      body: post == null
+          ? const Center(child: CircularProgressIndicator())
+          : Stack(
+        children: <Widget>[
+          /// **Image Carousel with Page Indicator**
+          Column(
+            children: <Widget>[
+              AspectRatio(
+                aspectRatio: 1.2,
+                child: Stack(
+                  children: [
+                    /// **Scrollable Image List**
+                    PageView.builder(
+                      controller: _pageController,
+                      itemCount: post!.imageUrls.isNotEmpty ? post!.imageUrls.length : 1,
+                      onPageChanged: (index) {
+                        setState(() {
+                          _currentPage = index;
+                        });
+                      },
+                      itemBuilder: (context, index) {
+                        return post!.imageUrls.isNotEmpty
+                            ? Image.network(post!.imageUrls[index], fit: BoxFit.cover)
+                            : Image.asset('assets/design_course/webInterFace.png', fit: BoxFit.cover);
+                      },
                     ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 15),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "Service Category",
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  "(May select more than one service category.)",
-                  style: const TextStyle(fontSize: 14,fontWeight: FontWeight.w500, fontStyle: FontStyle.italic, color: Colors.black54),
-                ),
-                CustomRadioGroup(
-                  key: ValueKey(selectedExpertiseFields.hashCode), // Force rebuild when selectedExpertiseFields change
-                  options: expertiseOptions, // This ensures options are loaded
-                  selectedValues: selectedExpertiseFields, // Creates a fresh instance
-                  isRequired: true,
-                  requiredMessage: "Please select at least one service category!",
-                  onSelected: (newSelection) {
-                    setState(() {
-                      selectedExpertiseFields = List.from(newSelection); // ✅ Ensure it's a new instance
-                    });
-                  },
-                  onValidation: (error) {
-                    setState(() {
-                      selectedExpertiseError = error;
-                    });
-                  },
-                ),
-                if (selectedExpertiseError != null) // 🔥 Ensure this error message is rendered
-                  Padding(
-                    padding: EdgeInsets.only(top: 5),
-                    child: Text(
-                      selectedExpertiseError!,
-                      style: TextStyle(color: Colors.red, fontSize: 12),
-                    ),
-                  ),
-              ],
-            ),
-            SizedBox(height: 20),
 
-            Text(
-              "Service Description",
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              "(Add a title and supporting descriptions for clarity. Use '+ Add Description' to include more details and '- Remove Section' to delete this section.)",
-              style: const TextStyle(fontSize: 14,fontWeight: FontWeight.w500, fontStyle: FontStyle.italic, color: Colors.black54),
-            ),
-            SizedBox(height: 10),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ...List.generate(entries.length, (titleIndex) {
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Title Input (✅ Uses Persistent Controller)
-                      LongInputContainer(
-                        labelText: "Title",
-                        controller: entries[titleIndex].titleController, // ✅ Uses existing controller
-                        placeholder: "e.g. Clog Removal",
-                        width: double.infinity,
-                        height: 50,
-                        isRequired: true,
-                        requiredMessage: "Title is required.",
+                    /// **Page Indicator (e.g., 1/3)**
+                    Positioned(
+                      bottom: 60,
+                      left: 16,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 10),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          "${_currentPage + 1}/${post!.imageUrls.isNotEmpty ? post!.imageUrls.length : 1}",
+                          style: const TextStyle(color: Colors.black, fontSize: 14),
+                        ),
                       ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
 
-                      SizedBox(height: 10),
+          /// **Main Content Container**
+          Positioned(
+            top: MediaQuery.of(context).size.width / 1.3 - 24.0,
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(32.0),
+                  topRight: Radius.circular(32.0),
+                ),
+                boxShadow: <BoxShadow>[
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.2),
+                    offset: const Offset(1.1, 1.1),
+                    blurRadius: 10.0,
+                  ),
+                ],
+              ),
 
-                      // Description Inputs (✅ Uses Persistent Controllers)
-                      ...List.generate(entries[titleIndex].descriptionControllers.length, (descIndex) {
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: ResponsiveTextArea(
-                                  labelText: "Description ${descIndex + 1}",
-                                  controller: entries[titleIndex].descriptionControllers[descIndex],
-                                  placeholder: "e.g. Quick and thorough clearing of blockages...",
-                                  isRequired: true,
-                                  requiredMessage: "Description ${descIndex + 1} is required.",
-                                  onChanged: (value) {
-                                    setState(() {}); // ✅ Triggers rebuild for dynamic height
-                                  },
+              child: Column(
+                children: [
+                  /// **Scrollable Description Section**
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 2.0, horizontal: 2.0),
+                            child: Row(
+                              children: [
+                                /// **Circular Profile Image**
+                                CircleAvatar(
+                                  radius: 28,
+                                  backgroundImage: (post!.spImageURL != null && post!.spImageURL!.isNotEmpty)
+                                      ? NetworkImage(post!.spImageURL!)
+                                      : const AssetImage('assets/default_profile.png') as ImageProvider,
                                 ),
-                              ),
+                                const SizedBox(width: 12),
 
-                              SizedBox(width: 10),
-                              IconButton(
-                                icon: Icon(Icons.delete, color: Colors.red),
-                                onPressed: () {
-                                  setState(() {
-                                    entries[titleIndex].descriptionControllers.removeAt(descIndex);
-                                  });
-                                },
+                                /// **SP Name & Rating**
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      /// **SP Name**
+                                      Text(
+                                        post!.spName ?? 'Unknown Service Provider',
+                                        style: const TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+
+                                      // /// **Rating in 5 stars**
+                                      // Row(
+                                      //   children: List.generate(5, (index) {
+                                      //     double rating = post!.rating ?? 0; // Ensure rating is not null
+                                      //     return Icon(
+                                      //       index < rating ? Icons.star : Icons.star_border,
+                                      //       color: Colors.orange,
+                                      //       size: 18,
+                                      //     );
+                                      //   }),
+                                      // ),
+
+                                      /// **Static Rating UI (Placeholder)**
+                                      Row(
+                                        children: [
+                                          /// **Placeholder Rating Text**
+                                          const Text(
+                                            "0.0",
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.black,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 6), // Add spacing between rating text and stars
+                                          /// **Stars**
+                                          Row(
+                                            children: List.generate(5, (index) {
+                                              return const Icon(
+                                                Icons.star_border, // Empty stars for now
+                                                color: Colors.orange,
+                                                size: 18,
+                                              );
+                                            }),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          /// **Thick Grey Divider**
+                          const Divider(
+                            color: Colors.grey, // Grey color
+                            thickness: 1.5, // Make it thicker
+                            height: 10, // Adjust spacing above and below the divider
+                          ),
+                          const SizedBox(height: 5),
+                          Text(
+                            post!.title,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 20,
+                              letterSpacing: 0.27,
+                            ),
+                          ),
+
+                          const SizedBox(height: 5),
+                          // 📌 Location with Icon
+                          Row(
+                            children: [
+                              const Icon(Icons.location_on, size: 16, color: Colors.black45),
+                              const SizedBox(width: 4), // Spacing
+                              Expanded( // ✅ Ensures text truncates within available space
+                                child: Text(
+                                  post!.serviceStates,
+                                  style: const TextStyle(fontSize: 16, color: Colors.black45, fontWeight: FontWeight.w500),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                ),
                               ),
                             ],
                           ),
-                        );
-                      }),
-
-                      // Add Description Button
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: TextButton(
-                          onPressed: () {
-                            setState(() {
-                              entries[titleIndex].descriptionControllers.add(TextEditingController());
-                            });
-                          },
-                          child: Text(
-                            "+ Add Description",
-                            style: TextStyle(
-                              fontSize: 15,
-                              color: const Color(0xFF464E65).withOpacity(0.8), // ✅ Fixed: Removed `const`
-                              fontWeight: FontWeight.w600, // Medium bold
-
-                            ),
-                          ),
-                        ),
-                      ),
-
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: SizedBox(
-                          width: 150, // Adjust width as needed
-                          height: 45, // Set fixed height
-                          child: TextButton(
-                            onPressed: () {
-                              setState(() {
-                                entries.removeAt(titleIndex);
-                              });
-                            },
-                            style: TextButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              side: const BorderSide(color: Color(0xFF464E65), width: 2.0), // Thin border
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(30), // Smooth rounded corners
+                          const SizedBox(height: 5),
+                          // 📌 Service Category with Icon
+                          Row(
+                            children: [
+                              const Icon(Icons.build, size: 16, color: Colors.black45),
+                              const SizedBox(width: 4), // Spacing
+                              Expanded( // ✅ Ensures text truncates properly
+                                child: Text(
+                                  post!.serviceCategory,
+                                  style: const TextStyle(fontSize: 16, color: Colors.black45, fontWeight: FontWeight.w500),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                ),
                               ),
-                              padding: const EdgeInsets.symmetric(vertical: 8), // Compact padding
-                            ),
-                            child: const Text(
-                              "- Remove Section",
-                              style: TextStyle(
-                                fontSize: 16, // Set to 16
-                                color: Color(0xFF464E65), // Keep red color for remove action
-                                fontWeight: FontWeight.w600, // Medium bold
-                              ),
-                            ),
+                            ],
                           ),
-                        ),
+                          const SizedBox(height: 8),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: <Widget>[
+                              Text(
+                                "RM ${post!.price}",
+                                style: const TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFFfb9798),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 5),
+
+                          /// **Thick Grey Divider**
+                          const Divider(
+                            color: Colors.grey, // Grey color
+                            thickness: 1.5, // Make it thicker
+                            height: 10, // Adjust spacing above and below the divider
+                          ),
+
+                          const SizedBox(height: 5),
+                          /// **Bullet Point Descriptions**
+                          if (post!.descriptions.isNotEmpty)
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: post!.descriptions.map((desc) {
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      desc.title,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.black54,
+                                        fontSize: 20,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: desc.descriptions.map((point) {
+                                        return Padding(
+                                          padding: const EdgeInsets.only(left: 8.0, bottom: 4),
+                                          child: Row(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              const Text(
+                                                "• ",
+                                                style: TextStyle(
+                                                    fontSize: 16
+                                                ),
+                                              ),
+                                              Expanded(
+                                                child: Text(
+                                                  point,
+                                                  style: const TextStyle(
+                                                    fontSize: 14,
+                                                    color: Colors.black54,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                      }).toList(),
+                                    ),
+                                    const SizedBox(height: 12),
+                                  ],
+                                );
+                              }).toList(),
+                            ),
+                        ],
                       ),
-
-                      Divider(
-                        color: Color(0xFF464E65), // ✅ Makes it grey
-                        thickness: 2,       // ✅ Makes it thicker
-                        height: 20,         // ✅ Adjusts spacing
-                      ),
-
-                    ],
-                  );
-                }),
-
-                SizedBox(height: 10),
-              ],
-            ),
-
-            SizedBox(
-              width: 130, // Slightly wider for better aesthetics
-              height: 45, // Balanced height
-              child: Material(
-                elevation: 5, // Shadow for depth
-                borderRadius: BorderRadius.circular(30), // Smooth rounded corners
-                shadowColor: Colors.black38, // Soft shadow effect
-                child: TextButton(
-                  onPressed: addTitleEntry,
-                  style: TextButton.styleFrom(
-                    backgroundColor: const Color(0xFF464E65), // Dark bluish-gray background
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30), // Smooth rounded corners
                     ),
-                    padding: const EdgeInsets.symmetric(vertical: 10), // Compact padding
                   ),
-                  child: const Text(
-                    "+ Add Section",
-                    style: TextStyle(
-                      fontSize: 16, // Readable size
-                      color: Colors.white, // White text for contrast
-                      fontWeight: FontWeight.w600, // Slightly bolder for emphasis
+
+                   pk_button(
+                      context,
+                      "Next",
+                          () {
+                        print("Joined ${post!.title}");
+                      },
+                    ),
+                ],
+              ),
+            ),
+          ),
+          // /// **🔹 Animated Floating Favorite Button**
+          // Positioned(
+          //   top: MediaQuery.of(context).size.width / 1.3 - 24.0 - 35,
+          //   right: 35,
+          //   child: GestureDetector(
+          //     onTap: () {
+          //       setState(() {
+          //         _isFavorite = !_isFavorite; // Toggle favorite state
+          //       });
+          //     },
+          //     child: ScaleTransition(
+          //       alignment: Alignment.center,
+          //       scale: CurvedAnimation(
+          //         parent: animationController!,
+          //         curve: Curves.fastOutSlowIn,
+          //       ),
+          //       child: Card(
+          //         color: _isFavorite ? Colors.white : Color(0xFFF06275), // Change background color
+          //         shape: RoundedRectangleBorder(
+          //           borderRadius: BorderRadius.circular(50.0),
+          //           side: _isFavorite ? const BorderSide(color: Color(0xFFF06275), width: 2) : BorderSide.none, // Add border when favorited
+          //         ),
+          //         elevation: 10.0,
+          //         child: Container(
+          //           width: 60,
+          //           height: 60,
+          //           child: Center(
+          //             child: Icon(
+          //               _isFavorite ? Icons.favorite : Icons.favorite_border, // Change icon
+          //               color: _isFavorite ? const Color(0xFFF06275) : Colors.white, // Change icon color
+          //               size: 30,
+          //             ),
+          //           ),
+          //         ),
+          //       ),
+          //     ),
+          //   ),
+          // ),
+
+
+          /// **🔹 Animated Floating Favorite Button**
+          Positioned(
+            top: MediaQuery.of(context).size.width / 1.3 - 24.0 - 45,
+            right: 35,
+            child: GestureDetector(
+              onTap: () {
+                setState(() {
+                  _isFavorite = !_isFavorite; // Toggle favorite state
+                });
+              },
+              child: ScaleTransition(
+                alignment: Alignment.center,
+                scale: CurvedAnimation(
+                  parent: animationController!,
+                  curve: Curves.fastOutSlowIn,
+                ),
+                child: Card(
+                  color: _isFavorite ? Colors.white : Colors.grey, // Background changes
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(50.0),
+                    side: _isFavorite ? const BorderSide(color: Color(0xFFF06275), width: 2) : BorderSide.none, // Border when favorited
+                  ),
+                  elevation: 10.0,
+                  child: Container(
+                    width: 60,
+                    height: 60,
+                    child: Center(
+                      child: Icon(
+                        _isFavorite ? Icons.favorite : Icons.favorite, // Always filled heart
+                        color: _isFavorite ? const Color(0xFFF06275) : Colors.white, // White heart before click, red after
+                        size: 30,
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
-            SizedBox(height: 30),
-            dk_button(
-              context,
-              "Update Post", // ✅ Update the label
-                  () async {
-                updateInstantPost(); // ✅ Call the same function when button is pressed
-              },
+          ),
+
+          /// **🔹 Styled Back Button**
+          Padding(
+            padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top, left: 10), // Move button slightly right
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(20), // Ensure smooth tap effect
+                onTap: () {
+                  Navigator.pop(context);
+                },
+                child: Container(
+                  width: 34, // Small circular background
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFfb9798), // Background color
+                    shape: BoxShape.circle, // Makes it circular
+                  ),
+                  child: Align( // Adjust the icon position inside the circle
+                    alignment: Alignment.centerRight, // Move the icon slightly to the right
+                    child: const Padding(
+                      padding: EdgeInsets.only(right: 5), // Fine-tune position
+                      child: Icon(
+                        Icons.arrow_back_ios,
+                        color: Colors.white, // Contrast against background
+                        size: 18, // Smaller size
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ),
-          ],
-        ),
+          ),
+
+
+        ],
       ),
     );
   }
-}
+  }
+
+
+
+
+

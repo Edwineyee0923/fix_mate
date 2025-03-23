@@ -1,7 +1,7 @@
 import 'package:fix_mate/service_provider/p_EditInstantPost.dart';
 import 'package:fix_mate/service_provider/p_FilterInstantPost.dart';
 import 'package:fix_mate/service_seeker/s_FilterInstantPost.dart';
-import 'package:fix_mate/service_seeker/s_InstantPostInfo2.dart';
+import 'package:fix_mate/service_seeker/s_InstantPostInfo.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -184,7 +184,7 @@ class _s_InstantPostListState extends State<s_InstantPostList> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => s_InstantPostInfo2(docId: doc.id),
+                  builder: (context) => s_InstantPostInfo(docId: doc.id),
                 ),
               );
             },

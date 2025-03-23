@@ -2,6 +2,7 @@ import 'package:fix_mate/service_seeker/s_Account.dart';
 import 'package:fix_mate/service_seeker/s_BookingHistory.dart';
 import 'package:fix_mate/service_seeker/s_Favourite.dart';
 import 'package:fix_mate/service_seeker/s_HomePage.dart';
+import 'package:fix_mate/service_seeker/s_profile.dart';
 import 'package:flutter/material.dart';
 
 class s_footer extends StatelessWidget {
@@ -24,7 +25,7 @@ class s_footer extends StatelessWidget {
         route = s_Favourite.routeName;
         break;
       case 3:
-        route = s_Account.routeName;
+        route = s_profile.routeName;
         break;
     }
 
@@ -49,7 +50,7 @@ class s_footer extends StatelessWidget {
       case 2:
         return s_Favourite();
       case 3:
-        return s_Account();
+        return s_profile();
       default:
         return s_HomePage();
     }
@@ -65,7 +66,7 @@ class s_footer extends StatelessWidget {
         BottomNavigationBarItem(icon: Icon(Icons.home, size: 30), label: 'Home'),
         BottomNavigationBarItem(icon: Icon(Icons.history, size: 30), label: 'History'),
         BottomNavigationBarItem(icon: Icon(Icons.favorite, size: 30), label: 'Favourite'),
-        BottomNavigationBarItem(icon: Icon(Icons.person, size: 30), label: 'Account'),
+        BottomNavigationBarItem(icon: Icon(Icons.person, size: 30), label: 'Profile'),
       ],
       currentIndex: selectedIndex,
       selectedItemColor: Color(0xFFfb9798),

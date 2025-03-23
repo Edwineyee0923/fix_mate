@@ -139,9 +139,10 @@ class _s_FilterInstantPostState extends State<s_FilterInstantPost> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          "Filter Post",
+          "Filter Instant Posts",
           style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
         ),
+        titleSpacing: 25,
       ),
       body: SingleChildScrollView(
         padding: EdgeInsets.all(16),

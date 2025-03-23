@@ -1,43 +1,47 @@
-import 'package:fix_mate/service_provider/p_EditInstantPost.dart';
-import 'package:fix_mate/service_provider/p_FilterInstantPost.dart';
+import 'package:fix_mate/service_provider/p_EditPromotionPost.dart';
+import 'package:fix_mate/service_provider/p_FilterPromotionPost.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fix_mate/reusable_widget/reusable_widget.dart';
 
-class p_InstantPostList extends StatefulWidget {
+class p_PromotionPostList extends StatefulWidget {
   final String initialSearchQuery;
   final List<String> initialCategories; // ✅ Ensure it's a List<String>
   final List<String> initialStates; // ✅ Ensure it's a List<String>
   final RangeValues initialPriceRange; // ✅ Add price range parameter
   final String initialSortOrder; // ✅ Sorting order
+  final RangeValues initialDiscountRange;
 
-  const p_InstantPostList({
+  const p_PromotionPostList({
     Key? key,
     this.initialSearchQuery = "",
     this.initialCategories = const [], // ✅ Default to empty list
     this.initialStates = const [], // ✅ Default to empty list
     this.initialPriceRange = const RangeValues(0, 1000), // ✅ Default price range
     this.initialSortOrder = "Newest", // ✅ Default sorting order
+    this.initialDiscountRange = const RangeValues(0, 100), // ✅ Default price range
   }) : super(key: key);
 
   @override
-  _p_InstantPostListState createState() => _p_InstantPostListState();
+  _p_PromotionPostListState createState() => _p_PromotionPostListState();
 }
 
-class _p_InstantPostListState extends State<p_InstantPostList> {
+class _p_PromotionPostListState extends State<p_PromotionPostList> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final TextEditingController _searchController = TextEditingController();
   bool hasFiltered = false; // Track if the user has applied filters
   String? filterMessage;
 
-  List<Widget> allInstantPosts = [];
+  List<Widget> allPromotionPosts = [];
   String searchQuery = "";
   List<String> selectedCategories = []; // ✅ Declare selectedCategories
   List<String> selectedStates = []; // ✅ Declare selectedStates
   RangeValues selectedPriceRange = RangeValues(0, 1000); // ✅ Store price range
   String? selectedSortOrder; // Can be null when nothing is selected
+  RangeValues selectedDiscountRange = RangeValues(0, 100); // ✅ Store price range
+
 
   @override
   void initState() {
@@ -47,16 +51,17 @@ class _p_InstantPostListState extends State<p_InstantPostList> {
     selectedStates = List<String>.from(widget.initialStates); // ✅ Ensure list format
     selectedPriceRange = widget.initialPriceRange; // ✅ Initialize price range
     selectedSortOrder = widget.initialSortOrder; // ✅ Initialize sorting
+    selectedDiscountRange = widget.initialDiscountRange;
 
     _searchController.text = searchQuery; // ✅ Set initial text
     _searchController.addListener(() {
       setState(() {
         searchQuery = _searchController.text;
       });
-      _loadInstantPosts(); // ✅ Refresh posts on search update
+      _loadPromotionPosts(); // ✅ Refresh posts on search update
     });
 
-    _loadInstantPosts();
+    _loadPromotionPosts();
   }
 
 
@@ -96,13 +101,14 @@ class _p_InstantPostListState extends State<p_InstantPostList> {
   }
 
 
-  Future<void> _loadInstantPosts() async {
-    print("🔍 Loading Instant Posts...");
+  Future<void> _loadPromotionPosts() async {
+    print("🔍 Loading Promotion Posts...");
     print("🔄 Reloading posts with filters:");
     print("Search Query: $searchQuery");
     print("Categories: $selectedCategories");
     print("States: $selectedStates");
     print("Price Range: $selectedPriceRange");
+    print("Discount Range: $selectedDiscountRange");
     print("Sort Order: $selectedSortOrder");
 
 
@@ -117,7 +123,7 @@ class _p_InstantPostListState extends State<p_InstantPostList> {
 
       // ✅ Start with a Query, NOT QuerySnapshot
       Query query = _firestore
-          .collection('instant_booking')
+          .collection('promotion')
           .where('userId', isEqualTo: user.uid);
 
       // ✅ Apply Sorting Based on updatedAt Timestamp
@@ -140,12 +146,12 @@ class _p_InstantPostListState extends State<p_InstantPostList> {
       }
 
       if (docs.isEmpty) {
-        print("No instant booking posts found for user: ${user.uid}");
+        print("No promotion posts found for user: ${user.uid}");
       } else {
         print("Fetched ${docs.length} posts");
       }
 
-      List<Widget> instantPosts = [];
+      List<Widget> promotionPosts = [];
 
       for (var doc in docs) {
         Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
@@ -159,50 +165,56 @@ class _p_InstantPostListState extends State<p_InstantPostList> {
                 .any((state) => selectedStates.contains(state));
 
         bool matchesSearch = searchQuery.isEmpty ||
-            (data['IPTitle'] as String).toLowerCase().contains(searchQuery.toLowerCase());
+            (data['PTitle'] as String).toLowerCase().contains(searchQuery.toLowerCase());
 
-        int postPrice = (data['IPPrice'] as num?)?.toInt() ?? 0;
+        int postPrice = (data['PPrice'] as num?)?.toInt() ?? 0;
         bool matchesPrice = postPrice >= selectedPriceRange.start && postPrice <= selectedPriceRange.end;
 
+
+        double postDiscount = (data['PDiscountPercentage'] as num?)?.toDouble() ?? 0.0;
+        bool matchesDiscount = postDiscount >= selectedDiscountRange.start && postDiscount <= selectedDiscountRange.end;
+
         // ✅ Exclude posts that do NOT match the filters
-        if (!matchesCategory || !matchesState || !matchesSearch || !matchesPrice) {
+        if (!matchesCategory || !matchesState || !matchesSearch || !matchesPrice || !matchesDiscount) {
           continue;
         }
 
-        instantPosts.add(
-          buildInstantBookingCard(
-            IPTitle: data['IPTitle'] ?? "Unknown",
+        promotionPosts.add(
+          buildPromotionCard(
+            PTitle: data['PTitle'] ?? "Unknown",
             ServiceStates: (data['ServiceStates'] as List<dynamic>?)?.join(", ") ?? "Unknown",
             ServiceCategory: (data['ServiceCategory'] as List<dynamic>?)?.join(", ") ?? "No services listed",
-            imageUrls: (data['IPImage'] != null && data['IPImage'] is List<dynamic>)
-                ? List<String>.from(data['IPImage'])
+            imageUrls: (data['PImage'] != null && data['PImage'] is List<dynamic>)
+                ? List<String>.from(data['PImage'])
                 : [],
             // IPPrice: (data['IPPrice'] as num?)?.toInt() ?? 0,
-            IPPrice: postPrice,
+            PPrice: postPrice,
+            PAPrice: (data['PAPrice'] as num?)?.toInt() ?? 0,
+            PDiscountPercentage: postDiscount,
             onEdit: () async {
               final result = await Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => p_EditInstantPost(docId: doc.id),
+                  builder: (context) => p_EditPromotionPost(docId: doc.id),
                 ),
               );
 
               if (result == true) {
-                _loadInstantPosts();
+                _loadPromotionPosts();
               }
             },
             onDelete: () {
-              _confirmDelete(doc.id);
+              _confirmP_Delete(doc.id);
             },
           ),
         );
       }
 
       setState(() {
-        allInstantPosts = instantPosts;
+        allPromotionPosts = promotionPosts;
       });
     } catch (e) {
-      print("Error loading Instant Booking Posts: $e");
+      print("Error loading promotion posts: $e");
     }
   }
 
@@ -210,12 +222,13 @@ class _p_InstantPostListState extends State<p_InstantPostList> {
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => p_FilterInstantPost(
+        builder: (context) => p_FilterPromotionPost(
           initialSearchQuery: searchQuery,
           initialCategories: selectedCategories,
           initialStates: selectedStates,
           initialPriceRange: selectedPriceRange,
           initialSortOrder: selectedSortOrder,
+          initialDiscountRange: selectedDiscountRange,
         ),
       ),
     );
@@ -227,6 +240,7 @@ class _p_InstantPostListState extends State<p_InstantPostList> {
         selectedStates = List<String>.from(result['selectedStates'] ?? []);
         selectedPriceRange = result["priceRange"];
         selectedSortOrder = result["sortOrder"];
+        selectedDiscountRange = result["discountRange"];
 
         // ✅ Mark filters as applied
         hasFiltered = true;
@@ -236,22 +250,24 @@ class _p_InstantPostListState extends State<p_InstantPostList> {
             selectedCategories.isNotEmpty ||
             selectedStates.isNotEmpty ||
             selectedSortOrder != null ||
-            (selectedPriceRange.start > 0 || selectedPriceRange.end < 1000);
+            (selectedPriceRange.start > 0 || selectedPriceRange.end < 1000) ||
+            (selectedDiscountRange.start > 0 || selectedDiscountRange.end < 100);
+
 
         if (isFiltered) {
-          filterMessage = "Showing ${allInstantPosts.length} matching posts";
+          filterMessage = "Showing ${allPromotionPosts.length} matching posts";
         } else {
           filterMessage = null; // Hide message if no filters are applied
         }
       });
 
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _loadInstantPosts();
+        _loadPromotionPosts();
       });
     }
   }
 
-  void _confirmDelete(String docId) {
+  void _confirmP_Delete(String docId) {
     showDialog(
       context: context,
       builder: (context) => ConfirmationDialog(
@@ -260,19 +276,22 @@ class _p_InstantPostListState extends State<p_InstantPostList> {
         confirmText: "Delete",
         cancelText: "Cancel",
         onConfirm: () async {
-          await _deletePost(docId); // ✅ Call delete function first
+          await _deleteP_Post(docId); // ✅ Call delete function first
 
           // ✅ Show success message using ReusableSnackBar
           ReusableSnackBar(
             context,
-            "Instant Booking post successfully deleted!",
+            "Promotion post successfully deleted!",
             icon: Icons.check_circle,
             iconColor: Colors.green,
           );
 
           // ✅ Navigate back to the original screen after deleting
-          Navigator.popUntil(context, (route) => route.isFirst);
+          Navigator.of(context).maybePop();
+
         },
+
+
         icon: Icons.delete,
         iconColor: Colors.red,
         confirmButtonColor: Colors.red,
@@ -281,19 +300,19 @@ class _p_InstantPostListState extends State<p_InstantPostList> {
     );
   }
 
-  Future<void> _deletePost(String docId) async {
+  Future<void> _deleteP_Post(String docId) async {
     try {
-      await _firestore.collection('instant_booking').doc(docId).delete();
+      await _firestore.collection('promotion').doc(docId).delete();
       print("Post deleted successfully: $docId");
 
-      _loadInstantPosts(); // ✅ Refresh list after deletion
+      _loadPromotionPosts(); // ✅ Refresh list after deletion
     } catch (e) {
       print("Error deleting post: $e");
     }
   }
 
 
-  Widget _buildInstantBookingSection() {
+  Widget _buildPromotionSection() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 0), // ✅ Align with title
       child: Column(
@@ -303,7 +322,7 @@ class _p_InstantPostListState extends State<p_InstantPostList> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: const [
               Text(
-                "Instant Booking",
+                "Promotion",
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
             ],
@@ -311,9 +330,9 @@ class _p_InstantPostListState extends State<p_InstantPostList> {
           const SizedBox(height: 8),
 
           // ✅ Show message if no posts exist
-          allInstantPosts.isEmpty
+          allPromotionPosts.isEmpty
               ? const Text(
-            "No instant booking post found.\nPlease click on the + button at the homepage under the instant booking section to add an instant booking post.",
+            "No promotion post found.\nPlease click on the + button at the homepage under the promotion section to add a promotion post.",
             style: TextStyle(color: Colors.black54),
           )
               : GridView.builder(
@@ -325,9 +344,9 @@ class _p_InstantPostListState extends State<p_InstantPostList> {
               mainAxisSpacing: 10, // ✅ Space between rows
               childAspectRatio: 0.72, // ✅ Adjust aspect ratio to fit better
             ),
-            itemCount: allInstantPosts.length,
+            itemCount: allPromotionPosts.length,
             itemBuilder: (context, index) {
-              return allInstantPosts[index];
+              return allPromotionPosts[index];
             },
           ),
         ],
@@ -343,7 +362,7 @@ class _p_InstantPostListState extends State<p_InstantPostList> {
       appBar: AppBar(
         backgroundColor: Color(0xFF464E65),
         title: Text(
-          "Instant Booking Post List",
+          "Promotion Post List",
           style: TextStyle(
             fontSize: 22,
             fontWeight: FontWeight.bold,
@@ -371,13 +390,13 @@ class _p_InstantPostListState extends State<p_InstantPostList> {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2), // Smaller height
               margin: const EdgeInsets.symmetric(vertical: 10), // Adds spacing
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
                       hasFiltered
-                          ? (allInstantPosts.isEmpty
+                          ? (allPromotionPosts.isEmpty
                           ? "No matching posts found"
-                          : "${allInstantPosts.length} matching posts")
+                          : "${allPromotionPosts.length} matching posts")
                           : "No filter applied", // Default message before filtering
                       style: TextStyle(color: Color(0xFF464E65), fontSize: 14),
                     ),
@@ -391,7 +410,7 @@ class _p_InstantPostListState extends State<p_InstantPostList> {
               ),
             ),
             const SizedBox(height: 2),
-            _buildInstantBookingSection(),
+            _buildPromotionSection(),
           ],
         ),
       ),
@@ -399,12 +418,14 @@ class _p_InstantPostListState extends State<p_InstantPostList> {
   }
 }
 
-Widget buildInstantBookingCard({
-  required String IPTitle,
+Widget buildPromotionCard({
+  required String PTitle,
   required String ServiceStates,
   required String ServiceCategory,
   required List<String> imageUrls,
-  required int IPPrice,
+  required int PPrice,
+  required int PAPrice,
+  required double PDiscountPercentage,
   required VoidCallback onEdit,
   required VoidCallback onDelete,
 }) {
@@ -435,7 +456,7 @@ Widget buildInstantBookingCard({
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      IPTitle,
+                      PTitle,
                       style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                       overflow: TextOverflow.ellipsis,
                       maxLines: 2,
@@ -549,18 +570,54 @@ Widget buildInstantBookingCard({
             ),
           ),
 
+          // 📌 Discount Badge (Top-left of the image)
+          Positioned(
+            top: 10,
+            left: 10,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.redAccent,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                "${PDiscountPercentage.toStringAsFixed(0)}% OFF",
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
 
-          // 📌 Price (Bottom-right of the card)
+          // 📌 Price Display (Bottom-right)
           Positioned(
             bottom: 8,
             right: 10,
-            child: Text(
-              "RM $IPPrice", // Directly use the stored integer
-              style: const TextStyle(
-                color: Color(0xFF464E65),
-                fontSize: 26,
-                fontWeight: FontWeight.bold,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                // Original Price (Strikethrough)
+                Text(
+                  "RM $PAPrice",
+                  style: const TextStyle(
+                    color: Colors.redAccent,
+                    fontSize: 14,
+                    decoration: TextDecoration.lineThrough, // Strikethrough effect
+                  ),
+                ),
+
+                // Discounted Price (Larger & Bold)
+                Text(
+                  "RM $PPrice",
+                  style: const TextStyle(
+                    color: Color(0xFF464E65),
+                    fontSize: 26,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
             ),
           ),
         ],

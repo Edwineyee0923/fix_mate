@@ -9,10 +9,14 @@ import 'package:fix_mate/home_page/HomePage.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/services.dart';
-
+import 'package:fix_mate/service_provider/p_layout.dart';
 
 
 class p_profile extends StatefulWidget {
+  static String routeName = "/service_provider/p_profile";
+
+  const p_profile({Key? key}) : super(key: key);
+
   @override
   _p_profileState createState() => _p_profileState();
 }
@@ -213,28 +217,54 @@ class _p_profileState extends State<p_profile> {
     });
   }
 
+  void _logoutUser() async {
+    try {
+      await _auth.signOut(); // ✅ Firebase sign-out
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => HomePage()), // ✅ Redirect to login
+      );
+    } catch (e) {
+      print("Logout failed: $e");
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return ProviderLayout(
+      selectedIndex: 2,
+      child: Scaffold(
       backgroundColor: Color(0xFFFFFFF2),
       appBar: AppBar(
         backgroundColor: Color(0xFF464E65),
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+        // leading: IconButton(
+        //   icon: Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+        //   onPressed: () {
+        //     if (isEditing) {
+        //       _showDiscardChangesDialog(); // Ask user before discarding changes
+        //     } else {
+        //       Navigator.pushReplacement(
+        //         context,
+        //         MaterialPageRoute(builder: (context) => HomePage()),
+        //       );
+        //     }
+        //   },
+        // ),
+        leading: isEditing
+            ? IconButton(
+          icon: Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: Colors.white, // Makes the icon white
+          ),
           onPressed: () {
-            if (isEditing) {
-              _showDiscardChangesDialog(); // Ask user before discarding changes
-            } else {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => HomePage()),
-              );
-            }
+            _showDiscardChangesDialog(); // ✅ Ask user before discarding changes
           },
-        ),
+        )
+            : null, // ✅ Hides the back button when `isEditing` is false
+
         title: Text("My Profile", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white,)),
-        titleSpacing: 2, // Aligns title closer to the leading icon (left-aligned)
+        titleSpacing: isEditing ? 2 : 25, // ✅ Adjust title spacing dynamically
+        automaticallyImplyLeading: false,
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 10), // Moves left by reducing right padding
@@ -277,6 +307,7 @@ class _p_profileState extends State<p_profile> {
           ),
         ),
       ),
+      )
     );
   }
 
@@ -603,7 +634,14 @@ class _p_profileState extends State<p_profile> {
           ),
           SizedBox(height: 25),
 
-
+          // ✅ Show Log Out button only when isEditing is true
+          if (!isEditing)
+          dk_button(
+            context,
+            "Log Out",
+            _logoutUser, // Calls the logout function
+          ),
+          SizedBox(height: 15),
         ],
       ),
     );

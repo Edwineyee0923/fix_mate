@@ -7,8 +7,13 @@ import 'package:fix_mate/reusable_widget/reusable_widget.dart';
 import 'package:fix_mate/services/upload_service.dart';
 import 'package:fix_mate/home_page/HomePage.dart';
 import 'package:intl/intl.dart';
+import 'package:fix_mate/service_seeker/s_layout.dart';
 
 class s_profile extends StatefulWidget {
+  static String routeName = "/service_seeker/s_profile";
+
+  const s_profile({Key? key}) : super(key: key);
+
   @override
   _s_profileState createState() => _s_profileState();
 }
@@ -135,6 +140,7 @@ class _s_profileState extends State<s_profile> {
   }
 
 
+
   // Function to select date of birth
   Future<void> _selectDateOfBirth() async {
     if (!isEditing) return; // 🔹 Prevent opening date picker in read-only mode
@@ -183,6 +189,19 @@ class _s_profileState extends State<s_profile> {
     });
   }
 
+  void _logoutUser() async {
+    try {
+      await _auth.signOut(); // ✅ Firebase sign-out
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => HomePage()), // ✅ Redirect to login
+      );
+    } catch (e) {
+      print("Logout failed: $e");
+    }
+  }
+
+
   void navigateNextPage(BuildContext ctx) {
     Navigator.of(ctx).push(MaterialPageRoute(builder: (_) {
       return HomePage();
@@ -191,28 +210,43 @@ class _s_profileState extends State<s_profile> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return SeekerLayout(
+      selectedIndex: 3,
+      child: Scaffold(
       backgroundColor: Color(0xFFFFFFF2),
       appBar: AppBar(
         backgroundColor: Color(0xFFfb9798),
-        leading: IconButton(
+        // leading: IconButton(
+        //   icon: Icon(
+        //     Icons.arrow_back_ios_new_rounded,
+        //     color: Colors.white, // Makes the icon white
+        //   ),
+        //   onPressed: () {
+        //     if (isEditing) {
+        //       _showDiscardChangesDialog(); // Ask user before discarding changes
+        //     } else {
+        //       Navigator.pushReplacement(
+        //         context,
+        //         MaterialPageRoute(builder: (context) => HomePage()),
+        //       );
+        //     }
+        //   },
+        // ),
+        leading: isEditing
+            ? IconButton(
           icon: Icon(
             Icons.arrow_back_ios_new_rounded,
             color: Colors.white, // Makes the icon white
           ),
           onPressed: () {
-            if (isEditing) {
-              _showDiscardChangesDialog(); // Ask user before discarding changes
-            } else {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => HomePage()),
-              );
-            }
+            _showDiscardChangesDialog(); // ✅ Ask user before discarding changes
           },
-        ),
+        )
+            : null, // ✅ Hides the back button when `isEditing` is false
+
         title: Text("My Profile", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white,)),
-        titleSpacing: 2,
+        titleSpacing: isEditing ? 2 : 25, // ✅ Adjust title spacing dynamically
+        automaticallyImplyLeading: false,
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 10), // Moves left by reducing right padding
@@ -255,6 +289,7 @@ class _s_profileState extends State<s_profile> {
           ),
         ),
       ),
+    )
     );
   }
 
@@ -379,6 +414,15 @@ class _s_profileState extends State<s_profile> {
             ),
           ),
           SizedBox(height: 25),
+
+          // ✅ Show Log Out button only when isEditing is true
+          if (!isEditing)
+          pk_button(
+            context,
+            "Log Out",
+            _logoutUser, // Calls the logout function
+          ),
+          SizedBox(height: 15),
         ],
       ),
     );

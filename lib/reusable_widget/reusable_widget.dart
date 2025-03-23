@@ -875,11 +875,11 @@ class _CustomRadioGroupState extends State<CustomRadioGroup> {
                 padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
                 decoration: BoxDecoration(
                   // color: isSelected ? widget.activeColor : Colors.white,
-                  color: isSelected ? (widget.activeColor ?? const Color(0xFFfb9798)) : Colors.white,
+                  color: isSelected ? (widget.activeColor ?? const Color(0xFF464E65)) : Colors.white,
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
                     // color: isSelected ? widget.activeColor : widget.inactiveColor,
-                    color: isSelected ? (widget.activeColor ?? const Color(0xFFfb9798)) : (widget.inactiveColor ?? const Color(0xFF464E65)),
+                    color: isSelected ? (widget.activeColor ?? const Color(0xFF464E65)) : (widget.inactiveColor ?? const Color(0xFF464E65)),
                     width: 2,
                   ),
                 ),
@@ -1163,6 +1163,79 @@ class _PriceInputContainerState extends State<PriceInputContainer> {
     );
   }
 }
+
+class DiscountDisplayContainer extends StatelessWidget {
+  final double width;
+  final double height;
+  final double? discountPercentage;
+
+  const DiscountDisplayContainer({
+    Key? key,
+    this.width = 380,
+    this.height = 50,
+    required this.discountPercentage,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "Discount Percentage",
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: Colors.black,
+          ),
+        ),
+        const SizedBox(height: 5),
+        Container(
+          width: width,
+          height: height,
+          padding: const EdgeInsets.symmetric(horizontal: 15),
+          decoration: BoxDecoration(
+            color: Colors.grey[200], // Light background to show it's non-editable
+            borderRadius: BorderRadius.circular(25.0),
+            border: Border.all(color: Colors.black),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.percent, color: Colors.black54), // Percentage icon
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  discountPercentage != null
+                      ? "${discountPercentage!.toStringAsFixed(1)}%" // Display calculated discount
+                      : "--", // Show "--" if no discount calculated
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.black,
+                  ),
+                  textAlign: TextAlign.left,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 5),
+        Padding(
+          padding: const EdgeInsets.only(left: 0),
+          child: Text(
+            "This field is uneditable and is calculated automatically.",
+            style: TextStyle(
+              fontSize: 12,
+              fontStyle: FontStyle.italic,
+              color: Colors.grey[700],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 
 
 class ResponsiveTextArea extends StatefulWidget {
