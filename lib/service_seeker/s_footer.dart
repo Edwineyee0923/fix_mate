@@ -1,4 +1,3 @@
-import 'package:fix_mate/service_seeker/s_Account.dart';
 import 'package:fix_mate/service_seeker/s_BookingHistory.dart';
 import 'package:fix_mate/service_seeker/s_Favourite.dart';
 import 'package:fix_mate/service_seeker/s_HomePage.dart';
