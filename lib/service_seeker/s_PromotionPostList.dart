@@ -314,6 +314,15 @@ class _s_PromotionPostListState extends State<s_PromotionPostList> {
       backgroundColor: Color(0xFFFFF8F2),
       appBar: AppBar(
         backgroundColor: Color(0xFFfb9798),
+        leading: IconButton(
+          icon: Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: Colors.white,
+          ),
+          onPressed: () {
+            Navigator.pop(context); // Navigates back when pressed
+          },
+        ),
         title: Text(
           "Promotion Post List",
           style: TextStyle(

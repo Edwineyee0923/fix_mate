@@ -1394,6 +1394,8 @@ import 'package:fix_mate/service_seeker/s_InstantPostInfo.dart';
 import 'package:fix_mate/service_seeker/s_InstantPostList.dart';
 import 'package:fix_mate/service_seeker/s_PromotionPostInfo.dart';
 import 'package:fix_mate/service_seeker/s_PromotionPostList.dart';
+import 'package:fix_mate/service_seeker/s_SPInfo.dart';
+import 'package:fix_mate/service_seeker/s_SPList.dart';
 import 'package:fix_mate/service_seeker/s_layout.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -1465,11 +1467,11 @@ class _s_HomePageState extends State<s_HomePage> {
   void _filterSPPosts(String query) {
     setState(() {
       if (query.isEmpty) {
-        displayedPromotionPosts = allPromotionPosts.take(4).toList(); // ✅ Reset to latest 4 posts
+        displayedSPPosts = allSPPosts.take(4).toList(); // ✅ Reset to latest 4 posts
       } else {
-        displayedPromotionPosts = allPromotionPosts.where((post) {
-          String title = (post.key as ValueKey<String>?)?.value ?? "";
-          return title.toLowerCase().contains(query.toLowerCase());
+        displayedSPPosts = allSPPosts.where((post) {
+          String name = (post.key as ValueKey<String>?)?.value ?? "";
+          return name.toLowerCase().contains(query.toLowerCase());
         }).toList(); // ✅ Show filtered results
       }
     });
@@ -1488,10 +1490,11 @@ class _s_HomePageState extends State<s_HomePage> {
         controller: _searchController,
         onChanged: (query) {
           _filterInstantPosts(query);  // ✅ Updates Instant Booking Section
-          _filterPromotionPosts(query);  // ✅ Updates Promotion Section
+          _filterPromotionPosts(query);
+          _filterSPPosts(query); // ✅ Updates Promotion Section
         },
         decoration: InputDecoration(
-          hintText: "Search your related service provider name or post title",
+          hintText: "Search your SP name or post title...",
           border: InputBorder.none,
           prefixIcon: const Icon(Icons.search, color: Color(0xFF464E65)),
           contentPadding: const EdgeInsets.symmetric(vertical: 14),
@@ -1648,15 +1651,12 @@ class _s_HomePageState extends State<s_HomePage> {
             services: (data['selectedExpertiseFields'] as List<dynamic>?)?.join(", ") ?? "No services listed",
             imageUrl: data['profilePic'] ?? "", // Default image if null
             onTap: () {
-              // Navigator.push(
-              //   context,
-              //   MaterialPageRoute(
-              //     builder: (context) => SPDetailsScreen(
-              //       applicationData: data,
-              //       docId: doc.id,
-              //     ),
-              //   ),
-              // );
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ServiceProviderScreen(docId: doc.id),
+                ),
+              );
             },
           ),
         );
@@ -1678,7 +1678,7 @@ class _s_HomePageState extends State<s_HomePage> {
 
   Widget _buildInstantBookingSection() {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
+      padding: const EdgeInsets.symmetric(vertical: 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1742,7 +1742,7 @@ class _s_HomePageState extends State<s_HomePage> {
 
   Widget _buildPromotionSection() {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1803,149 +1803,34 @@ class _s_HomePageState extends State<s_HomePage> {
     );
   }
 
-  // Widget _buildSPSection() {
-  //   print("Building UI with ${displayedSPPosts.length} posts"); // Debug UI rendering
-  //
-  //   return Padding(
-  //     padding: const EdgeInsets.symmetric(vertical: 10),
-  //     child: Column(
-  //       crossAxisAlignment: CrossAxisAlignment.start,
-  //       children: [
-  //         Row(
-  //           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-  //           children: [
-  //             const Text(
-  //               "Service Provider",
-  //               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-  //             ),
-  //             GestureDetector(
-  //               onTap: allSPPosts.isNotEmpty
-  //                   ? () {
-  //                 // Uncomment when navigation is needed
-  //                 // Navigator.push(
-  //                 //   context,
-  //                 //   MaterialPageRoute(
-  //                 //     builder: (context) => s_SPList(),
-  //                 //   ),
-  //                 // );
-  //               }
-  //                   : null,
-  //               child: Opacity(
-  //                 opacity: allSPPosts.isNotEmpty ? 1.0 : 0.5,
-  //                 child: Row(
-  //                   children: const [
-  //                     Text(
-  //                       "See more",
-  //                       style: TextStyle(color: Color(0xFFfb9798), fontSize: 16, fontWeight: FontWeight.w600),
-  //                     ),
-  //                     SizedBox(width: 4),
-  //                     Icon(Icons.arrow_forward_ios, size: 16, color: Color(0xFFfb9798)),
-  //                   ],
-  //                 ),
-  //               ),
-  //             ),
-  //           ],
-  //         ),
-  //         const SizedBox(height: 8),
-  //         displayedSPPosts.isEmpty
-  //             ? const Text(
-  //           "No service provider post found.",
-  //           style: TextStyle(color: Colors.black54),
-  //         )
-  //             : Container(
-  //           height: 280, // Ensure it has enough space
-  //           child: ListView.builder(
-  //             scrollDirection: Axis.horizontal,
-  //             itemCount: displayedSPPosts.length,
-  //             itemBuilder: (context, index) {
-  //               return Padding(
-  //                 padding: const EdgeInsets.symmetric(horizontal: 5.0),
-  //                 child: displayedSPPosts[index], // Render the card
-  //               );
-  //             },
-  //           ),
-  //         ),
-  //       ],
-  //     ),
-  //   );
-  // }
-
-  // Widget _buildSPSection() {
-  //   return Column(
-  //     crossAxisAlignment: CrossAxisAlignment.start,
-  //     children: [
-  //       Padding(
-  //         padding: const EdgeInsets.symmetric(vertical: 8.0),
-  //         child: Row(
-  //           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-  //           children: [
-  //             const Text(
-  //               "Service Providers",
-  //               style: TextStyle(
-  //                 fontSize: 18,
-  //                 fontWeight: FontWeight.bold,
-  //               ),
-  //             ),
-  //             if (displayedSPPosts.isNotEmpty)
-  //               TextButton(
-  //                 onPressed: () {
-  //                   // Implement navigation to full list
-  //                   // Navigator.push(
-  //                   //   context,
-  //                   //   MaterialPageRoute(builder: (context) => FullSPListScreen()),
-  //                   // );
-  //                 },
-  //                 child: Row(
-  //                   mainAxisSize: MainAxisSize.min,
-  //                   children: const [
-  //                     Text(
-  //                       "See More",
-  //                       style: TextStyle(color: Color(0xFFfb9798), fontSize: 16, fontWeight: FontWeight.w600),
-  //                     ),
-  //                     SizedBox(width: 4),
-  //                     Icon(Icons.arrow_forward_ios, size: 16, color: Color(0xFFfb9798)),
-  //                   ],
-  //                 ),
-  //               ),
-  //           ],
-  //         ),
-  //       ),
-  //       displayedSPPosts.isEmpty
-  //           ? const Center(
-  //         child: Padding(
-  //           padding: EdgeInsets.all(8.0),
-  //           child: Text("No service providers available."),
-  //         ),
-  //       )
-  //           : Column(
-  //         children: displayedSPPosts,
-  //       ),
-  //     ],
-  //   );
-  // }
 
   Widget _buildSPSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(bottom: 5, left: 10, right: 10), // ⬅ Reduced vertical space
-          child: Row(
+    return Padding(
+      padding: const EdgeInsets.only(top: 10, bottom: 4), // Matches the promotion section padding
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
                 "Service Providers",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold), // Matches the title style
               ),
               if (displayedSPPosts.isNotEmpty)
-                TextButton(
-                  onPressed: allSPPosts.isNotEmpty
+                GestureDetector(
+                  onTap: allSPPosts.isNotEmpty
                       ? () {
-                    // Navigate to the full service provider list
+                    Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                    builder: (context) => s_SPList(),
+                    ),
+                    );
                   }
-                      : null, // Disable button if no more service providers
+                      : null, // Disables the button if there are no more service providers
                   child: Opacity(
-                    opacity: allSPPosts.isNotEmpty ? 1.0 : 0.5,
+                    opacity: allSPPosts.isNotEmpty ? 1.0 : 0.5, // Matches the "See More" styling
                     child: Row(
                       children: const [
                         Text(
@@ -1960,39 +1845,42 @@ class _s_HomePageState extends State<s_HomePage> {
                 ),
             ],
           ),
-        ),
 
-        // Show "No Service Providers" message if the list is empty
-        displayedSPPosts.isEmpty
-            ? const Center(
-          child: Padding(
-            padding: EdgeInsets.all(8.0),
-            child: Text("No service providers available."),
+          const SizedBox(height: 8), // Ensures consistent spacing
+
+          // Displays a message if there are no service providers, aligned with the title
+          displayedSPPosts.isEmpty
+              ? const Align(
+            alignment: Alignment.centerLeft, // Aligns text to the left
+            child: Padding(
+              padding: EdgeInsets.only(left:0), // Adjusts spacing to match the title
+              child: Text(
+                "No service providers available.",
+                style: TextStyle(color: Colors.black54, fontSize: 14),
+              ),
+            ),
+          )
+              : SizedBox(
+            height: 160, // Keeps the height consistent
+            child: ListView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 10), // Prevents content from touching the edges
+              scrollDirection: Axis.horizontal, // Enables horizontal scrolling
+              itemCount: displayedSPPosts.length,
+              itemBuilder: (context, index) {
+                return Padding(
+                  padding: const EdgeInsets.only(right: 12), // Keeps spacing between cards
+                  child: SizedBox(
+                    width: 320, // Keeps the card width consistent
+                    child: displayedSPPosts[index], // Displays the service provider card
+                  ),
+                );
+              },
+            ),
           ),
-        )
-            : SizedBox(
-          height: 160,//educed height slightly
-          child: ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 10), // Prevents content from touching the edges
-            scrollDirection: Axis.horizontal, // Enable horizontal scrolling
-            itemCount: displayedSPPosts.length,
-            itemBuilder: (context, index) {
-              return Padding(
-                padding: const EdgeInsets.only(right: 12), // ✅ Keeps spacing between cards
-                child: SizedBox(
-                  width: 320, // ✅ Keeps card width
-                  child: displayedSPPosts[index], // Display the SP card
-                ),
-              );
-            },
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
-
-
-
 
 
   @override
@@ -2017,10 +1905,9 @@ class _s_HomePageState extends State<s_HomePage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildSearchBar(),
-                const SizedBox(height: 2),
-                _buildPromotionSection(),
-                const SizedBox(height: 2),
+                const SizedBox(height: 4),
                 _buildSPSection(),
+                _buildPromotionSection(),
                 const SizedBox(height: 2),
                 _buildInstantBookingSection(),
               ],
@@ -2404,7 +2291,7 @@ Widget buildSPCard({
                             children: [
                               const Text(
                                 "0.0",
-                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                style: TextStyle(fontSize: 18, color: Colors.redAccent, fontWeight: FontWeight.bold),
                               ),
                               const SizedBox(width: 6),
                               Row(
@@ -2472,9 +2359,9 @@ class _FavoriteButton2State extends State<FavoriteButton2> {
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: isFavorite ? Colors.red.withOpacity(0.5) : Colors.grey.withOpacity(0.3), // Change shadow color
-            spreadRadius: 3,
-            blurRadius: 6,
+            color: isFavorite ? Color(0xFFF06275).withOpacity(0.5) : Colors.grey.withOpacity(0.0), // Change shadow color
+            spreadRadius: 2,
+            blurRadius: 4,
           ),
         ],
       ),
@@ -2484,7 +2371,7 @@ class _FavoriteButton2State extends State<FavoriteButton2> {
           Icon(
             isFavorite ? Icons.favorite : Icons.favorite_border,
             size: 22, // ✅ Ensures the icon is 25 in size
-            color: isFavorite ? Colors.red : Colors.black,
+            color: isFavorite ? Color(0xFFF06275) : Colors.black,
           ),
           Positioned.fill(
             child: Material(

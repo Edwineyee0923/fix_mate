@@ -268,7 +268,7 @@ class _s_InstantPostListState extends State<s_InstantPostList> {
           // ✅ Show message if no posts exist
           allInstantPosts.isEmpty
               ? const Text(
-            "No instant booking post found.\nPlease click on the + button at the homepage under the instant booking section to add an instant booking post.",
+            "No instant booking post found.",
             style: TextStyle(color: Colors.black54),
           )
               : GridView.builder(

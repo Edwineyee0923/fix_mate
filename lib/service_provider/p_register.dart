@@ -113,6 +113,8 @@ class _p_registerState extends State<p_register> {
   TextEditingController emailController = TextEditingController();
   TextEditingController passwordController = TextEditingController();
   TextEditingController confirmPasswordController = TextEditingController();
+  TextEditingController spUSecretController = TextEditingController();   // Toyyibpay User Secret
+  TextEditingController spCCodeController = TextEditingController(); // Toyyibpay User Secret
   TextEditingController certificateController = TextEditingController();
   TextEditingController addressController = TextEditingController();
 
@@ -123,6 +125,8 @@ class _p_registerState extends State<p_register> {
   bool isEmailValid = true;
   bool isPasswordValid = true;
   bool isConfirmPasswordValid = true;
+  bool isspUSecretValid = true;
+  bool isspCCodeValid = true;
   bool isEditing = true;
   String? selectedGender; // Holds selected gender value
   final List<String> genderOptions = ["Male", "Female", "Prefer not to say"]; // Dropdown options
@@ -159,7 +163,8 @@ class _p_registerState extends State<p_register> {
 
 
 
-    if (!isNameValid || !isEmailValid || !isPhoneValid || !isDobValid || !isPasswordValid || !isConfirmPasswordValid || selectedGender == null || selectedStates.isEmpty  || selectedExpertiseFields.isEmpty || bioError != null || certificateError != null) {
+    if (!isNameValid || !isEmailValid || !isPhoneValid || !isDobValid || !isPasswordValid || !isConfirmPasswordValid || selectedGender == null || selectedStates.isEmpty  || selectedExpertiseFields.isEmpty || bioError != null
+        || certificateError != null || !isspUSecretValid || !isspCCodeValid ) {
       ReusableSnackBar(context, "Please fill all fields correctly!", icon: Icons.warning, iconColor: Colors.orange);
       return false; // Registration failed
     }
@@ -193,6 +198,8 @@ class _p_registerState extends State<p_register> {
         'dob': dobController.text.trim(),
         'gender': selectedGender,
         'bio': bioController.text.trim(),
+        'spUSecret': spUSecretController.text.trim(),
+        'spCCode': spCCodeController.text.trim(),
         'certificateLink': certificateController.text.trim(),
         'profilePic': _imageUrl ?? '',
         'role': "Service Provider",
@@ -568,6 +575,36 @@ class _p_registerState extends State<p_register> {
                         ],
                       ),
                       SizedBox(height: 15),
+                      InternalTextField(
+                        labelText: "ToyyibPay User Secret Key",
+                        hintText: "Enter your registered ToyyibPay User Secret Key",
+                        icon: Icons.key_sharp,
+                        controller: spUSecretController,
+                        validationMessage: "Please enter your registered ToyyibPay user secret key",
+                        isValid: isspUSecretValid,
+                        enabled: isEditing,
+                        onChanged: (value) {
+                          setState(() {
+                            isspUSecretValid = value.trim().isNotEmpty; // Check if input is not empty
+                          });
+                        },// Pass validation status
+                      ),
+                      SizedBox(height: 15),
+                      InternalTextField(
+                        labelText: "ToyyibPay Category Code",
+                        hintText: "Enter your registered ToyyibPay category code",
+                        icon: Icons.category_outlined,
+                        controller: spCCodeController,
+                        validationMessage: "Please enter your registered ToyyibPay category code",
+                        isValid: isspCCodeValid,
+                        enabled: isEditing,
+                        onChanged: (value) {
+                          setState(() {
+                            isspCCodeValid = value.trim().isNotEmpty; // Check if input is not empty
+                          });
+                        },// Pass validation status
+                      ),
+                      SizedBox(height: 15),
                       LongInputContainer(
                         labelText: "Google Drive Link (Supporting Document Upload)",
                         controller: certificateController,
@@ -577,8 +614,6 @@ class _p_registerState extends State<p_register> {
                         errorMessage: certificateError, // ✅ Pass validation error
                         onChanged: (text) => _validateCertificate(),
                       ),
-
-
                       SizedBox(height: 15),
                       LongInputContainer(
                         labelText: "Business Address (Optional)",
@@ -586,7 +621,7 @@ class _p_registerState extends State<p_register> {
                         placeholder: "Enter Your Business Address here...",
                         isRequired: false,
                       ),
-
+                      SizedBox(height: 15),
                       dk_button(
                         context,
                         "Register",
@@ -597,6 +632,7 @@ class _p_registerState extends State<p_register> {
                           }
                         },
                       ),
+                      SizedBox(height: 15),
                     ],
                   ),
                 ),

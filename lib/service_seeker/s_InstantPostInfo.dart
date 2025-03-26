@@ -1,152 +1,5 @@
-// import 'package:cloud_firestore/cloud_firestore.dart';
-// import 'package:flutter/material.dart';
-//
-// class s_InstantPostInfo2 extends StatefulWidget {
-//   final String docId;
-//
-//   const s_InstantPostInfo2({Key? key, required this.docId}) : super(key: key);
-//
-//   @override
-//   _s_InstantPostInfo2State createState() => _s_InstantPostInfo2State();
-// }
-//
-// class _s_InstantPostInfo2State extends State<s_InstantPostInfo2> {
-//   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-//   Map<String, dynamic>? postData;
-//   bool isLoading = true;
-//
-//   @override
-//   void initState() {
-//     super.initState();
-//     fetchPostData();
-//   }
-//
-//   Future<void> fetchPostData() async {
-//     try {
-//       DocumentSnapshot docSnapshot =
-//       await _firestore.collection('instant_booking').doc(widget.docId).get();
-//
-//       if (docSnapshot.exists) {
-//         setState(() {
-//           postData = docSnapshot.data() as Map<String, dynamic>;
-//           isLoading = false;
-//         });
-//       } else {
-//         setState(() {
-//           isLoading = false;
-//         });
-//       }
-//     } catch (e) {
-//       print("Error fetching data: $e");
-//       setState(() {
-//         isLoading = false;
-//       });
-//     }
-//   }
-//
-//   @override
-//   Widget build(BuildContext context) {
-//     return Scaffold(
-//       appBar: AppBar(title: const Text("Instant Booking Details")),
-//       body: isLoading
-//           ? const Center(child: CircularProgressIndicator())
-//           : postData == null
-//           ? const Center(child: Text("No data available"))
-//           : Padding(
-//         padding: const EdgeInsets.all(16.0),
-//         child: ListView(
-//           children: [
-//             // 📌 Safe Image Handling
-//             ClipRRect(
-//               borderRadius: BorderRadius.circular(12),
-//               child: Image.network(
-//                 (postData!['IPImage'] is List<dynamic> &&
-//                     (postData!['IPImage'] as List<dynamic>).isNotEmpty)
-//                     ? (postData!['IPImage'] as List<dynamic>).first.toString()
-//                     : "https://via.placeholder.com/150",
-//                 width: double.infinity,
-//                 height: 200,
-//                 fit: BoxFit.cover,
-//               ),
-//             ),
-//
-//             const SizedBox(height: 16),
-//
-//             // 📌 Title
-//             Text(
-//               postData!['IPTitle']?.toString() ?? "Unknown",
-//               style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-//             ),
-//
-//             const SizedBox(height: 8),
-//
-//             // 📌 Price
-//             Text(
-//               "Price: RM ${postData!['IPPrice']?.toString() ?? '0'}",
-//               style: const TextStyle(fontSize: 18, color: Colors.blue),
-//             ),
-//
-//             const SizedBox(height: 8),
-//
-//             // 📌 Location
-//             Text(
-//               "Location: ${(postData!['ServiceStates'] as List<dynamic>?)?.join(", ") ?? "Unknown"}",
-//               style: const TextStyle(fontSize: 16, color: Colors.grey),
-//             ),
-//
-//             const SizedBox(height: 8),
-//
-//             // 📌 Category
-//             Text(
-//               "Category: ${(postData!['ServiceCategory'] as List<dynamic>?)?.join(", ") ?? "No category"}",
-//               style: const TextStyle(fontSize: 16, color: Colors.grey),
-//             ),
-//
-//             const SizedBox(height: 16),
-//
-//             // 📌 Description
-//             Text(
-//               "Description:",
-//               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-//             ),
-//
-//             const SizedBox(height: 8),
-//
-//             // 📌 Description Entries
-//             ...(postData!['IPDescriptions'] as List<dynamic>? ?? []).map((entry) {
-//               return Column(
-//                 crossAxisAlignment: CrossAxisAlignment.start,
-//                 children: [
-//                   // Entry Title
-//                   Text(
-//                     entry['title']?.toString() ?? "No Title",
-//                     style: const TextStyle(
-//                         fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black),
-//                   ),
-//
-//                   const SizedBox(height: 4),
-//
-//                   // Entry Description Bullet Points
-//                   ...(entry['descriptions'] as List<dynamic>? ?? []).map((desc) {
-//                     return Padding(
-//                       padding: const EdgeInsets.only(bottom: 4),
-//                       child: Text("• ${desc.toString()}",
-//                           style: const TextStyle(fontSize: 16, color: Colors.black54)),
-//                     );
-//                   }).toList(),
-//
-//                   const SizedBox(height: 8),
-//                 ],
-//               );
-//             }).toList(),
-//           ],
-//         ),
-//       ),
-//     );
-//   }
-// }
-
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:fix_mate/service_seeker/s_SetBookingDetails.dart';
 import 'package:flutter/material.dart';
 import 'package:fix_mate/reusable_widget/reusable_widget.dart';
 
@@ -158,6 +11,7 @@ class InstantPost {
   final int price;
   final String docId;
   final List<TitleWithDescriptions> descriptions;
+  final String spId; // Service Provider ID
   String? spName;
   String? spImageURL;
 
@@ -169,6 +23,7 @@ class InstantPost {
     required this.price,
     required this.docId,
     required this.descriptions,
+    required this.spId,
     required this.spName,
     required this.spImageURL,
   });
@@ -185,6 +40,10 @@ class InstantPost {
           : [],
       price: (data['IPPrice'] as num?)?.toInt() ?? 0,
       docId: doc.id,
+
+      /// 🔹 Extracting Service Provider ID
+      spId: data['userId'] ?? 'Unknown',
+
       /// **🔹 Retrieving SPname and SPimageURL**
       spName: data['SPname'] ?? 'Unknown Service Provider',
       spImageURL: data['SPimageURL'] ?? '',
@@ -251,7 +110,8 @@ class _s_InstantPostInfoState extends State<s_InstantPostInfo> with TickerProvid
     return Scaffold(
       body: post == null
           ? const Center(child: CircularProgressIndicator())
-          : Stack(
+          : SingleChildScrollView(
+        child: Stack(
         children: <Widget>[
           /// **Image Carousel with Page Indicator**
           Column(
@@ -527,56 +387,35 @@ class _s_InstantPostInfoState extends State<s_InstantPostInfo> with TickerProvid
                     ),
                   ),
 
-                   pk_button(
-                      context,
-                      "Next",
-                          () {
-                        print("Joined ${post!.title}");
-                      },
-                    ),
+                  pk_button(
+                    context,
+                    "Next",
+                        () {
+                      if (post != null) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => s_SetBookingDetails(
+                              spId: post!.spId,  // ✅ Provide a default value
+                              spName: post!.spName ?? 'Unknown Service Provider',
+                              spImageURL: post!.spImageURL ?? '',
+                              IBpostId: post!.docId, // ✅ Use `docId` instead of `IBpostId`
+                              IBPrice: post!.price,
+                              IPTitle: post!.title,
+                            ),
+                          ),
+                        );
+                      } else {
+                        print("Error: No post data available.");
+                      }
+                    },
+                  ),
+
+
                 ],
               ),
             ),
           ),
-          // /// **🔹 Animated Floating Favorite Button**
-          // Positioned(
-          //   top: MediaQuery.of(context).size.width / 1.3 - 24.0 - 35,
-          //   right: 35,
-          //   child: GestureDetector(
-          //     onTap: () {
-          //       setState(() {
-          //         _isFavorite = !_isFavorite; // Toggle favorite state
-          //       });
-          //     },
-          //     child: ScaleTransition(
-          //       alignment: Alignment.center,
-          //       scale: CurvedAnimation(
-          //         parent: animationController!,
-          //         curve: Curves.fastOutSlowIn,
-          //       ),
-          //       child: Card(
-          //         color: _isFavorite ? Colors.white : Color(0xFFF06275), // Change background color
-          //         shape: RoundedRectangleBorder(
-          //           borderRadius: BorderRadius.circular(50.0),
-          //           side: _isFavorite ? const BorderSide(color: Color(0xFFF06275), width: 2) : BorderSide.none, // Add border when favorited
-          //         ),
-          //         elevation: 10.0,
-          //         child: Container(
-          //           width: 60,
-          //           height: 60,
-          //           child: Center(
-          //             child: Icon(
-          //               _isFavorite ? Icons.favorite : Icons.favorite_border, // Change icon
-          //               color: _isFavorite ? const Color(0xFFF06275) : Colors.white, // Change icon color
-          //               size: 30,
-          //             ),
-          //           ),
-          //         ),
-          //       ),
-          //     ),
-          //   ),
-          // ),
-
 
           /// **🔹 Animated Floating Favorite Button**
           Positioned(
@@ -649,9 +488,8 @@ class _s_InstantPostInfoState extends State<s_InstantPostInfo> with TickerProvid
               ),
             ),
           ),
-
-
         ],
+      ),
       ),
     );
   }
