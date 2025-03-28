@@ -96,6 +96,7 @@ class _s_SetBookingDetailsState extends State<s_SetBookingDetails> {
       // 🔹 Fetch Service Seeker ID from Firestore
       String? seekerId;
       String? seekerEmail;
+      String? seekerPhone;
       QuerySnapshot querySnapshot = await FirebaseFirestore.instance
           .collection('service_seekers')
           .where('id', isEqualTo: user.uid) // Match by UID instead of email
@@ -105,6 +106,7 @@ class _s_SetBookingDetailsState extends State<s_SetBookingDetails> {
       if (querySnapshot.docs.isNotEmpty) {
         seekerId = querySnapshot.docs.first['id'];
         seekerEmail = querySnapshot.docs.first['email']; // Fetch email
+        seekerPhone = querySnapshot.docs.first['phone'];
       }
 
       if (seekerId == null) {
@@ -170,6 +172,7 @@ class _s_SetBookingDetailsState extends State<s_SetBookingDetails> {
             toyyibSecretKey: toyyibSecretKey,
             toyyibCategory: toyyibCategory,
             userEmail: seekerEmail!, // ✅ Pass the seeker's email
+            userPhone: seekerPhone!,
           ),
         ),
       );

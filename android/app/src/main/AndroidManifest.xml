@@ -15,6 +15,15 @@
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
 
+        <!-- Branch.io Meta-Data (Inside <application>) -->
+        <meta-data
+            android:name="io.branch.sdk.BranchKey"
+            android:value="key_live_hAb8WUBQKGSS3zloOgCgGkgmAzhlUeYS"/>
+        <meta-data
+            android:name="io.branch.sdk.TestMode"
+            android:value="true"/> <!-- Set to true since you're testing on emulator -->
+
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -35,6 +44,26 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+
+            <!-- Deep Linking Intent Filter -->
+            <intent-filter>
+                <data android:scheme="fixmate" android:host="open" />
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+            </intent-filter>
+
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="https"
+                    android:host="j64jm.app.link"
+                    android:pathPrefix="/" />
+            </intent-filter>
+
+
         </activity>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->

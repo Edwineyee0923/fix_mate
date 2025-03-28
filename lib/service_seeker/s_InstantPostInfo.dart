@@ -110,8 +110,7 @@ class _s_InstantPostInfoState extends State<s_InstantPostInfo> with TickerProvid
     return Scaffold(
       body: post == null
           ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-        child: Stack(
+        : Stack(
         children: <Widget>[
           /// **Image Carousel with Page Indicator**
           Column(
@@ -489,7 +488,6 @@ class _s_InstantPostInfoState extends State<s_InstantPostInfo> with TickerProvid
             ),
           ),
         ],
-      ),
       ),
     );
   }
