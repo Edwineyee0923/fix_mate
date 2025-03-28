@@ -52,14 +52,14 @@
 // }
 
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_dynamic_links/firebase_dynamic_links.dart';
+import 'package:flutter_branch_sdk/flutter_branch_sdk.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:fix_mate/routes.dart';
 import 'package:fix_mate/home_page/HomePage.dart';
 import 'package:fix_mate/service_seeker/s_BookingHistory.dart';
 import 'firebase_options.dart';
 
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -80,46 +80,198 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
-    _handleDeepLinks();
-  }
-
-  /// Handles deep links when the app is opened via a dynamic link
-  void _handleDeepLinks() async {
-    final PendingDynamicLinkData? data = await FirebaseDynamicLinks.instance.getInitialLink();
-    if (data != null) {
-      _processDeepLink(data.link);
-    }
-
-    FirebaseDynamicLinks.instance.onLink.listen((PendingDynamicLinkData dynamicLink) {
-      _processDeepLink(dynamicLink.link);
-    }).onError((error) {
-      print("🔥 Error handling deep link: $error");
+    FlutterBranchSdk.validateSDKIntegration();
+    // Wait for the first frame to be fully built before listening to deep links
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _listenBranchDeepLinks();
     });
   }
 
-  /// Processes deep link and updates Firestore
-  void _processDeepLink(Uri link) {
-    if (link.queryParameters.containsKey('bookingId')) {
-      String bookingId = link.queryParameters['bookingId']!;
-      _updateBookingStatus(bookingId);
-    }
+  /// Listens to Branch deep links when the app is opened via link
+  void _listenBranchDeepLinks() {
+    FlutterBranchSdk.initSession().listen((data) {
+      print("🔥 Branch Deep Link Data: $data");
+
+      if (data.containsKey("+clicked_branch_link") && data["+clicked_branch_link"] == true) {
+        String? bookingId = data["bookingId"]; // Deep link param must match key here
+        if (bookingId != null) {
+          _updateBookingStatus(bookingId);
+        } else {
+          _handleMissingBookingId();
+        }
+      } else {
+        print("⚠️ Not a Branch deep link or not clicked.");
+      }
+    });
   }
 
-  /// Updates Firestore booking status to "Pending Confirmation" and navigates to history screen
+  void _handleMissingBookingId() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const HomePage()),
+      );
+      Future.delayed(const Duration(milliseconds: 300), () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("⚠️ Invalid or expired payment link."),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      });
+    });
+  }
+
+  // /// Queries by bookingId field and updates status
+  // Future<void> _updateBookingStatus(String bookingId) async {
+  //   try {
+  //     QuerySnapshot snapshot = await FirebaseFirestore.instance
+  //         .collection('bookings')
+  //         .where('bookingId', isEqualTo: bookingId)
+  //         .limit(1)
+  //         .get();
+  //
+  //     if (snapshot.docs.isNotEmpty) {
+  //       await snapshot.docs.first.reference.update({
+  //         'status': 'Pending Confirmation',
+  //       });
+  //
+  //       print("✅ Booking status updated for $bookingId");
+  //       WidgetsBinding.instance.addPostFrameCallback((_) {
+  //         Navigator.pushReplacementNamed(context, s_BookingHistory.routeName);
+  //       });
+  //       // Navigator.pushNamed(context, s_BookingHistory.routeName);
+  //
+  //
+  //     } else {
+  //       print("❌ No matching booking found for bookingId: $bookingId");
+  //     }
+  //   } catch (e) {
+  //     print("❌ Error updating booking: $e");
+  //   }
+  // }
+
+  // /// Queries by bookingId field and updates status
+  // Future<void> _updateBookingStatus(String bookingId) async {
+  //   try {
+  //     QuerySnapshot snapshot = await FirebaseFirestore.instance
+  //         .collection('bookings')
+  //         .where('bookingId', isEqualTo: bookingId)
+  //         .limit(1)
+  //         .get();
+  //
+  //     if (snapshot.docs.isNotEmpty) {
+  //       await snapshot.docs.first.reference.update({
+  //         'status': 'Pending Confirmation',
+  //       });
+  //
+  //       print("✅ Booking status updated for $bookingId");
+  //
+  //       navigatorKey.currentState?.pushNamedAndRemoveUntil(
+  //         s_BookingHistory.routeName,
+  //             (route) => false,
+  //       );
+  //
+  //       Future.delayed(Duration(milliseconds: 500), () {
+  //         final context = navigatorKey.currentContext;
+  //         if (context != null) {
+  //           ScaffoldMessenger.of(context).showSnackBar(
+  //             SnackBar(
+  //               content: Text("🎉 Payment successful! Your booking has been confirmed."),
+  //               backgroundColor: Colors.green,
+  //               duration: Duration(seconds: 3),
+  //             ),
+  //           );
+  //         }
+  //       });
+  //
+  //     } else {
+  //       print("❌ No matching booking found for bookingId: $bookingId");
+  //     }
+  //   } catch (e) {
+  //     print("❌ Error updating booking: $e");
+  //   }
+  // }
+
   Future<void> _updateBookingStatus(String bookingId) async {
-    await FirebaseFirestore.instance.collection('bookings').doc(bookingId).update({
-      'status': 'Pending Confirmation',
-    });
+    try {
+      final context = navigatorKey.currentContext;
+      if (context == null) {
+        print("❌ navigatorKey context is null.");
+        return;
+      }
 
-    Navigator.pushNamed(context, s_BookingHistory.routeName);
+      // Show full-screen loading spinner
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) {
+          return const Center(
+            child: CircularProgressIndicator(),
+          );
+        },
+      );
+
+      // Fetch booking
+      QuerySnapshot snapshot = await FirebaseFirestore.instance
+          .collection('bookings')
+          .where('bookingId', isEqualTo: bookingId)
+          .limit(1)
+          .get();
+
+      if (snapshot.docs.isNotEmpty) {
+        await snapshot.docs.first.reference.update({
+          'status': 'Pending Confirmation',
+        });
+
+        print("✅ Booking status updated for $bookingId");
+
+        // Delay slightly before navigating
+        await Future.delayed(Duration(milliseconds: 200));
+
+        // Close the loading dialog
+        Navigator.pop(context);
+
+        // Navigate to Booking History
+        navigatorKey.currentState?.pushNamedAndRemoveUntil(
+          s_BookingHistory.routeName,
+              (route) => false,
+        );
+
+        // Show success SnackBar
+        await Future.delayed(Duration(milliseconds: 300));
+        final postNavContext = navigatorKey.currentContext;
+        if (postNavContext != null) {
+          ScaffoldMessenger.of(postNavContext).showSnackBar(
+            SnackBar(
+              content: Text("🎉 Payment successful! Your booking has been confirmed."),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+      } else {
+        print("❌ No matching booking found for bookingId: $bookingId");
+        Navigator.pop(context); // Close the dialog
+      }
+    } catch (e) {
+      print("❌ Error updating booking: $e");
+      final context = navigatorKey.currentContext;
+      if (context != null) Navigator.pop(context);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: navigatorKey, // ✅ Add this line
       title: 'FixMate',
       debugShowCheckedModeBanner: false,
-      routes: routes,
+      routes: {
+        s_BookingHistory.routeName: (context) => const s_BookingHistory(),
+        // other routes...
+      },
+      // routes: routes,
       theme: ThemeData(
         primarySwatch: Colors.orange,
         fontFamily: 'Poppins',

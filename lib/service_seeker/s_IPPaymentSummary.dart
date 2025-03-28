@@ -148,6 +148,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_branch_sdk/flutter_branch_sdk.dart';
+
 
 class s_IPPaymentSummary extends StatelessWidget {
   final String spName;
@@ -183,8 +185,116 @@ class s_IPPaymentSummary extends StatelessWidget {
     required this.userPhone,
   }) : super(key: key);
 
+  Future<String> _generateBranchLink(String bookingId) async {
+    BranchUniversalObject buo = BranchUniversalObject(
+      canonicalIdentifier: 'booking/$bookingId',
+      title: 'Your Booking ID',
+      contentDescription: 'Tap to view your booking details',
+      contentMetadata: BranchContentMetaData()
+        ..addCustomMetadata('bookingId', bookingId),
+    );
+
+    BranchLinkProperties lp = BranchLinkProperties(
+      channel: 'fixmate',
+      feature: 'booking',
+    );
+
+    BranchResponse response = await FlutterBranchSdk.getShortUrl(
+      buo: buo,
+      linkProperties: lp,
+    );
+
+    if (response.success) {
+      print('✅ Generated Branch link: ${response.result}');
+      return response.result;
+    } else {
+      print('❌ Branch link error: ${response.errorMessage}');
+      return '';
+    }
+  }
+
+  // Future<String> _createToyyibPayBill() async {
+  //   try {
+  //     Uri apiUrl = Uri.parse('https://toyyibpay.com/index.php/api/createBill');
+  //
+  //     Map<String, String> bodyData = {
+  //       'userSecretKey': toyyibSecretKey,
+  //       'categoryCode': toyyibCategory,
+  //       'billName': 'Service Booking',
+  //       'billDescription': 'Payment for booking ID: $bookingId',
+  //       'billPriceSetting': '1',
+  //       'billPayorInfo': '1',
+  //       'billAmount': (totalPrice * 100).toString(),
+  //       // 'billReturnUrl': 'https://yourapp.com/payment-success?bookingId=$bookingId',
+  //       'billReturnUrl': await _generateBranchLink(bookingId),
+  //       'billCallbackUrl': 'https://your-server.com/toyyibpay-callback',
+  //       'billExternalReferenceNo': bookingId,
+  //       'billTo': userEmail,
+  //       'billEmail': userEmail,
+  //       'billPhone': userPhone,
+  //     };
+  //
+  //     print("🔹 Sending Request to ToyyibPay...");
+  //     print("📝 Request Data: $bodyData");
+  //
+  //     var response = await http.post(apiUrl, body: bodyData);
+  //
+  //     print("🔹 Response Status Code: ${response.statusCode}");
+  //     print("🔹 Response Body: ${response.body}");
+  //
+  //     if (response.statusCode == 200) {
+  //       List<dynamic> responseData = jsonDecode(response.body); // ✅ FIX: Expecting a list
+  //
+  //       if (responseData.isNotEmpty && responseData[0].containsKey('BillCode')) {
+  //         String billCode = responseData[0]['BillCode'];
+  //         String paymentUrl = "https://toyyibpay.com/$billCode";
+  //         print("✅ Payment URL: $paymentUrl");
+  //         return paymentUrl;
+  //       } else {
+  //         print("⚠️ Unexpected response format from ToyyibPay.");
+  //         return "";
+  //       }
+  //     } else {
+  //       print("❌ Failed to create bill: ${response.body}");
+  //       return "";
+  //     }
+  //   } catch (e) {
+  //     print("❌ Error creating ToyyibPay bill: $e");
+  //     return "";
+  //   }
+  // }
+
   Future<String> _createToyyibPayBill() async {
     try {
+      // 🔹 STEP 1: Generate Branch Deep Link FIRST
+      String? deepLink;
+      BranchUniversalObject buo = BranchUniversalObject(
+        canonicalIdentifier: 'booking/$bookingId',
+        title: 'Booking Confirmed',
+        contentDescription: 'Tap to confirm your booking in FixMate',
+        contentMetadata: BranchContentMetaData()
+          ..addCustomMetadata('bookingId', bookingId),
+      );
+
+      BranchLinkProperties lp = BranchLinkProperties(
+        channel: 'toyyibpay',
+        feature: 'payment',
+      );
+
+      BranchResponse response = await FlutterBranchSdk.getShortUrl(
+        buo: buo,
+        linkProperties: lp,
+      );
+
+      if (response.success) {
+        deepLink = response.result;
+        print("✅ Generated Branch Deep Link: $deepLink");
+      } else {
+        print("❌ Failed to generate Branch deep link: ${response.errorMessage}");
+        deepLink = 'https://fixmate.com/deeplink-fallback'; // Fallback link
+      }
+
+      // 🔹 STEP 2: Prepare ToyyibPay Bill Request
       Uri apiUrl = Uri.parse('https://toyyibpay.com/index.php/api/createBill');
 
       Map<String, String> bodyData = {
@@ -195,7 +305,7 @@ class s_IPPaymentSummary extends StatelessWidget {
         'billPriceSetting': '1',
         'billPayorInfo': '1',
         'billAmount': (totalPrice * 100).toString(),
-        'billReturnUrl': 'https://yourapp.com/payment-success?bookingId=$bookingId',
+        'billReturnUrl': deepLink!,
         'billCallbackUrl': 'https://your-server.com/toyyibpay-callback',
         'billExternalReferenceNo': bookingId,
         'billTo': userEmail,
@@ -206,13 +316,13 @@ class s_IPPaymentSummary extends StatelessWidget {
       print("🔹 Sending Request to ToyyibPay...");
       print("📝 Request Data: $bodyData");
 
-      var response = await http.post(apiUrl, body: bodyData);
+      var responseToyyib = await http.post(apiUrl, body: bodyData);
 
-      print("🔹 Response Status Code: ${response.statusCode}");
-      print("🔹 Response Body: ${response.body}");
+      print("🔹 Response Status Code: ${responseToyyib.statusCode}");
+      print("🔹 Response Body: ${responseToyyib.body}");
 
-      if (response.statusCode == 200) {
-        List<dynamic> responseData = jsonDecode(response.body); // ✅ FIX: Expecting a list
+      if (responseToyyib.statusCode == 200) {
+        List<dynamic> responseData = jsonDecode(responseToyyib.body);
 
         if (responseData.isNotEmpty && responseData[0].containsKey('BillCode')) {
           String billCode = responseData[0]['BillCode'];
@@ -224,7 +334,7 @@ class s_IPPaymentSummary extends StatelessWidget {
           return "";
         }
       } else {
-        print("❌ Failed to create bill: ${response.body}");
+        print("❌ Failed to create bill: ${responseToyyib.body}");
         return "";
       }
     } catch (e) {

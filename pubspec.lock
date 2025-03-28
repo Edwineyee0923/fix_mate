@@ -25,14 +25,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.1"
-  branch_sdk:
-    dependency: "direct main"
-    description:
-      name: branch_sdk
-      sha256: cbaf48a6f86e414dfa4e8c7ee0cc99ebe94c4c98d771a007fd536861c7835f76
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.0.0-alpha.8"
   characters:
     dependency: transitive
     description:
@@ -278,6 +270,14 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  flutter_branch_sdk:
+    dependency: "direct main"
+    description:
+      name: flutter_branch_sdk
+      sha256: f04e46f382584f9ad7032828d605c51fe4c9bfc2d5a142cd546e9ff228161bcb
+      url: "https://pub.dev"
+    source: hosted
+    version: "5.1.1"
   flutter_lints:
     dependency: "direct dev"
     description:
