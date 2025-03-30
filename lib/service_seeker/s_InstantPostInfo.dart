@@ -401,6 +401,7 @@ class _s_InstantPostInfoState extends State<s_InstantPostInfo> with TickerProvid
                               IBpostId: post!.docId, // ✅ Use `docId` instead of `IBpostId`
                               IBPrice: post!.price,
                               IPTitle: post!.title,
+                              serviceCategory: post!.serviceCategory,
                             ),
                           ),
                         );

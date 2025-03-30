@@ -149,7 +149,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_branch_sdk/flutter_branch_sdk.dart';
-
+import 'package:intl/intl.dart'; // At the top
 
 class s_IPPaymentSummary extends StatelessWidget {
   final String spName;
@@ -166,6 +166,10 @@ class s_IPPaymentSummary extends StatelessWidget {
   final String bookingId;
   final String userEmail;
   final String userPhone;
+  final String serviceSeekerId;
+  final String serviceCategory;
+  final String postId;
+  final String spId;
 
   const s_IPPaymentSummary({
     Key? key,
@@ -183,7 +187,43 @@ class s_IPPaymentSummary extends StatelessWidget {
     required this.bookingId,
     required this.userEmail,
     required this.userPhone,
+    required this.serviceSeekerId,
+    required this.serviceCategory,
+    required this.postId,
+    required this.spId,
   }) : super(key: key);
+
+
+  String formatDate(DateTime date) => DateFormat("d MMM yyyy", "ms_MY").format(date);
+  String formatTime(TimeOfDay time) {
+    final now = DateTime.now();
+    final dt = DateTime(now.year, now.month, now.day, time.hour, time.minute);
+    return DateFormat.jm().format(dt); // e.g., 12:30 PM
+  }
+
+
+  Future<void> _saveBookingToFirestore() async {
+    await FirebaseFirestore.instance.collection('bookings').add({
+      'bookingId': bookingId,
+      'serviceProviderId': spId,
+      'spName': spName,
+      'spImageURL': spImageURL,
+      'postId': postId,
+      'IPTitle': IPTitle,
+      'serviceCategory': serviceCategory,
+      'serviceSeekerId': serviceSeekerId,
+      'location': location,
+      'preferredDate': formatDate(preferredDate),
+      'preferredTime': formatTime(preferredTime),
+      'alternativeDate': alternativeDate != null ? formatDate(alternativeDate!) : null,
+      'alternativeTime': alternativeTime != null ? formatTime(alternativeTime!) : null,
+      'status': 'pending',
+      'bookedAt': FieldValue.serverTimestamp(),
+      'price': totalPrice,
+      'spUSecret': toyyibSecretKey,
+      'spCCode': toyyibCategory,
+    });
+  }
 
   Future<String> _generateBranchLink(String bookingId) async {
     BranchUniversalObject buo = BranchUniversalObject(
@@ -205,11 +245,11 @@ class s_IPPaymentSummary extends StatelessWidget {
     );
 
     if (response.success) {
-      print('✅ Generated Branch link: ${response.result}');
+      print('✅ Branch deep link sent to ToyyibPay: ${response.result}');
       return response.result;
     } else {
       print('❌ Branch link error: ${response.errorMessage}');
-      return '';
+      return 'https://fixmate.com/deeplink-fallback';
     }
   }
 
@@ -265,6 +305,7 @@ class s_IPPaymentSummary extends StatelessWidget {
   // }
 
   Future<String> _createToyyibPayBill() async {
+
     try {
       // 🔹 STEP 1: Generate Branch Deep Link FIRST
       String? deepLink;
@@ -346,6 +387,8 @@ class s_IPPaymentSummary extends StatelessWidget {
 
   /// 🚀 Launch Payment in Browser
   Future<void> _initiatePayment() async {
+    await _saveBookingToFirestore();
+
     String paymentUrl = await _createToyyibPayBill();
     if (paymentUrl.isNotEmpty) {
 
