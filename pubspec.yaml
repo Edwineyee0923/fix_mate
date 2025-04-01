@@ -51,6 +51,7 @@ dependencies:
   smooth_page_indicator: ^1.2.1
   firebase_dynamic_links: ^5.4.8
   flutter_branch_sdk: ^5.1.1
+  another_flushbar: ^1.10.28
 
 dev_dependencies:
   flutter_test:

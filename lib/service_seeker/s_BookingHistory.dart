@@ -81,10 +81,11 @@
 // }
 
 
+import 'package:fix_mate/service_seeker/s_PInstantBookingDetail.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fix_mate/service_seeker/s_layout.dart';
-
+import 'package:firebase_auth/firebase_auth.dart';
 
 class s_BookingHistory extends StatefulWidget {
   static String routeName = "/service_seeker/s_BookingHistory";
@@ -98,12 +99,15 @@ class s_BookingHistory extends StatefulWidget {
 }
 
 class _s_BookingHistoryState extends State<s_BookingHistory> {
+  String? seekerId;
   int _selectedIndex = 0;
   final List<String> statuses = ["Pending Confirmation", "Active", "Completed", "Cancelled"];
 
   @override
   void initState() {
     super.initState();
+    final user = FirebaseAuth.instance.currentUser;
+    seekerId = user?.uid;
     _selectedIndex = widget.initialTabIndex;
   }
 
@@ -155,8 +159,11 @@ class _s_BookingHistoryState extends State<s_BookingHistory> {
               ),
             ),
             Expanded(
-              child: StreamBuilder<QuerySnapshot>(
+              child: seekerId == null
+                  ? const Center(child: Text("You must be logged in."))
+                  : StreamBuilder<QuerySnapshot>(
                 stream: FirebaseFirestore.instance.collection('bookings')
+                    .where('serviceSeekerId', isEqualTo: seekerId)
                     .where('status', isEqualTo: statuses[_selectedIndex])
                     .snapshots(),
                 builder: (context, snapshot) {
@@ -170,29 +177,71 @@ class _s_BookingHistoryState extends State<s_BookingHistory> {
                   return ListView(
                     padding: const EdgeInsets.all(16),
                     children: snapshot.data!.docs.map((doc) {
-                      return Card(
-                        margin: const EdgeInsets.symmetric(vertical: 10),
-                        elevation: 3,
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(doc['IPTitle'], style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                              const SizedBox(height: 5),
-                              Text("Status: ${doc['status']}", style: const TextStyle(fontSize: 16, color: Colors.red)),
-                              Text("Booking ID: ${doc['bookingId']}"),
-                              Text("Preferred Date: ${doc['preferredDate']}"),
-                              Text("Preferred Time: ${doc['preferredTime']}"),
-                              if (doc['alternativeDate'] != null) Text("Alternative Date: ${doc['alternativeDate']}"),
-                              if (doc['alternativeTime'] != null) Text("Alternative Time: ${doc['alternativeTime']}"),
-                              Text("Service Category: ${doc['serviceCategory']}"),
-                              Text("Price: RM ${doc['price']}"),
-                              Text("Location: ${doc['location']}"),
-                              const SizedBox(height: 10),
-                              if (doc['bookingId'].toString().startsWith('BKIB'))
+                      // return Card(
+                      //   margin: const EdgeInsets.symmetric(vertical: 10),
+                      //   elevation: 3,
+                      //   child: Padding(
+                      //     padding: const EdgeInsets.all(16),
+                      //     child: Column(
+                      //       crossAxisAlignment: CrossAxisAlignment.start,
+                      //       children: [
+                      //         Text(doc['IPTitle'], style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      //         const SizedBox(height: 5),
+                      //         Text("Status: ${doc['status']}", style: const TextStyle(fontSize: 16, color: Colors.red)),
+                      //         Text("Booking ID: ${doc['bookingId']}"),
+                      //         Text("Preferred Date: ${doc['preferredDate']}"),
+                      //         Text("Preferred Time: ${doc['preferredTime']}"),
+                      //         if (doc['alternativeDate'] != null) Text("Alternative Date: ${doc['alternativeDate']}"),
+                      //         if (doc['alternativeTime'] != null) Text("Alternative Time: ${doc['alternativeTime']}"),
+                      //         Text("Service Category: ${doc['serviceCategory']}"),
+                      //         Text("Price: RM ${doc['price']}"),
+                      //         Text("Location: ${doc['location']}"),
+                      //         const SizedBox(height: 10),
+                      //         if (doc['bookingId'].toString().startsWith('BKIB'))
+                      //           const Text("Type: Instant Booking", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      //       ],
+                      //     ),
+                      //   ),
+                      // );
+
+                      return InkWell(
+                          onTap: () {
+                            if (doc['bookingId'].toString().startsWith('BKIB')) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => s_PInstantBookingDetail(
+                                    bookingId: doc['bookingId'],
+                                    postId: doc['postId'],
+                                    providerId: doc['serviceProviderId'],
+                                  ),
+                                ),
+                              );
+                            }
+                          },
+                        child: Card(
+                          margin: const EdgeInsets.symmetric(vertical: 10),
+                          elevation: 3,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(doc['IPTitle'], style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                                const SizedBox(height: 5),
+                                Text("Status: ${doc['status']}", style: const TextStyle(fontSize: 16, color: Colors.red)),
+                                Text("Booking ID: ${doc['bookingId']}"),
+                                Text("Preferred Date: ${doc['preferredDate']}"),
+                                Text("Preferred Time: ${doc['preferredTime']}"),
+                                if (doc['alternativeDate'] != null) Text("Alternative Date: ${doc['alternativeDate']}"),
+                                if (doc['alternativeTime'] != null) Text("Alternative Time: ${doc['alternativeTime']}"),
+                                Text("Service Category: ${doc['serviceCategory']}"),
+                                Text("Price: RM ${doc['price']}"),
+                                Text("Location: ${doc['location']}"),
+                                const SizedBox(height: 10),
                                 const Text("Type: Instant Booking", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       );

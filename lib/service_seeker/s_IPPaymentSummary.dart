@@ -222,6 +222,7 @@ class s_IPPaymentSummary extends StatelessWidget {
       'price': totalPrice,
       'spUSecret': toyyibSecretKey,
       'spCCode': toyyibCategory,
+      "providerHasSeen": false,
     });
   }
 
@@ -314,7 +315,10 @@ class s_IPPaymentSummary extends StatelessWidget {
         title: 'Booking Confirmed',
         contentDescription: 'Tap to confirm your booking in FixMate',
         contentMetadata: BranchContentMetaData()
-          ..addCustomMetadata('bookingId', bookingId),
+          ..addCustomMetadata('bookingId', bookingId)
+          ..addCustomMetadata('spId', spId)
+          ..addCustomMetadata('serviceSeekerId', serviceSeekerId)
+          ..addCustomMetadata('postId', postId),
       );
 
       BranchLinkProperties lp = BranchLinkProperties(
