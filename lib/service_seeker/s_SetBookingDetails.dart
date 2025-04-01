@@ -104,9 +104,14 @@ class _s_SetBookingDetailsState extends State<s_SetBookingDetails> {
   /// ⏰ Selects a time and ensures valid selections
   Future<void> _selectTime(BuildContext context, bool isPreferred) async {
     DateTime now = DateTime.now();
-    TimeOfDay nowTime = TimeOfDay(hour: now.hour, minute: now.minute);
-    TimeOfDay initialTime = TimeOfDay(hour: now.hour + 1, minute: now.minute); // Default 1 hour later
-
+    // TimeOfDay nowTime = TimeOfDay(hour: now.hour, minute: now.minute);
+    // TimeOfDay initialTime = TimeOfDay(hour: now.hour + 1, minute: now.minute); // Default 1 hour later
+    TimeOfDay nowTime = TimeOfDay.fromDateTime(
+      now.add(const Duration(hours: 8)),
+    );
+    TimeOfDay initialTime = TimeOfDay.fromDateTime(
+      now.add(const Duration(hours: 9)),
+    );
     TimeOfDay? picked = await showTimePicker(
       context: context,
       initialTime: initialTime,

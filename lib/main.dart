@@ -187,7 +187,7 @@ class _MyAppState extends State<MyApp> {
         primarySwatch: Colors.orange,
         fontFamily: 'Poppins',
       ),
-      home: HomePage(),
+      home: s_HomePage(),
     );
   }
 }
