@@ -1,10 +1,8 @@
-import 'package:fix_mate/service_seeker/s_IPPaymentSummary.dart';
+import 'package:fix_mate/service_seeker/s_BookingModule/s_IPPaymentSummary.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
-import 'package:url_launcher/url_launcher.dart'; // For launching payment URL
 import 'dart:math';
 import 'package:fix_mate/reusable_widget/reusable_widget.dart';
 
@@ -47,11 +45,6 @@ class _s_SetBookingDetailsState extends State<s_SetBookingDetails> {
     return formatter.format(date);
   }
 
-  // /// 🕒 Formats the time to 24-hour format "14:30"
-  // String _formatTime(TimeOfDay time) {
-  //   return "${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}";
-  // }
-
   String _formatTime(TimeOfDay time) {
     final int hour = time.hourOfPeriod; // Converts 24-hour to 12-hour format
     final String period = time.period == DayPeriod.am ? "AM" : "PM";
@@ -84,8 +77,6 @@ class _s_SetBookingDetailsState extends State<s_SetBookingDetails> {
       setState(() {
         if (isPreferred) {
           _preferredDate = picked;
-          _alternativeDate = picked.add(Duration(days: 1)); // Set default alternative date
-          _alternativeTime = null; // Reset alternative time too
         } else {
           if (_preferredDate != null && !picked.isAfter(_preferredDate!)) {
             ReusableSnackBar(
@@ -165,9 +156,6 @@ class _s_SetBookingDetailsState extends State<s_SetBookingDetails> {
   }
 
 
-
-
-
   String generateBookingId() {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     Random random = Random();
@@ -230,28 +218,6 @@ class _s_SetBookingDetailsState extends State<s_SetBookingDetails> {
       // 🔹 Generate Shorter & Confidential Booking ID
       String bookingId = generateBookingId();
 
-      // 🔹 Save booking with seekerId
-      // await FirebaseFirestore.instance.collection('bookings').add({
-      //   'bookingId': bookingId, // ✅ Save short Booking ID
-      //   'serviceProviderId': widget.spId,
-      //   'spName': widget.spName, // ✅ Added Service Provider Name
-      //   'spImageURL': widget.spImageURL, // ✅ Added Service Provider Image URL
-      //   'postId': widget.IBpostId,
-      //   'IPTitle': widget.IPTitle, // ✅ Added Instant Booking Post Title
-      //   'serviceCategory': widget.serviceCategory,
-      //   'serviceSeekerId': user.uid, // ✅ Add the current user's UID
-      //   'location': _locationController.text,
-      //   'preferredDate': _preferredDate!.toIso8601String(),
-      //   'preferredTime': "${_preferredTime!.hour}:${_preferredTime!.minute}",
-      //   'alternativeDate': _alternativeDate?.toIso8601String(),
-      //   'alternativeTime': _alternativeTime != null ? "${_alternativeTime!.hour}:${_alternativeTime!.minute}" : null,
-      //   'status': 'pending', // Service provider will later confirm
-      //   'bookedAt': FieldValue.serverTimestamp(),
-      //   'price': widget.IBPrice,
-      //   'spUSecret': toyyibSecretKey,
-      //   'spCCode': toyyibCategory,
-      // });
-
       // 🔹 Navigate to Payment Summary Screen
       Navigator.push(
         context,
@@ -308,64 +274,36 @@ class _s_SetBookingDetailsState extends State<s_SetBookingDetails> {
           children: [
             Text("Location Details", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
             SizedBox(height: 5),
-            TextFormField(
+            LongInputContainer(
               controller: _locationController,
-              maxLines: 3,
-              decoration: InputDecoration(
-                hintText: "Enter your location...",
-                hintStyle: TextStyle(color: Colors.grey.shade600), // Match hint style
-                filled: true,
-                fillColor: Colors.white, // Ensuring consistency with pickers
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8), // Rounded corners like pickers
-                  borderSide: BorderSide(color: Color(0xFFfb9798)), // Pinkish-red border
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(color: Color(0xFFfb9798)), // Default border
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(width: 2, color: Color(0xFFfb9798)), // Thicker when focused
-                ),
-                contentPadding: EdgeInsets.symmetric(vertical: 12, horizontal: 16), // Proper spacing
-              ),
-              style: TextStyle(color: Colors.black, fontSize: 16), // Consistent font style
-              cursorColor: Color(0xFFfb9798), // Match cursor color to theme
+              placeholder: "Enter your location...",
+              isRequired: true,
+              requiredMessage: "Location is required.",
+              width: double.infinity,
             ),
-
             SizedBox(height: 30),
 
             Text("Pick your desired time slot", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
             SizedBox(height: 10),
             // Preferred Date & Time
             Text("Preferred Date & Time", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            _buildDateTimePicker("Select a date", _preferredDate, () => _selectDate(context, true)),
-            _buildDateTimePicker("Select a time", _preferredTime, () => _selectTime(context, true)),
+            _buildDateTimePicker("Select a date", _preferredDate, () => _selectDate(context, true), isDate: true),
+            _buildDateTimePicker("Select a time", _preferredTime, () => _selectTime(context, true), isDate: false),
 
             // Alternative Date & Time
             SizedBox(height: 20),
             Text("Alternative Date & Time", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            _buildDateTimePicker("Select a date", _alternativeDate, () => _selectDate(context, false)),
-            _buildDateTimePicker("Select a time", _alternativeTime, () => _selectTime(context, false)),
+            _buildDateTimePicker("Select a date", _alternativeDate, () => _selectDate(context, false), isDate: true),
+            _buildDateTimePicker("Select a time", _alternativeTime, () => _selectTime(context, false), isDate: false),
 
-            SizedBox(height: 30),
+            SizedBox(height: 20),
 
             // Confirm Button
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  print("Confirm button pressed! Calling _confirmBooking()");
-                  _confirmBooking();
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFFfb9798),
-                  padding: EdgeInsets.symmetric(vertical: 15),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                ),
-                child: Text("Confirm", style: TextStyle(fontSize: 18, color: Colors.white)),
-              ),
+            Center(
+              child: pk_button(context, "Confirm", () {
+                print("Confirm button pressed! Calling _confirmBooking()");
+                _confirmBooking();
+              }),
             ),
           ],
         ),
@@ -373,31 +311,8 @@ class _s_SetBookingDetailsState extends State<s_SetBookingDetails> {
     );
   }
 
-  // Widget _buildDateTimePicker(String label, dynamic value, VoidCallback onTap) {
-  //   return Padding(
-  //     padding: const EdgeInsets.only(top: 10),
-  //     child: InkWell(
-  //       onTap: onTap,
-  //       child: Container(
-  //         padding: EdgeInsets.symmetric(horizontal: 15, vertical: 12),
-  //         decoration: BoxDecoration(
-  //           border: Border.all(color: Colors.grey),
-  //           borderRadius: BorderRadius.circular(10),
-  //         ),
-  //         child: Row(
-  //           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-  //           children: [
-  //             Text(value != null ? value.toString() : label, style: TextStyle(color: Colors.black54)),
-  //             Icon(Icons.calendar_today, color: Color(0xFFfb9798)),
-  //           ],
-  //         ),
-  //       ),
-  //     ),
-  //   );
-  // }
-
   /// 🔹 Builds the aesthetic date/time picker UI
-  Widget _buildDateTimePicker(String label, dynamic value, VoidCallback onTap) {
+  Widget _buildDateTimePicker(String label, dynamic value, VoidCallback onTap, {required bool isDate}) {
     print("Value Type: ${value.runtimeType} | Value: $value");
 
     return Padding(
@@ -409,14 +324,15 @@ class _s_SetBookingDetailsState extends State<s_SetBookingDetails> {
           padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
             color: Colors.white,
-            border: Border.all(color: Colors.grey.shade300, width: 1.5),
+            border: Border.all(color: Colors.black, width: 0.9),
             borderRadius: BorderRadius.circular(12),
             boxShadow: [
               BoxShadow(
-                color: Colors.black12,
-                blurRadius: 4,
+                color: Color(0xFFD19C86).withOpacity(1),
+                blurRadius: 6,
                 offset: Offset(0, 2),
               ),
+
             ],
           ),
           child: Row(
@@ -435,8 +351,8 @@ class _s_SetBookingDetailsState extends State<s_SetBookingDetails> {
                 ),
               ),
               Icon(
-                (value is DateTime) ? Icons.calendar_today : Icons.access_time, // Ensure correct icon
-                color: Color(0xFFfb9798),
+              isDate ? Icons.calendar_month : Icons.access_time,
+              color: Color(0xFFB87F65), size: 26
               ),
             ],
           ),
@@ -444,8 +360,4 @@ class _s_SetBookingDetailsState extends State<s_SetBookingDetails> {
       ),
     );
   }
-
-
-
-
 }

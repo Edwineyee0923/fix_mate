@@ -139,6 +139,7 @@ class _p_BookingHistoryState extends State<p_BookingHistory> {
                       final data = doc.data() as Map<String, dynamic>;
                       final isActive = data['status'] == 'Active';
                       final isNew = doc['status'] == 'Pending Confirmation';
+                      final isInstantBooking = data['bookingId'].toString().startsWith('BKIB');
                       return GestureDetector(
                         onTap: () async {
                           final bookingId = doc['bookingId'];
@@ -163,22 +164,26 @@ class _p_BookingHistoryState extends State<p_BookingHistory> {
                             }
                           }
 
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => isActive
-                                  ? p_AInstantBookingDetail(
-                                bookingId: doc['bookingId'],
-                                postId: doc['postId'],
-                                seekerId: doc['serviceSeekerId'],
-                              )
-                                  : p_PInstantBookingDetail(
-                                bookingId: doc['bookingId'],
-                                postId: doc['postId'],
-                                seekerId: doc['serviceSeekerId'],
+                          if (isInstantBooking) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => isActive
+                                    ? p_AInstantBookingDetail(
+                                  bookingId: data['bookingId'],
+                                  postId: data['postId'],
+                                  seekerId: data['serviceSeekerId'],
+                                )
+                                    : p_PInstantBookingDetail(
+                                  bookingId: data['bookingId'],
+                                  postId: data['postId'],
+                                  seekerId: data['serviceSeekerId'],
+                                ),
                               ),
-                            ),
-                          );
+                            );
+                          } else {
+                            // TODO: Add redirect to PromotionBookingDetail if needed
+                          }
 
                         },
                         child: Card(
@@ -198,9 +203,15 @@ class _p_BookingHistoryState extends State<p_BookingHistory> {
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: Text(
-                                        isActive ? "Service Confirmed" : "New Order Assigned",
+                                        data['isRescheduling'] == true
+                                            ? "Booking Rescheduled"
+                                            : isActive
+                                            ? "Service Confirmed"
+                                            : "New Order Assigned",
                                         style: const TextStyle(color: Colors.white),
                                       ),
+
+
                                     ),
                                     if (isNew && !(doc['providerHasSeen'] ?? true))
                                       Container(
@@ -220,7 +231,10 @@ class _p_BookingHistoryState extends State<p_BookingHistory> {
                                 Text("Status: ${doc['status']}", style: const TextStyle(color: Colors.red)),
                                 Text("Price: RM ${doc['price']}",),
                                 Text("Location: ${doc['location']}",),
-                                if (isActive) ...[
+                                if (data['isRescheduling'] == true) ...[
+                                  Text("Final Schedule (Rescheduled): ${data['finalDate']}, ${data['finalTime']}"),
+                                  Text("⚠ Awaiting confirmation from seeker", style: TextStyle(color: Colors.orange, fontWeight: FontWeight.w500)),
+                                ] else if (isActive) ...[
                                   Text("Final Schedule: ${data['finalDate']}, ${data['finalTime']}"),
                                 ] else ...[
                                   Text("Preferred: ${data['preferredDate']}, ${data['preferredTime']}"),
@@ -228,10 +242,10 @@ class _p_BookingHistoryState extends State<p_BookingHistory> {
                                     Text("Alternative: ${data['alternativeDate']}, ${data['alternativeTime']}"),
                                 ],
 
-
-
-
-                                const Text("Type: Instant Booking", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                                Text(
+                                  "Type: ${isInstantBooking ? "Instant Booking" : "Promotion"}",
+                                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                ),
                               ],
                             ),
                           ),

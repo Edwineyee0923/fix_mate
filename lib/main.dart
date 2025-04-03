@@ -6,7 +6,7 @@ import 'package:flutter_branch_sdk/flutter_branch_sdk.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:fix_mate/home_page/HomePage.dart';
-import 'package:fix_mate/service_seeker/s_BookingHistory.dart';
+import 'package:fix_mate/service_seeker/s_BookingModule/s_BookingHistory.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'firebase_options.dart';
 

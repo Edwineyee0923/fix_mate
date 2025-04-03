@@ -1,4 +1,4 @@
-import 'package:fix_mate/service_seeker/s_BookingHistory.dart';
+import 'package:fix_mate/service_seeker/s_BookingModule/s_BookingHistory.dart';
 import 'package:fix_mate/service_seeker/s_Favourite.dart';
 import 'package:fix_mate/service_seeker/s_HomePage.dart';
 import 'package:fix_mate/service_seeker/s_profile.dart';

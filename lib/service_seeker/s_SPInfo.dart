@@ -152,7 +152,6 @@
 import 'package:fix_mate/service_seeker/s_SPDetail.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 class ServiceProviderScreen extends StatefulWidget {
   final String docId;
@@ -315,14 +314,5 @@ class _ServiceProviderScreenState extends State<ServiceProviderScreen> {
     );
   }
 
-
-  void _launchWhatsApp(String phoneNumber) {
-    if (phoneNumber.isNotEmpty) {
-      final url = "https://wa.me/$phoneNumber";
-      launch(url);
-    } else {
-      print("Phone number not available");
-    }
-  }
 }
 

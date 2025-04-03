@@ -94,46 +94,6 @@ class _p_AInstantBookingDetailState extends State<p_AInstantBookingDetail> {
   }
 
 
-  Future<void> _confirmSchedule() async {
-    if (selectedSchedule == null) return;
-
-    setState(() => isSubmitting = true);
-
-    try {
-      String finalDate = selectedSchedule == 'preferred'
-          ? bookingData!["preferredDate"]
-          : bookingData!["alternativeDate"];
-      String finalTime = selectedSchedule == 'preferred'
-          ? bookingData!["preferredTime"]
-          : bookingData!["alternativeTime"];
-
-      final query = await FirebaseFirestore.instance
-          .collection('bookings')
-          .where('bookingId', isEqualTo: widget.bookingId)
-          .limit(1)
-          .get();
-
-      if (query.docs.isNotEmpty) {
-        final docRef = query.docs.first.reference;
-        await docRef.update({
-          'finalDate': finalDate,
-          'finalTime': finalTime,
-          'status': 'Active',
-        });
-      }
-
-
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Schedule confirmed successfully.")));
-
-      Navigator.pop(context); // Optional: Return to booking history
-    } catch (e) {
-      print("❌ Failed to confirm schedule: $e");
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to confirm schedule.")));
-    } finally {
-      setState(() => isSubmitting = false);
-    }
-  }
-
 
   @override
   Widget build(BuildContext context) {

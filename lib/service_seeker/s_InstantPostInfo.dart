@@ -1,5 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:fix_mate/service_seeker/s_SetBookingDetails.dart';
+import 'package:fix_mate/service_seeker/s_BookingModule/s_SetBookingDetails.dart';
 import 'package:flutter/material.dart';
 import 'package:fix_mate/reusable_widget/reusable_widget.dart';
 
