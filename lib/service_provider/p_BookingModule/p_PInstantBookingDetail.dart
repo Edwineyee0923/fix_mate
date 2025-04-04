@@ -28,6 +28,7 @@ class _p_PInstantBookingDetailState extends State<p_PInstantBookingDetail> {
   String? selectedSchedule; // 'preferred' or 'alternative'
   bool isSubmitting = false;
   bool isRescheduling = false;
+  bool rescheduleSent = false;
   DateTime? _rescheduleDate;
   TimeOfDay? _rescheduleTime;
 
@@ -151,6 +152,16 @@ class _p_PInstantBookingDetailState extends State<p_PInstantBookingDetail> {
         await docRef.update({
           'finalDate': formattedDate,
           'finalTime': formattedTime,
+          'isRescheduling': true, // Mark that it's a reschedule
+          'rescheduleSent': true,
+          'status': 'Pending Confirmation', // Keep status if still needs seeker confirmation
+        });
+
+        setState(() {
+          rescheduleSent = true;
+          isRescheduling = false;
+          _rescheduleDate = null;
+          _rescheduleTime = null;
         });
 
         await FirebaseFirestore.instance.collection('s_notifications').add({
@@ -164,13 +175,19 @@ class _p_PInstantBookingDetailState extends State<p_PInstantBookingDetail> {
           'createdAt': FieldValue.serverTimestamp(),
         });
 
+        // ✅ Update flags locally
+        setState(() {
+          rescheduleSent = true;
+          isRescheduling = false;
+        });
+
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Reschedule confirmed.")),
+          SnackBar(content: Text("Reschedule submitted successfully.")),
         );
 
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const p_BookingHistory(initialTabIndex: 1)),
+          MaterialPageRoute(builder: (_) => const p_BookingHistory(initialTabIndex: 0)),
         );
       }
     } catch (e) {
@@ -199,6 +216,13 @@ class _p_PInstantBookingDetailState extends State<p_PInstantBookingDetail> {
 
       if (snapshot.docs.isNotEmpty) {
         bookingData = snapshot.docs.first.data() as Map<String, dynamic>;
+
+        // ✅ Check if a reschedule was already submitted
+        if (bookingData?["rescheduleSent"] == true) {
+          setState(() {
+            rescheduleSent = true;
+          });
+        }
       }
 
 
@@ -362,10 +386,10 @@ class _p_PInstantBookingDetailState extends State<p_PInstantBookingDetail> {
           Text("Category: ${bookingData!["serviceCategory"]}"),
           Text("Preferred Date: ${_formatDate(bookingData!["preferredDate"])}"),
           Text("Preferred Time: ${_formatTime(bookingData!["preferredTime"])}"),
-          if (bookingData!["alternativeDate"] != null)
+          if (bookingData!["alternativeDate"] != null && bookingData!["alternativeTime"] != null) ...[
             Text("Alternative Date: ${_formatDate(bookingData!["alternativeDate"])}"),
-          if (bookingData!["alternativeTime"] != null)
             Text("Alternative Time: ${_formatTime(bookingData!["alternativeTime"])}"),
+          ],
           Text("Location: ${bookingData!["location"]}"),
           Text("Price: RM ${bookingData!["price"]}"),
           const SizedBox(height: 12),
@@ -387,6 +411,7 @@ class _p_PInstantBookingDetailState extends State<p_PInstantBookingDetail> {
 
           const SizedBox(height: 24),
           const SizedBox(height: 16),
+          if (!rescheduleSent) ...[
           Opacity(
             opacity: isRescheduling ? 0.5 : 1.0, // 🔸 Fade out when rescheduling
             child: IgnorePointer(
@@ -408,19 +433,20 @@ class _p_PInstantBookingDetailState extends State<p_PInstantBookingDetail> {
                       setState(() => selectedSchedule = 'preferred');
                     },
                   ),
-                  CheckboxListTile(
-                    title: Text(
-                      "Alternative Schedule: ${_formatDate(bookingData!["alternativeDate"])} at ${_formatTime(bookingData!["alternativeTime"])}",
-                      style: TextStyle(color: isRescheduling ? Colors.grey : Colors.black),
+                  if (bookingData!["alternativeDate"] != null && bookingData!["alternativeTime"] != null)
+                    CheckboxListTile(
+                      title: Text(
+                        "Alternative Schedule: ${_formatDate(bookingData!["alternativeDate"])} at ${_formatTime(bookingData!["alternativeTime"])}",
+                        style: TextStyle(color: isRescheduling ? Colors.grey : Colors.black),
+                      ),
+                      value: selectedSchedule == 'alternative',
+                      activeColor: isRescheduling ? Colors.grey : Colors.green,
+                      onChanged: isRescheduling
+                          ? null
+                          : (val) {
+                        setState(() => selectedSchedule = 'alternative');
+                      },
                     ),
-                    value: selectedSchedule == 'alternative',
-                    activeColor: isRescheduling ? Colors.grey : Colors.green,
-                    onChanged: isRescheduling
-                        ? null
-                        : (val) {
-                      setState(() => selectedSchedule = 'alternative');
-                    },
-                  ),
                 ],
               ),
             ),
@@ -436,7 +462,6 @@ class _p_PInstantBookingDetailState extends State<p_PInstantBookingDetail> {
               await _confirmSchedule();
             },
           ),
-
           if (!isRescheduling) ...[
             const SizedBox(height: 16),
             Text(
@@ -455,8 +480,8 @@ class _p_PInstantBookingDetailState extends State<p_PInstantBookingDetail> {
               },
             ),
           ],
-
-          if (isRescheduling) ...[
+          ],
+          if (isRescheduling && !rescheduleSent) ...[
             const SizedBox(height: 20),
             Text("Custom Reschedule Date & Time", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
 
@@ -484,15 +509,15 @@ class _p_PInstantBookingDetailState extends State<p_PInstantBookingDetail> {
                 ),
               ],
             ),
+          ] else if (rescheduleSent) ...[
+            const SizedBox(height: 20),
+            Text(
+              "📌 Booking schedule has been reset.\nWaiting for service seeker to confirm the new schedule.",
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.orange),
+            ),
           ],
 
-
-          // Bottom Section: Edit & Cancel
-          ElevatedButton(
-            onPressed: () {},
-            child: const Text("Edit Schedule"),
-          ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 20),
           ElevatedButton(
             onPressed: () {},
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
