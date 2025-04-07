@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:fix_mate/service_provider/p_BookingModule/p_AInstantBookingDetail.dart';
 import 'package:fix_mate/service_provider/p_BookingModule/p_PInstantBookingDetail.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -61,7 +62,7 @@ class _p_NotificationState extends State<p_Notification> {
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('p_notifications')
-            .where('spId', isEqualTo: providerId)
+            .where('providerId', isEqualTo: providerId)
             .orderBy('createdAt', descending: true)
             .snapshots(),
         builder: (context, snapshot) {
@@ -108,18 +109,54 @@ class _p_NotificationState extends State<p_Notification> {
                     ],
                   ),
                   trailing: !isRead ? const Icon(Icons.circle, color: Colors.red, size: 10) : null,
+                  // onTap: () async {
+                  //   await doc.reference.update({'isRead': true});
+                  //   Navigator.pushReplacement(
+                  //     context,
+                  //     MaterialPageRoute(
+                  //       builder: (_) => p_PInstantBookingDetail(
+                  //         bookingId: doc['bookingId'],
+                  //         postId: doc['postId'],
+                  //         seekerId: doc['seekerId'],
+                  //       ),
+                  //     ),
+                  //   );
+                  // },
                   onTap: () async {
                     await doc.reference.update({'isRead': true});
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => p_PInstantBookingDetail(
-                          bookingId: doc['bookingId'],
-                          postId: doc['postId'],
-                          seekerId: doc['serviceSeekerId'],
+
+                    // 🔍 Fetch the latest booking status from Firestore
+                    final bookingSnapshot = await FirebaseFirestore.instance
+                        .collection('bookings')
+                        .where('bookingId', isEqualTo: doc['bookingId'])
+                        .limit(1)
+                        .get();
+
+                    if (bookingSnapshot.docs.isNotEmpty) {
+                      final bookingData = bookingSnapshot.docs.first.data();
+                      final status = bookingData['status'] ?? '';
+
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => status == 'Active'
+                              ? p_AInstantBookingDetail(
+                            bookingId: doc['bookingId'],
+                            postId: doc['postId'],
+                            seekerId: doc['seekerId'],
+                          )
+                              : p_PInstantBookingDetail(
+                            bookingId: doc['bookingId'],
+                            postId: doc['postId'],
+                            seekerId: doc['seekerId'],
+                          ),
                         ),
-                      ),
-                    );
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Booking not found.')),
+                      );
+                    }
                   },
                 ),
               );

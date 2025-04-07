@@ -1,9 +1,12 @@
+import 'package:fix_mate/service_seeker/s_BookingModule/s_BookingHistory.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:fix_mate/service_seeker/s_InstantPostInfo.dart';
 import 'package:fix_mate/reusable_widget/reusable_widget.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter/services.dart';
+
 
 class s_PInstantBookingDetail extends StatefulWidget {
   final String bookingId;
@@ -292,36 +295,196 @@ class _s_PInstantBookingDetailState extends State<s_PInstantBookingDetail> {
           const SizedBox(height: 24),
 
           // Details Section
-          Text("Booking ID: ${bookingData!["bookingId"]}"),
+          GestureDetector(
+            onLongPress: () {
+              Clipboard.setData(ClipboardData(text: bookingData!["bookingId"]));
+              ReusableSnackBar(
+                context,
+                "Booking ID copied to clipboard!",
+                icon: Icons.check_circle,
+                iconColor: Colors.green,
+              );
+            },
+            child: Text(
+              "Booking ID: ${bookingData!["bookingId"]}",
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            ),
+          ),
+
           Text("Status: ${bookingData!["status"]}"),
           Text("Title: ${bookingData!["IPTitle"]}"),
           Text("Category: ${bookingData!["serviceCategory"]}"),
-          isEditingSchedule
-              ? Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildDateTimePicker("Select Preferred Date", _newPreferredDate, () => _selectDate(context, true), isDate: true),
-              _buildDateTimePicker("Select Preferred Time", _newPreferredTime, () => _selectTime(context, true), isDate: false),
-              _buildDateTimePicker("Select Alternative Date", _newAlternativeDate, () => _selectDate(context, false), isDate: true),
-              _buildDateTimePicker("Select Alternative Time", _newAlternativeTime, () => _selectTime(context, false), isDate: false),
-            ],
-          )
-              : Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+          // 📌 Step 1: If rescheduling sent, show finalDate/finalTime with confirmation buttons
+          if (bookingData!['isRescheduling'] == true && bookingData!['rescheduleSent'] == true) ...[
+            const SizedBox(height: 10),
+            Text(
+              "📌 Booking schedule has been reset.\nWaiting for you to confirm the new schedule.",
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.orange),
+            ),
+            const SizedBox(height: 10),
+            Text("Final Date: ${bookingData!["finalDate"]}"),
+            Text("Final Time: ${bookingData!["finalTime"]}"),
+            const SizedBox(height: 10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.close),
+                  label: const Text("Reject"),
+                  onPressed: () async {
+                    bool? shouldProceed = await showDialog<bool>(
+                      context: context,
+                      builder: (_) => AlertDialog(
+                        title: const Text("Reject Reschedule"),
+                        content: const Text(
+                            "We are sorry as you are unavailable for the rescheduled time.\n"
+                                "Please contact the provider via WhatsApp so they can reschedule again."
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            child: const Text("Cancel"),
+                          ),
+                          ElevatedButton(
+                            onPressed: () => Navigator.pop(context, true),
+                            child: const Text("Okay"),
+                          ),
+                        ],
+                      ),
+                    );
 
+                    if (shouldProceed == true) {
+                      final doc = await FirebaseFirestore.instance
+                          .collection('bookings')
+                          .where('bookingId', isEqualTo: widget.bookingId)
+                          .limit(1)
+                          .get();
+
+                      if (doc.docs.isNotEmpty) {
+                        await doc.docs.first.reference.update({
+                          'status': 'Pending Confirmation',
+                          'isRescheduling': true,
+                          'rescheduleSent': false,
+                          'providerHasSeen': false,
+                        });
+
+                        // 🔔 Notify the service provider
+                        await FirebaseFirestore.instance.collection('p_notifications').add({
+                          'providerId': bookingData!["serviceProviderId"],
+                          'bookingId': widget.bookingId,
+                          'postId': widget.postId,
+                          'seekerId': bookingData?['serviceSeekerId'],
+                          'title': 'Reschedule Rejected (#${widget.bookingId})',
+                          'message': 'Seeker rejected the new schedule. Please coordinate with them to reset.',
+                          'isRead': false,
+                          'createdAt': FieldValue.serverTimestamp(),
+                        });
+
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text("You have rejected the reschedule.")),
+                        );
+
+                        // 🔁 Redirect back to Pending tab
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => s_BookingHistory(initialTabIndex: 0),
+                          ),
+                        );
+                      }
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                ),
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.check),
+                  label: const Text("Confirm"),
+                  onPressed: () async {
+                    final doc = await FirebaseFirestore.instance
+                        .collection('bookings')
+                        .where('bookingId', isEqualTo: widget.bookingId)
+                        .limit(1)
+                        .get();
+                    if (doc.docs.isNotEmpty) {
+                      await doc.docs.first.reference.update({
+                        'status': 'Active',
+                        'isRescheduling': false,
+                        'rescheduleSent': false,
+                        'providerHasSeen': false,
+                      });
+
+                      await FirebaseFirestore.instance.collection('p_notifications').add({
+                        'providerId': bookingData!["serviceProviderId"],
+                        'bookingId': widget.bookingId,
+                        'postId': widget.postId,
+                        'seekerId': bookingData?['serviceSeekerId'],
+                        'title': 'Reschedule Approved (#${widget.bookingId})',
+                        'message': 'Seeker confirmed the new schedule.',
+                        'isRead': false,
+                        'createdAt': FieldValue.serverTimestamp(),
+                      });
+
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("You have confirmed the reschedule.")),
+                      );
+
+                      // ✅ Redirect to Booking History, Active Tab
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => s_BookingHistory(initialTabIndex: 1),
+                        ),
+                      );
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                ),
+              ],
+            ),
+          ]
+
+          // ✅ Step 2: If reschedule is rejected (rescheduleSent == false but isRescheduling still true)
+          else if (bookingData!['isRescheduling'] == true && bookingData!['rescheduleSent'] == false) ...[
+            Text(
+              "Final Schedule (Rescheduled): ${bookingData!['finalDate']}, ${bookingData!['finalTime']}",
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ]
+
+          // ✏️ Step 3: If editing manually
+          else if (isEditingSchedule) ...[
+            _buildDateTimePicker("Select Preferred Date", _newPreferredDate, () => _selectDate(context, true), isDate: true),
+            _buildDateTimePicker("Select Preferred Time", _newPreferredTime, () => _selectTime(context, true), isDate: false),
+            _buildDateTimePicker("Select Alternative Date", _newAlternativeDate, () => _selectDate(context, false), isDate: true),
+            _buildDateTimePicker("Select Alternative Time", _newAlternativeTime, () => _selectTime(context, false), isDate: false),
+          ]
+
+            // 🔚 Default: show the preferred + alternative date/time
+          else ...[
               Text("Preferred Date: ${_formatDate(parseCustomDate(bookingData!["preferredDate"]))}"),
-
               Text("Preferred Time: ${_formatTime(parseTimeOfDay(bookingData!["preferredTime"]))}"),
               if (bookingData!["alternativeDate"] != null)
                 Text("Alternative Date: ${_formatDate(parseCustomDate(bookingData!["alternativeDate"]))}"),
               if (bookingData!["alternativeTime"] != null)
                 Text("Alternative Time: ${_formatTime(parseTimeOfDay(bookingData!["alternativeTime"]))}"),
-
             ],
+
+          GestureDetector(
+            onLongPress: () {
+              Clipboard.setData(ClipboardData(text: bookingData!["location"]));
+              ReusableSnackBar(
+                context,
+                "Location copied to clipboard!",
+                icon: Icons.check_circle,
+                iconColor: Colors.green,
+              );
+            },
+            child: Text(
+              "Location: ${bookingData!["location"]}",
+              // style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            ),
           ),
 
-          Text("Location: ${bookingData!["location"]}"),
           Text("Price: RM ${bookingData!["price"]}"),
           const SizedBox(height: 12),
           if (providerPhone != null)
@@ -342,39 +505,93 @@ class _s_PInstantBookingDetailState extends State<s_PInstantBookingDetail> {
 
           const SizedBox(height: 24),
 
-          // Bottom Section: Edit & Cancel
-          if (!isEditingSchedule) ...[
-            ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  isEditingSchedule = true;
-
-                  // Pre-fill from existing booking data
-                  _newPreferredDate = parseCustomDate(bookingData!['preferredDate']);
-                  _newPreferredTime = parseTimeOfDay(bookingData!['preferredTime']);
-
-                  _newAlternativeDate = bookingData!['alternativeDate'] != null
-                      ? parseCustomDate(bookingData!['alternativeDate'])
-                      : null;
-                  _newAlternativeTime = bookingData!['alternativeTime'] != null
-                      ? parseTimeOfDay(bookingData!['alternativeTime'])
-                      : null;
-                });
-              },
-              child: const Text("Edit Schedule"),
-            ),
-          ] else ...[
-            ElevatedButton(
-              onPressed: _saveUpdatedSchedule,
-              child: const Text("Save Changes"),
+          if ((bookingData?['isRescheduling'] ?? false) && !(bookingData?['rescheduleSent'] ?? false)) ...[
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Text(
+                "📌 You have rejected the previous schedule suggested by the provider.\n"
+                    "Please contact them via WhatsApp to arrange a new time, or wait for an updated schedule to be sent.",
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.orange.shade700,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
             ),
           ],
+
+          // Only show the edit UI if reschedule == false and isRescheduling == false
+          if (!(bookingData?['rescheduleSent'] ?? false) && !(bookingData?['isRescheduling'] ?? false)) ...[
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Text(
+                "📌 You can edit and reschedule the booking before confirming.",
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.orange.shade700,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ),
+            if (!isEditingSchedule)
+              ElevatedButton(
+                onPressed: () {
+                  setState(() {
+                    isEditingSchedule = true;
+
+                    // Pre-fill from existing booking data
+                    _newPreferredDate = parseCustomDate(bookingData!['preferredDate']);
+                    _newPreferredTime = parseTimeOfDay(bookingData!['preferredTime']);
+
+                    _newAlternativeDate = bookingData!['alternativeDate'] != null
+                        ? parseCustomDate(bookingData!['alternativeDate'])
+                        : null;
+                    _newAlternativeTime = bookingData!['alternativeTime'] != null
+                        ? parseTimeOfDay(bookingData!['alternativeTime'])
+                        : null;
+                  });
+                },
+                child: const Text("Edit Schedule"),
+              )
+            else
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // Cancel Button
+                  TextButton(
+                    onPressed: () {
+                      setState(() {
+                        isEditingSchedule = false;
+                        _newPreferredDate = null;
+                        _newPreferredTime = null;
+                        _newAlternativeDate = null;
+                        _newAlternativeTime = null;
+                      });
+                    },
+                    child: const Text("Cancel", style: TextStyle(color: Colors.red)),
+                  ),
+
+                  // Save Changes Button
+                  ElevatedButton(
+                    onPressed: _saveUpdatedSchedule,
+                    child: const Text("Save Changes"),
+                  ),
+                ],
+              ),
+          ],
+
+
+
           const SizedBox(height: 10),
-          ElevatedButton(
-            onPressed: () {},
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text("Request Cancellation", style: TextStyle(color: Colors.white)),
-          ),
+          if (!(bookingData?['isRescheduling'] ?? false)) ...[
+            ElevatedButton(
+              onPressed: () {},
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              child: const Text("Request Cancellation", style: TextStyle(color: Colors.white)),
+            ),
+          ]
+
+
         ],
       ),
     );

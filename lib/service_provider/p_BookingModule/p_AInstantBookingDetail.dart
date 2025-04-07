@@ -2,6 +2,8 @@ import 'package:fix_mate/service_provider/p_EditInstantPost.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter/services.dart';
+import 'package:fix_mate/reusable_widget/reusable_widget.dart';
 
 class p_AInstantBookingDetail extends StatefulWidget {
   final String bookingId;
@@ -145,12 +147,41 @@ class _p_AInstantBookingDetailState extends State<p_AInstantBookingDetail> {
           const SizedBox(height: 24),
 
           // Details Section
-          Text("Booking ID: ${bookingData!["bookingId"]}"),
+          GestureDetector(
+            onLongPress: () {
+              Clipboard.setData(ClipboardData(text: bookingData!["bookingId"]));
+              ReusableSnackBar(
+                context,
+                "Booking ID copied to clipboard!",
+                icon: Icons.check_circle,
+                iconColor: Colors.green,
+              );
+            },
+            child: Text(
+              "Booking ID: ${bookingData!["bookingId"]}",
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            ),
+          ),
           Text("Status: ${bookingData!["status"]}"),
           Text("Title: ${bookingData!["IPTitle"]}"),
           Text("Category: ${bookingData!["serviceCategory"]}"),
           Text("Final Schedule: ${bookingData!["finalDate"]}, ${bookingData!["finalTime"]}"),
-          Text("Location: ${bookingData!["location"]}"),
+          GestureDetector(
+            onLongPress: () {
+              Clipboard.setData(ClipboardData(text: bookingData!["location"]));
+              ReusableSnackBar(
+                context,
+                "Location copied to clipboard!",
+                icon: Icons.check_circle,
+                iconColor: Colors.green,
+              );
+            },
+            child: Text(
+              "Location: ${bookingData!["location"]}",
+              // style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            ),
+          ),
+
           Text("Price: RM ${bookingData!["price"]}"),
           const SizedBox(height: 12),
           if (seekerPhone != null)

@@ -198,16 +198,30 @@ class _s_BookingHistoryState extends State<s_BookingHistory> {
                                         const SizedBox(height: 5),
                                         Text("Status: ${data['status']}", style: const TextStyle(color: Colors.red)),
                                         Text("Booking ID: $bookingId"),
-                                        if (isActive) ...[
-                                          Text("Final Schedule: ${data['finalDate']}, ${data['finalTime']}"),
-                                        ] else ...[
-                                          Text("Preferred: ${data['preferredDate']}, ${data['preferredTime']}"),
-                                          if (data['alternativeDate'] != null && data['alternativeTime'] != null)
-                                            Text("Alternative: ${data['alternativeDate']}, ${data['alternativeTime']}"),
-                                        ],
+
                                         Text("Service Category: ${data['serviceCategory']}"),
                                         Text("Price: RM ${data['price']}"),
                                         Text("Location: ${data['location']}"),
+                                        if (data['isRescheduling'] == true && data['rescheduleSent'] == false) ...[
+                                          Text("Final Schedule (Rescheduled): ${data['finalDate']}, ${data['finalTime']}"),
+                                          Text(
+                                            "❌ Previous schedule rejected. Please contact the provider via WhatsApp to reschedule or wait for a new suggestion.",
+                                            style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.w500),
+                                          ),
+                                        ] else if (data['isRescheduling'] == true && data['rescheduleSent'] == true) ...[
+                                          Text("Final Schedule (Rescheduled): ${data['finalDate']}, ${data['finalTime']}"),
+                                          Text(
+                                            "⚠ The provider has suggested a new schedule. Please review it and confirm or reject accordingly.",
+                                            style: TextStyle(color: Colors.orange, fontWeight: FontWeight.w500),
+                                          ),
+                                        ] else if (isActive) ...[
+                                          Text("Final Schedule: ${data['finalDate']}, ${data['finalTime']}"),
+                                        ] else ...[
+                                          Text("Preferred: ${data['preferredDate']}, ${data['preferredTime']}"),
+                                          if (data["alternativeDate"] != null && data["alternativeTime"] != null) ...[
+                                            Text("Alternative: ${data['alternativeDate']}, ${data['alternativeTime']}"),
+                                          ],
+                                        ],
                                         const SizedBox(height: 10),
                                         Text(
                                           "Type: ${isInstantBooking ? "Instant Booking" : "Promotion"}",

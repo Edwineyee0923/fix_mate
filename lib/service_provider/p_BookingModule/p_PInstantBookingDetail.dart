@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter/services.dart';
+import 'package:fix_mate/reusable_widget/reusable_widget.dart';
 
 class p_PInstantBookingDetail extends StatefulWidget {
   final String bookingId;
@@ -40,15 +42,45 @@ class _p_PInstantBookingDetailState extends State<p_PInstantBookingDetail> {
       initialDate: now,
       firstDate: now,
       lastDate: now.add(const Duration(days: 365)),
+      builder: (context, child) {
+        return Theme(
+          data: ThemeData.light().copyWith(
+            primaryColor: Color(0xFF464E65),
+            colorScheme: ColorScheme.light(
+              primary: Color(0xFF464E65),
+            ),
+            buttonTheme: ButtonThemeData(
+              textTheme: ButtonTextTheme.primary,
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
     if (picked != null) setState(() => _rescheduleDate = picked);
   }
 
+
   Future<void> _selectTime(BuildContext context) async {
     final now = DateTime.now();
+
     final picked = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.fromDateTime(now.add(const Duration(hours: 8))),
+      builder: (context, child) {
+        return Theme(
+          data: ThemeData.light().copyWith(
+            primaryColor: Color(0xFF464E65),
+            colorScheme: ColorScheme.light(
+              primary: Color(0xFF464E65),
+            ),
+            buttonTheme: ButtonThemeData(
+              textTheme: ButtonTextTheme.primary,
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
 
     if (picked != null) {
@@ -56,16 +88,12 @@ class _p_PInstantBookingDetailState extends State<p_PInstantBookingDetail> {
           _rescheduleDate!.year == now.year &&
           _rescheduleDate!.month == now.month &&
           _rescheduleDate!.day == now.day) {
-        final pickedDateTime = DateTime(
-          _rescheduleDate!.year,
-          _rescheduleDate!.month,
-          _rescheduleDate!.day,
-          picked.hour,
-          picked.minute,
-        );
-        if (pickedDateTime.isBefore(now)) {
+        final nowTime = TimeOfDay.now();
+
+        if (picked.hour < nowTime.hour ||
+            (picked.hour == nowTime.hour && picked.minute <= nowTime.minute)) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("Please choose a future time.")),
+            const SnackBar(content: Text("Please choose a future time.")),
           );
           return;
         }
@@ -76,7 +104,9 @@ class _p_PInstantBookingDetailState extends State<p_PInstantBookingDetail> {
   }
 
 
-  Widget _buildDateTimePicker(String label, dynamic value, VoidCallback onTap) {
+
+
+  Widget _buildDateTimePicker(String label, dynamic value, VoidCallback onTap, {required bool isDate}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: InkWell(
@@ -99,7 +129,10 @@ class _p_PInstantBookingDetailState extends State<p_PInstantBookingDetail> {
                     : label,
                 style: TextStyle(color: value != null ? Colors.black : Colors.black54),
               ),
-              Icon((value is DateTime) ? Icons.calendar_today : Icons.access_time, color: Colors.orange),
+              Icon(
+                  isDate ? Icons.calendar_month : Icons.access_time,
+                  color: Color(0xFFB87F65), size: 26
+              ),
             ],
           ),
         ),
@@ -215,30 +248,38 @@ class _p_PInstantBookingDetailState extends State<p_PInstantBookingDetail> {
           .get();
 
       if (snapshot.docs.isNotEmpty) {
-        bookingData = snapshot.docs.first.data() as Map<String, dynamic>;
+        final data = snapshot.docs.first.data() as Map<String, dynamic>;
 
-        // ✅ Check if a reschedule was already submitted
-        if (bookingData?["rescheduleSent"] == true) {
-          setState(() {
-            rescheduleSent = true;
-          });
-        }
+        setState(() {
+          bookingData = data;
+          isRescheduling = data['isRescheduling'] ?? false;
+          rescheduleSent = data['rescheduleSent'] ?? false;
+        });
       }
-
 
       // Fetch IP post info
-      DocumentSnapshot postSnap = await FirebaseFirestore.instance.collection('instant_booking').doc(widget.postId).get();
+      DocumentSnapshot postSnap = await FirebaseFirestore.instance
+          .collection('instant_booking')
+          .doc(widget.postId)
+          .get();
+
       if (postSnap.exists) {
-        instantPostData = postSnap.data() as Map<String, dynamic>;
+        setState(() {
+          instantPostData = postSnap.data() as Map<String, dynamic>;
+        });
       }
 
-      // Fetch provider phone
-      DocumentSnapshot seekerSnap = await FirebaseFirestore.instance.collection('service_seekers').doc(widget.seekerId).get();
+      // Fetch seeker phone
+      DocumentSnapshot seekerSnap = await FirebaseFirestore.instance
+          .collection('service_seekers')
+          .doc(widget.seekerId)
+          .get();
+
       if (seekerSnap.exists) {
-        seekerPhone = seekerSnap['phone'];
+        setState(() {
+          seekerPhone = seekerSnap['phone'];
+        });
       }
-
-      setState(() {});
     } catch (e) {
       print("❌ Error fetching details: $e");
     }
@@ -347,12 +388,12 @@ class _p_PInstantBookingDetailState extends State<p_PInstantBookingDetail> {
       appBar: AppBar(
         backgroundColor:  const Color(0xFF464E65),
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new_rounded),
+          icon: Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
           onPressed: () {
             Navigator.pop(context);
           },
         ),
-        title: const Text("Booking History", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
+        title: const Text("Booking Summary Detail", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
         titleSpacing: 25,
       ),
       body: ListView(
@@ -380,17 +421,53 @@ class _p_PInstantBookingDetailState extends State<p_PInstantBookingDetail> {
           const SizedBox(height: 24),
 
           // Details Section
-          Text("Booking ID: ${bookingData!["bookingId"]}"),
+          // Details Section
+          GestureDetector(
+            onLongPress: () {
+              Clipboard.setData(ClipboardData(text: bookingData!["bookingId"]));
+              ReusableSnackBar(
+                context,
+                "Booking ID copied to clipboard!",
+                icon: Icons.check_circle,
+                iconColor: Colors.green,
+              );
+            },
+            child: Text(
+              "Booking ID: ${bookingData!["bookingId"]}",
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            ),
+          ),
           Text("Status: ${bookingData!["status"]}"),
           Text("Title: ${bookingData!["IPTitle"]}"),
           Text("Category: ${bookingData!["serviceCategory"]}"),
-          Text("Preferred Date: ${_formatDate(bookingData!["preferredDate"])}"),
-          Text("Preferred Time: ${_formatTime(bookingData!["preferredTime"])}"),
-          if (bookingData!["alternativeDate"] != null && bookingData!["alternativeTime"] != null) ...[
-            Text("Alternative Date: ${_formatDate(bookingData!["alternativeDate"])}"),
-            Text("Alternative Time: ${_formatTime(bookingData!["alternativeTime"])}"),
+          if (bookingData?['isRescheduling'] == true) ...[
+            Text(
+              "Final Schedule (Rescheduled): ${_formatDate(bookingData!['finalDate'])}, ${_formatTime(bookingData!['finalTime'])}",
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ] else ...[
+            Text("Preferred Date: ${_formatDate(bookingData!["preferredDate"])}"),
+            Text("Preferred Time: ${_formatTime(bookingData!["preferredTime"])}"),
+            if (bookingData!["alternativeDate"] != null && bookingData!["alternativeTime"] != null) ...[
+              Text("Alternative Date: ${_formatDate(bookingData!["alternativeDate"])}"),
+              Text("Alternative Time: ${_formatTime(bookingData!["alternativeTime"])}"),
+            ],
           ],
-          Text("Location: ${bookingData!["location"]}"),
+          GestureDetector(
+            onLongPress: () {
+              Clipboard.setData(ClipboardData(text: bookingData!["location"]));
+              ReusableSnackBar(
+                context,
+                "Location copied to clipboard!",
+                icon: Icons.check_circle,
+                iconColor: Colors.green,
+              );
+            },
+            child: Text(
+              "Location: ${bookingData!["location"]}",
+              // style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            ),
+          ),
           Text("Price: RM ${bookingData!["price"]}"),
           const SizedBox(height: 12),
           if (seekerPhone != null)
@@ -409,9 +486,8 @@ class _p_PInstantBookingDetailState extends State<p_PInstantBookingDetail> {
               ),
             ),
 
-          const SizedBox(height: 24),
-          const SizedBox(height: 16),
-          if (!rescheduleSent) ...[
+          const SizedBox(height: 20),
+          if (!isRescheduling) ...[
           Opacity(
             opacity: isRescheduling ? 0.5 : 1.0, // 🔸 Fade out when rescheduling
             child: IgnorePointer(
@@ -482,11 +558,21 @@ class _p_PInstantBookingDetailState extends State<p_PInstantBookingDetail> {
           ],
           ],
           if (isRescheduling && !rescheduleSent) ...[
-            const SizedBox(height: 20),
+            const SizedBox(height: 5),
+            Text(
+              "❌ The previous reschedule was rejected by the service seeker.\n"
+                  "Please discuss a suitable time via WhatsApp and propose a new schedule below.",
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.red,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 16),
             Text("Custom Reschedule Date & Time", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
 
-            _buildDateTimePicker("Select new date", _rescheduleDate, () => _selectDate(context)),
-            _buildDateTimePicker("Select new time", _rescheduleTime, () => _selectTime(context)),
+            _buildDateTimePicker("Select new date", _rescheduleDate, () => _selectDate(context), isDate: true),
+            _buildDateTimePicker("Select new time", _rescheduleTime, () => _selectTime(context), isDate: false),
 
             const SizedBox(height: 10),
             Row(
@@ -510,19 +596,13 @@ class _p_PInstantBookingDetailState extends State<p_PInstantBookingDetail> {
               ],
             ),
           ] else if (rescheduleSent) ...[
-            const SizedBox(height: 20),
             Text(
               "📌 Booking schedule has been reset.\nWaiting for service seeker to confirm the new schedule.",
               style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.orange),
             ),
           ],
 
-          const SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: () {},
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text("Request Cancellation", style: TextStyle(color: Colors.white)),
-          ),
+          const SizedBox(height: 30),
         ],
       ),
     );

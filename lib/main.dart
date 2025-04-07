@@ -123,10 +123,10 @@ class _MyAppState extends State<MyApp> {
 
         // 🔔 Add a notification to Firestore for service provider
         await FirebaseFirestore.instance.collection('p_notifications').add({
-          'spId': spId,
+          'providerId': spId,
           'bookingId': bookingId,
           'postId': postId,
-          'serviceSeekerId': serviceSeekerId,
+          'seekerId': serviceSeekerId,
           'title': 'New Order Assigned (#$bookingId)',
           'message': 'Please review and confirm the booking schedule. If unavailable, kindly coordinate with the service seeker to reschedule.',
           'isRead': false,

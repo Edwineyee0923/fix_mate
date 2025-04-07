@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fix_mate/service_provider/p_layout.dart';
+import 'package:fix_mate/reusable_widget/reusable_widget.dart';
 
 class p_BookingHistory extends StatefulWidget {
   static String routeName = "/provider/p_BookingHistory";
@@ -50,7 +51,7 @@ class _p_BookingHistoryState extends State<p_BookingHistory> {
               StreamBuilder<QuerySnapshot>(
                 stream: FirebaseFirestore.instance
                     .collection('p_notifications')
-                    .where('spId', isEqualTo: providerId)
+                    .where('providerId', isEqualTo: providerId)
                     .where('isRead', isEqualTo: false)
                     .snapshots(),
                 builder: (context, snapshot) {
@@ -199,7 +200,11 @@ class _p_BookingHistoryState extends State<p_BookingHistory> {
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                       decoration: BoxDecoration(
-                                        color: Colors.green,
+                                        color: data['isRescheduling'] == true
+                                            ? Colors.amber    // Yellow for Booking Rescheduled
+                                            : isActive
+                                            ? Colors.green  // Green for Service Confirmed
+                                            : const Color(0xFFfb9798), // Pinkish-red for New Order Assigned
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: Text(
@@ -208,12 +213,10 @@ class _p_BookingHistoryState extends State<p_BookingHistory> {
                                             : isActive
                                             ? "Service Confirmed"
                                             : "New Order Assigned",
-                                        style: const TextStyle(color: Colors.white),
+                                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500, fontSize: 14),
                                       ),
-
-
                                     ),
-                                    if (isNew && !(doc['providerHasSeen'] ?? true))
+                                    if (!(doc['providerHasSeen'] ?? true))
                                       Container(
                                         margin: const EdgeInsets.only(left: 5),
                                         width: 10,
@@ -231,7 +234,10 @@ class _p_BookingHistoryState extends State<p_BookingHistory> {
                                 Text("Status: ${doc['status']}", style: const TextStyle(color: Colors.red)),
                                 Text("Price: RM ${doc['price']}",),
                                 Text("Location: ${doc['location']}",),
-                                if (data['isRescheduling'] == true) ...[
+                                if (data['isRescheduling'] == true && data['rescheduleSent'] == false) ...[
+                                  Text("Final Schedule (Rescheduled): ${data['finalDate']}, ${data['finalTime']}"),
+                                  Text("❌ Reschedule rejected by seeker. Please suggest a new schedule based on your WhatsApp discussion.", style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.w500)),
+                                ] else if (data['isRescheduling'] == true && data['rescheduleSent'] == true) ...[
                                   Text("Final Schedule (Rescheduled): ${data['finalDate']}, ${data['finalTime']}"),
                                   Text("⚠ Awaiting confirmation from seeker", style: TextStyle(color: Colors.orange, fontWeight: FontWeight.w500)),
                                 ] else if (isActive) ...[
@@ -246,6 +252,104 @@ class _p_BookingHistoryState extends State<p_BookingHistory> {
                                   "Type: ${isInstantBooking ? "Instant Booking" : "Promotion"}",
                                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                                 ),
+
+
+                                const SizedBox(height: 8),
+
+                                // // Only show for active bookings
+                                // if (data['status'] == 'Active') ...[
+                                //   ElevatedButton.icon(
+                                //     icon: Icon(Icons.check_circle_outline),
+                                //     label: Text("Mark as Completed"),
+                                //     style: ElevatedButton.styleFrom(backgroundColor: Colors.blueGrey),
+                                //     onPressed: () async {
+                                //       await doc.reference.update({
+                                //         'status': 'Completed',
+                                //         'providerMarkedCompleted': true,
+                                //         'seekerHasSeenCompletion': false,
+                                //       });
+                                //
+                                //       await FirebaseFirestore.instance.collection('s_notifications').add({
+                                //         'seekerId': data['serviceSeekerId'],
+                                //         'providerId': providerId,
+                                //         'bookingId': data['bookingId'],
+                                //         'postId': data['postId'],
+                                //         'title': 'Service Completed',
+                                //         'message': 'Provider marked the service as completed. Please confirm or report issue.',
+                                //         'isRead': false,
+                                //         'createdAt': FieldValue.serverTimestamp(),
+                                //       });
+                                //
+                                //       ReusableSnackBar(
+                                //         context,
+                                //         "Service marked as completed!",
+                                //         icon: Icons.check_circle,
+                                //         iconColor: Colors.green,
+                                //       );
+                                //     },
+                                //   ),
+                                // ],
+                                if (data['status'] == 'Active' && data['providerMarkedCompleted'] != true) ...[
+                                  ElevatedButton.icon(
+                                    icon: const Icon(Icons.check_circle_outline),
+                                    label: const Text("Mark as Completed"),
+                                    style: ElevatedButton.styleFrom(backgroundColor: Colors.blueGrey),
+                                    onPressed: () async {
+                                      final confirm = await showDialog<bool>(
+                                        context: context,
+                                        builder: (context) => AlertDialog(
+                                          title: const Text("Mark Service as Completed?"),
+                                          content: const Text("Are you sure you’ve provided the service? "
+                                              "Once marked, the seeker will be notified to confirm."),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () => Navigator.pop(context, false),
+                                              child: const Text("Cancel"),
+                                            ),
+                                            ElevatedButton(
+                                              onPressed: () => Navigator.pop(context, true),
+                                              child: const Text("Confirm"),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+
+                                      if (confirm == true) {
+                                        await doc.reference.update({
+                                          'providerMarkedCompleted': true,
+                                          'seekerHasSeenCompletion': false,
+                                        });
+
+                                        await FirebaseFirestore.instance.collection('s_notifications').add({
+                                          'seekerId': data['serviceSeekerId'],
+                                          'providerId': providerId,
+                                          'bookingId': data['bookingId'],
+                                          'postId': data['postId'],
+                                          'title': 'Service Completed',
+                                          'message': 'Provider marked the service as completed. Please confirm or report issue.',
+                                          'isRead': false,
+                                          'createdAt': FieldValue.serverTimestamp(),
+                                        });
+
+                                        ReusableSnackBar(
+                                          context,
+                                          "Service marked as completed!",
+                                          icon: Icons.check_circle,
+                                          iconColor: Colors.green,
+                                        );
+                                      }
+                                    },
+                                  ),
+                                ] else if (data['providerMarkedCompleted'] == true) ...[
+                                  const Padding(
+                                    padding: EdgeInsets.only(top: 6),
+                                    child: Text(
+                                      "✅ You have marked this service as completed.\nWaiting for seeker confirmation or auto-complete.",
+                                      style: TextStyle(color: Colors.green, fontStyle: FontStyle.italic),
+                                    ),
+                                  ),
+                                ],
+
                               ],
                             ),
                           ),

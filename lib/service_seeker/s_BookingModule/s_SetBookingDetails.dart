@@ -156,10 +156,52 @@ class _s_SetBookingDetailsState extends State<s_SetBookingDetails> {
   }
 
 
-  String generateBookingId() {
-    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-    Random random = Random();
-    return "BKIB-${List.generate(5, (index) => chars[random.nextInt(chars.length)]).join()}";
+  // String generateBookingId() {
+  //   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  //   Random random = Random();
+  //   return "BKIB-${List.generate(5, (index) => chars[random.nextInt(chars.length)]).join()}";
+  // }
+
+  // Generate for the bookingId counter
+  Future<String> generateBookingId() async {
+    final counterRef = FirebaseFirestore.instance.collection('counters').doc('bookingId');
+    final snapshot = await counterRef.get();
+
+    String prefix = "A";
+    int number = 1;
+
+    if (snapshot.exists) {
+      final data = snapshot.data()!;
+      prefix = data["prefix"] ?? "A";
+      number = data["number"] ?? 1;
+    }
+
+    // Format the bookingId
+    String paddedNumber = number.toString().padLeft(6, '0');
+    String bookingId = "BKIB-$prefix$paddedNumber";
+
+    // Update for next booking
+    int nextNumber = number + 1;
+    String nextPrefix = prefix;
+
+    if (nextNumber > 999999) {
+      // Move to next alphabet
+      nextPrefix = String.fromCharCode(prefix.codeUnitAt(0) + 1);
+      nextNumber = 1;
+
+      // Optional: prevent going beyond Z
+      if (nextPrefix.codeUnitAt(0) > 'Z'.codeUnitAt(0)) {
+        throw Exception("Booking ID prefix limit exceeded.");
+      }
+    }
+
+    // Save the updated prefix and number
+    await counterRef.set({
+      "prefix": nextPrefix,
+      "number": nextNumber,
+    });
+
+    return bookingId;
   }
 
   Future<void> _confirmBooking() async {
@@ -216,7 +258,7 @@ class _s_SetBookingDetailsState extends State<s_SetBookingDetails> {
       }
 
       // 🔹 Generate Shorter & Confidential Booking ID
-      String bookingId = generateBookingId();
+      String bookingId = await generateBookingId();
 
       // 🔹 Navigate to Payment Summary Screen
       Navigator.push(
