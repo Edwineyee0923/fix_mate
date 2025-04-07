@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fix_mate/service_seeker/s_layout.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:url_launcher/url_launcher.dart';
+
 
 class s_BookingHistory extends StatefulWidget {
   static String routeName = "/service_seeker/s_BookingHistory";
@@ -194,6 +196,28 @@ class _s_BookingHistoryState extends State<s_BookingHistory> {
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
+
+                                        if (data['status'] == 'Active') ...[
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                            decoration: BoxDecoration(
+                                              color: data['pCompleted'] == true
+                                                  ? Colors.green  // ✅ Green for Service Delivered
+                                                  : Colors.orange, // 🟠 Orange for In Progress
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                            child: Text(
+                                              data['pCompleted'] == true ? "Service Delivered" : "Service in Progress",
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.w500,
+                                                fontSize: 14,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+
+
                                         Text("Another User", style: TextStyle(fontWeight: FontWeight.bold)),
                                         const SizedBox(height: 5),
                                         Text("Status: ${data['status']}", style: const TextStyle(color: Colors.red)),
@@ -214,12 +238,12 @@ class _s_BookingHistoryState extends State<s_BookingHistory> {
                                             "⚠ The provider has suggested a new schedule. Please review it and confirm or reject accordingly.",
                                             style: TextStyle(color: Colors.orange, fontWeight: FontWeight.w500),
                                           ),
-                                        ] else if (isActive) ...[
+                                        ] else if (isActive || data['status'] == "Completed") ...[
                                           Text("Final Schedule: ${data['finalDate']}, ${data['finalTime']}"),
                                         ] else ...[
-                                          Text("Preferred: ${data['preferredDate']}, ${data['preferredTime']}"),
+                                          Text("Preferred Schedule: ${data['preferredDate']}, ${data['preferredTime']}"),
                                           if (data["alternativeDate"] != null && data["alternativeTime"] != null) ...[
-                                            Text("Alternative: ${data['alternativeDate']}, ${data['alternativeTime']}"),
+                                            Text("Alternative Schedule: ${data['alternativeDate']}, ${data['alternativeTime']}"),
                                           ],
                                         ],
                                         const SizedBox(height: 10),
@@ -227,7 +251,60 @@ class _s_BookingHistoryState extends State<s_BookingHistory> {
                                           "Type: ${isInstantBooking ? "Instant Booking" : "Promotion"}",
                                           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                                         ),
+
+                                        if (data['pCompleted'] == true && data['status'] == "Active") ...[
+                                          const SizedBox(height: 12),
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.end,
+                                            children: [
+                                              ElevatedButton(
+                                                onPressed: () async {
+                                                  final email = "fixmate1168@gmail.com";
+                                                  final subject = Uri.encodeComponent("Issue with Service: $bookingId");
+                                                  final body = Uri.encodeComponent("Hello FixMate,\n\nI have an issue regarding my booking (ID: $bookingId). Please assist.");
+                                                  final emailUrl = "mailto:$email?subject=$subject&body=$body";
+
+                                                  if (await canLaunch(emailUrl)) {
+                                                    await launch(emailUrl);
+                                                  } else {
+                                                    ScaffoldMessenger.of(context).showSnackBar(
+                                                      SnackBar(content: Text("Could not open the email client.")),
+                                                    );
+                                                  }
+                                                },
+                                                child: Text("Report Issue"),
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor: Colors.redAccent,
+                                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 10),
+                                              ElevatedButton(
+                                                onPressed: () async {
+                                                  await FirebaseFirestore.instance.collection('bookings').doc(doc.id).update({'sCompleted': true});
+                                                  if (data['pCompleted'] == true) {
+                                                    await FirebaseFirestore.instance.collection('bookings').doc(doc.id).update({
+                                                      'status': 'Completed',
+                                                      'completedAt': DateTime.now().toIso8601String(),
+                                                    });
+
+                                                    ScaffoldMessenger.of(context).showSnackBar(
+                                                      SnackBar(content: Text("Booking marked as completed.")),
+                                                    );
+                                                  }
+                                                },
+                                                child: Text("Service Received"),
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor: Colors.green,
+                                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+
                                       ],
+
                                     ),
                                   ),
                                   if (hasUnread)
@@ -244,6 +321,10 @@ class _s_BookingHistoryState extends State<s_BookingHistory> {
                                       ),
                                     ),
                                 ],
+
+
+
+
                               ),
                             ),
                           );
