@@ -1,7 +1,10 @@
 import 'package:fix_mate/admin/admin_layout.dart';
+import 'package:fix_mate/home_page/HomePage.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 
 
 class contact_developer extends StatefulWidget {
@@ -60,6 +63,23 @@ class _contact_developerState extends State<contact_developer> {
           "Contact Developers",
           style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white,),
         ),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 6), // 👈 Add some spacing
+            child: IconButton(
+              icon: Icon(Icons.logout, color: Colors.white), // 👈 White icon
+              tooltip: 'Log Out',
+              onPressed: () async {
+                await FirebaseAuth.instance.signOut();
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => HomePage()), // or your login page
+                );
+              },
+            ),
+          ),
+        ],
+
         titleSpacing: 25,
         automaticallyImplyLeading: false,
       ),

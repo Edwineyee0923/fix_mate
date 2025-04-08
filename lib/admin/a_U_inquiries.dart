@@ -14,21 +14,32 @@ class U_inquiries extends StatefulWidget {
 class _U_inquiriesState extends State<U_inquiries> {
 
   // Function to open email
-  void _openGmail() async {
-    final Uri gmailIntentUri = Uri.parse("intent://gmail/#Intent;scheme=android-app;package=com.google.android.gm;end;");
+  // void _openGmail() async {
+  //   final Uri gmailIntentUri = Uri.parse("intent://gmail/#Intent;scheme=android-app;package=com.google.android.gm;end;");
+  //
+  //   if (await canLaunchUrl(gmailIntentUri)) {
+  //     await launchUrl(gmailIntentUri);
+  //   } else {
+  //     // Fallback to web
+  //     final Uri gmailWebUri = Uri.parse("https://mail.google.com/mail/u/0/#inbox");
+  //     if (await canLaunchUrl(gmailWebUri)) {
+  //       await launchUrl(gmailWebUri, mode: LaunchMode.externalApplication);
+  //     } else {
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //         const SnackBar(content: Text("Could not open Gmail.")),
+  //       );
+  //     }
+  //   }
+  // }
 
-    if (await canLaunchUrl(gmailIntentUri)) {
-      await launchUrl(gmailIntentUri);
+  void _openGmail() async {
+    const gmailUri = "googlegmail://inbox";
+    const webFallback = "https://mail.google.com/mail/u/0/#inbox";
+
+    if (await canLaunch(gmailUri)) {
+      await launch(gmailUri); // try open app
     } else {
-      // Fallback to web
-      final Uri gmailWebUri = Uri.parse("https://mail.google.com/mail/u/0/#inbox");
-      if (await canLaunchUrl(gmailWebUri)) {
-        await launchUrl(gmailWebUri, mode: LaunchMode.externalApplication);
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Could not open Gmail.")),
-        );
-      }
+      await launch(webFallback); // fallback to browser
     }
   }
 
@@ -130,7 +141,7 @@ class _U_inquiriesState extends State<U_inquiries> {
                       ),
                       const SizedBox(height: 6),
                       const Text(
-                        "Tap to view all user inquiries emails",
+                        "Tap to check all user inquiries emails in Gmail (click 'OPEN' on top)",
                         style: TextStyle(fontSize: 14, color: Colors.black54), // Smaller text
                         textAlign: TextAlign.center,
                       ),

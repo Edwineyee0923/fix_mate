@@ -4,6 +4,8 @@ import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'package:fix_mate/admin/a_application_detail.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 
 class SP_application extends StatefulWidget {
   static String routeName = "/admin/SP_application";
@@ -24,6 +26,7 @@ class _SP_applicationState extends State<SP_application> {
     super.initState();
     _loadApplications(); // Load applications from Firestore
   }
+
 
   Future<void> _loadApplications() async {
     try {
@@ -474,106 +477,4 @@ class ApplicationCard extends StatelessWidget {
   }
 }
 
-
-
-// class ApplicationCard extends StatelessWidget {
-//   final String name;
-//   final String location;
-//   final String services;
-//   final String status;
-//   final String imageUrl;
-//   final DateTime joinedAt;
-//   final VoidCallback onTap;
-//
-//   const ApplicationCard({
-//     Key? key,
-//     required this.name,
-//     required this.location,
-//     required this.services,
-//     required this.status,
-//     required this.imageUrl,
-//     required this.joinedAt,
-//     required this.onTap,
-//   }) : super(key: key);
-//
-//   @override
-//   Widget build(BuildContext context) {
-//
-//     return Card(
-//       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-//       elevation: 3,
-//       margin: const EdgeInsets.symmetric(vertical: 4),
-//       child: Padding(
-//         padding: const EdgeInsets.symmetric(horizontal: 15.0, vertical: 12.0),
-//         child: Column(
-//           crossAxisAlignment: CrossAxisAlignment.start,
-//           children: [
-//             const SizedBox(height: 6),
-//             Container(
-//               height: 1, // Underline
-//               color: Colors.grey.withOpacity(0.5),
-//             ),
-//             const SizedBox(height: 10),
-//             Row(
-//               children: [
-//                 CircleAvatar(
-//                   radius: 25,
-//                   backgroundImage: imageUrl.isNotEmpty
-//                       ? NetworkImage(imageUrl)
-//                       : AssetImage("assets/default_profile.png") as ImageProvider,
-//                 ),
-//                 const SizedBox(width: 10),
-//                 Column(
-//                   crossAxisAlignment: CrossAxisAlignment.start,
-//                   children: [
-//                     SizedBox(
-//                       width: 180, // Restrict width to prevent overflow
-//                       child: Text(
-//                         name,
-//                         style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-//                         softWrap: true, // Allows text to wrap to the next line
-//                       ),
-//                     ),
-//                     Row(
-//                       children: [
-//                         const Icon(Icons.location_on, size: 14, color: Colors.grey),
-//                         SizedBox(
-//                           width: 180, // Ensure consistent width
-//                           child: Text(
-//                             location,
-//                             style: const TextStyle(fontSize: 14, color: Colors.grey),
-//                             overflow: TextOverflow.ellipsis,
-//                             maxLines: 1,
-//                           ),
-//                         ),
-//                       ],
-//                     ),
-//                     Row(
-//                       children: [
-//                         const Icon(Icons.build, size: 14, color: Colors.grey),
-//                         SizedBox(
-//                           width: 180,
-//                           child: Text(
-//                             services,
-//                             style: const TextStyle(fontSize: 14, color: Colors.grey),
-//                             overflow: TextOverflow.ellipsis,
-//                             maxLines: 1,
-//                           ),
-//                         ),
-//                       ],
-//                     ),
-//                   ],
-//                 ),
-//               ],
-//
-//
-//
-//             ),
-//             const SizedBox(height: 10),
-//           ],
-//         ),
-//       ),
-//     );
-//   }
-// }
 
