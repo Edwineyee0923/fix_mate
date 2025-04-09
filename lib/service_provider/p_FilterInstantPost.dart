@@ -174,8 +174,9 @@ class _p_FilterInstantPostState extends State<p_FilterInstantPost> {
         ),
         title: Text(
           "Filter Post",
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
         ),
+        titleSpacing: 5,
       ),
       body: SingleChildScrollView(
         padding: EdgeInsets.all(16),

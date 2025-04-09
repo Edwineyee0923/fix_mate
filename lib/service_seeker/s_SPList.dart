@@ -3,6 +3,7 @@ import 'package:fix_mate/service_provider/p_FilterInstantPost.dart';
 import 'package:fix_mate/service_seeker/s_FilterInstantPost.dart';
 import 'package:fix_mate/service_seeker/s_FilterSPPost.dart';
 import 'package:fix_mate/service_seeker/s_InstantPostInfo.dart';
+import 'package:fix_mate/service_seeker/s_SPInfo.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -180,12 +181,12 @@ class _s_SPListState extends State<s_SPList> {
             // IPPrice: (data['IPPrice'] as num?)?.toInt() ?? 0,
             // IPPrice: postPrice,
             onTap: () {
-              // Navigator.push(
-              //   context,
-              //   MaterialPageRoute(
-              //     builder: (context) => s_InstantPostInfo(docId: doc.id),
-              //   ),
-              // );
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ServiceProviderScreen(docId: doc.id),
+                ),
+              );
             },
           ),
         );
@@ -440,12 +441,12 @@ Widget buildSPCard({
                             children: [
                               const Text(
                                 "0.0",
-                                style: TextStyle(fontSize: 18, color: Colors.redAccent, fontWeight: FontWeight.bold),
+                                style: TextStyle(fontSize: 16, color: Colors.redAccent, fontWeight: FontWeight.bold),
                               ),
                               const SizedBox(width: 6),
                               Row(
                                 children: List.generate(5, (index) {
-                                  return const Icon(Icons.star_border, color: Colors.orange, size: 18);
+                                  return const Icon(Icons.star_border, color: Colors.orange, size: 14);
                                 }),
                               ),
                             ],

@@ -11,7 +11,7 @@
     </queries>
 
     <application
-        android:label="fix_mate"
+        android:label="FixMate"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
 

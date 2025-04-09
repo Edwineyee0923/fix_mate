@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:fix_mate/reusable_widget/reusable_widget.dart';
 import 'package:flutter/services.dart';
 import 'package:fix_mate/services/send_email.dart';
+import 'package:fix_mate/services/FullScreenImageViewer.dart';
 
 class ApplicationDetailsScreen extends StatefulWidget {
   final Map<String, dynamic> applicationData;
@@ -85,11 +86,25 @@ class _ApplicationDetailsScreenState extends State<ApplicationDetailsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            CircleAvatar(
-              radius: 60,
-              backgroundImage: widget.applicationData['profilePic'] != null
-                  ? NetworkImage(widget.applicationData['profilePic'])
-                  : const AssetImage("assets/default_profile.png") as ImageProvider,
+            GestureDetector(
+              onTap: () {
+                // Only open if it's a network image
+                if (widget.applicationData['profilePic'] != null) {
+                  showDialog(
+                    context: context,
+                    builder: (_) => FullScreenImageViewer(
+                      imageUrls: [widget.applicationData['profilePic']], // wrap in list
+                      initialIndex: 0,
+                    ),
+                  );
+                }
+              },
+              child: CircleAvatar(
+                radius: 60,
+                backgroundImage: widget.applicationData['profilePic'] != null
+                    ? NetworkImage(widget.applicationData['profilePic'])
+                    : const AssetImage("assets/default_profile.png") as ImageProvider,
+              ),
             ),
             const SizedBox(height: 16),
             Card(

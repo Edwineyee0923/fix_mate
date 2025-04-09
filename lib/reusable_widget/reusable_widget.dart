@@ -418,7 +418,7 @@ Widget big_button({
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           if (leftIcon != null) ...[ // ✅ Show left icon only if it's provided
-          Icon(leftIcon, size: 40, color: Colors.white), // Left-side icon
+          Icon(leftIcon, size: 35, color: Colors.white), // Left-side icon
           SizedBox(width: 10),
     ],// Space between icon & text
           Text(
@@ -426,12 +426,12 @@ Widget big_button({
             style: const TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.bold,
-              fontSize: 26,
+              fontSize: 24,
             ),
           ),
           if (rightIcon != null) ...[ // ✅ Show right icon only if it's provided
           SizedBox(width: 10), // Space between text & icon
-          Icon(rightIcon, size: 35, color: Colors.white), // Right-side icon
+          Icon(rightIcon, size: 30, color: Colors.white), // Right-side icon
   ],
         ],
       ),

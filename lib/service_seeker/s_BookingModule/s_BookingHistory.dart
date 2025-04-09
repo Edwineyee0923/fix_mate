@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fix_mate/service_seeker/s_layout.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:fix_mate/reusable_widget/reusable_widget.dart';
 
 
 class s_BookingHistory extends StatefulWidget {
@@ -246,53 +246,90 @@ class _s_BookingHistoryState extends State<s_BookingHistory> {
                                             Text("Alternative Schedule: ${data['alternativeDate']}, ${data['alternativeTime']}"),
                                           ],
                                         ],
-                                        const SizedBox(height: 10),
                                         Text(
                                           "Type: ${isInstantBooking ? "Instant Booking" : "Promotion"}",
                                           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                                         ),
 
                                         if (data['pCompleted'] == true && data['status'] == "Active") ...[
-                                          const SizedBox(height: 12),
+                                          Row(
+                                            crossAxisAlignment: CrossAxisAlignment.center,
+                                            children: [
+                                              Icon(Icons.sticky_note_2_outlined, color: Colors.green, size: 18),
+                                              const SizedBox(width: 6),
+                                              Expanded(
+                                                child: Text(
+                                                  "You may tap on the card to view the service evidence photos before click on “Service Received”.",
+                                                  style: TextStyle(
+                                                    color: Colors.green,
+                                                    fontSize: 12.5,
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
                                           Row(
                                             mainAxisAlignment: MainAxisAlignment.end,
                                             children: [
-                                              ElevatedButton(
-                                                onPressed: () async {
-                                                  final email = "fixmate1168@gmail.com";
-                                                  final subject = Uri.encodeComponent("Issue with Service: $bookingId");
-                                                  final body = Uri.encodeComponent("Hello FixMate,\n\nI have an issue regarding my booking (ID: $bookingId). Please assist.");
-                                                  final emailUrl = "mailto:$email?subject=$subject&body=$body";
-
-                                                  if (await canLaunch(emailUrl)) {
-                                                    await launch(emailUrl);
-                                                  } else {
-                                                    ScaffoldMessenger.of(context).showSnackBar(
-                                                      SnackBar(content: Text("Could not open the email client.")),
-                                                    );
-                                                  }
-                                                },
-                                                child: Text("Report Issue"),
-                                                style: ElevatedButton.styleFrom(
-                                                  backgroundColor: Colors.redAccent,
-                                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                                                ),
-                                              ),
+                                              // ElevatedButton(
+                                              //   onPressed: () async {
+                                              //     final email = "fixmate1168@gmail.com";
+                                              //     final subject = Uri.encodeComponent("Issue with Service: $bookingId");
+                                              //     final body = Uri.encodeComponent("Hello FixMate,\n\nI have an issue regarding my booking (ID: $bookingId). Please assist.");
+                                              //     final emailUrl = "mailto:$email?subject=$subject&body=$body";
+                                              //
+                                              //     if (await canLaunch(emailUrl)) {
+                                              //       await launch(emailUrl);
+                                              //     } else {
+                                              //       ScaffoldMessenger.of(context).showSnackBar(
+                                              //         SnackBar(content: Text("Could not open the email client.")),
+                                              //       );
+                                              //     }
+                                              //   },
+                                              //   child: Text("Report Issue"),
+                                              //   style: ElevatedButton.styleFrom(
+                                              //     backgroundColor: Colors.redAccent,
+                                              //     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                              //   ),
+                                              // ),
                                               const SizedBox(width: 10),
                                               ElevatedButton(
                                                 onPressed: () async {
-                                                  await FirebaseFirestore.instance.collection('bookings').doc(doc.id).update({'sCompleted': true});
-                                                  if (data['pCompleted'] == true) {
-                                                    await FirebaseFirestore.instance.collection('bookings').doc(doc.id).update({
+                                                  final docRef = FirebaseFirestore.instance.collection('bookings').doc(doc.id);
+
+                                                  // Mark seeker complete
+                                                  await docRef.update({'sCompleted': true});
+
+                                                  // 🔁 Re-fetch latest data from Firestore
+                                                  final updatedDoc = await docRef.get();
+                                                  final updatedData = updatedDoc.data();
+
+                                                  if (updatedData?['pCompleted'] == true) {
+                                                    await docRef.update({
                                                       'status': 'Completed',
-                                                      'completedAt': DateTime.now().toIso8601String(),
+                                                      'completedAt': FieldValue.serverTimestamp(),
                                                     });
 
-                                                    ScaffoldMessenger.of(context).showSnackBar(
-                                                      SnackBar(content: Text("Booking marked as completed.")),
+                                                    ReusableSnackBar(
+                                                      context,
+                                                      "Booking marked as completed!",
+                                                      icon: Icons.check_circle,
+                                                      iconColor: Colors.green,
                                                     );
+
+                                                    // ✅ Delay before navigating
+                                                    await Future.delayed(const Duration(milliseconds: 400));
+
+                                                    // ✅ Switch tab without pushing a new screen
+                                                    setState(() {
+                                                      _selectedIndex = 2; // ✅ go to Completed tab directly
+                                                    });
+
                                                   }
                                                 },
+
+
                                                 child: Text("Service Received"),
                                                 style: ElevatedButton.styleFrom(
                                                   backgroundColor: Colors.green,
@@ -302,9 +339,7 @@ class _s_BookingHistoryState extends State<s_BookingHistory> {
                                             ],
                                           ),
                                         ],
-
                                       ],
-
                                     ),
                                   ),
                                   if (hasUnread)

@@ -1,5 +1,6 @@
 import 'package:fix_mate/admin/a_SP_application.dart';
 import 'package:fix_mate/home_page/HomePage.dart';
+import 'package:fix_mate/home_page/register_option.dart';
 import 'package:fix_mate/service_provider/p_HomePage.dart';
 import 'package:fix_mate/service_provider/p_ResubmitApplication.dart';
 import 'package:fix_mate/service_provider/p_login.dart';
@@ -360,7 +361,7 @@ Row signUpOption(BuildContext context) {
         onTap: () {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => HomePage()),
+            MaterialPageRoute(builder: (context) => register_option()),
           );
         },
         child: const Text(

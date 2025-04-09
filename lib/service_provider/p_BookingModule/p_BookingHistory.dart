@@ -1,4 +1,5 @@
 import 'package:fix_mate/service_provider/p_BookingModule/p_AInstantBookingDetail.dart';
+import 'package:fix_mate/service_provider/p_BookingModule/p_CInstantBookingDetail.dart';
 import 'package:fix_mate/service_provider/p_BookingModule/p_Notification.dart';
 import 'package:fix_mate/service_provider/p_BookingModule/p_PInstantBookingDetail.dart';
 import 'package:flutter/material.dart';
@@ -30,6 +31,23 @@ class _p_BookingHistoryState extends State<p_BookingHistory> {
     final user = FirebaseAuth.instance.currentUser;
     providerId = user?.uid;
     _selectedIndex = widget.initialTabIndex;
+  }
+
+
+  Color getStatusColor(Map<String, dynamic> data, bool isActive) {
+    if (data['status'] == "Completed") return Colors.green;
+    if (data['isRescheduling'] == true) return Colors.amber;
+    if (data['pCompleted'] == true && data['status'] != "Completed") return Colors.orange;
+    if (isActive) return Colors.green;
+    return const Color(0xFFfb9798); // Fallback
+  }
+
+  String getStatusLabel(Map<String, dynamic> data, bool isActive) {
+    if (data['status'] == "Completed") return "Service Completed";
+    if (data['isRescheduling'] == true) return "Booking Rescheduled";
+    if (data['pCompleted'] == true && data['status'] != "Completed") return "Awaiting Service Completion";
+    if (isActive) return "Service Schedule Confirmed";
+    return "New Order Assigned";
   }
 
   @override
@@ -139,6 +157,7 @@ class _p_BookingHistoryState extends State<p_BookingHistory> {
                     children: snapshot.data!.docs.map((doc) {
                       final data = doc.data() as Map<String, dynamic>;
                       final isActive = data['status'] == 'Active';
+                      final isCompleted = data['status'] == 'Completed';
                       final isNew = doc['status'] == 'Pending Confirmation';
                       final isInstantBooking = data['bookingId'].toString().startsWith('BKIB');
                       return GestureDetector(
@@ -169,7 +188,14 @@ class _p_BookingHistoryState extends State<p_BookingHistory> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => isActive
+                                builder: (context) =>
+                                isCompleted
+                                    ? p_CInstantBookingDetail(
+                                  bookingId: data['bookingId'],
+                                  postId: data['postId'],
+                                  seekerId: data['serviceSeekerId'],
+                                )
+                                : isActive
                                     ? p_AInstantBookingDetail(
                                   bookingId: data['bookingId'],
                                   postId: data['postId'],
@@ -200,23 +226,11 @@ class _p_BookingHistoryState extends State<p_BookingHistory> {
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                       decoration: BoxDecoration(
-                                        color: data['status'] == "Completed"
-                                            ? Colors.green                   // ✅ Green for Service Completed
-                                            : data['isRescheduling'] == true
-                                            ? Colors.amber              // Yellow for Booking Rescheduled
-                                            : isActive
-                                            ? Colors.green          // Green for Service Confirmed
-                                            : const Color(0xFFfb9798), // Pinkish-red for New Order Assigned
+                                        color: getStatusColor(data, isActive),
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: Text(
-                                        data['status'] == "Completed"
-                                            ? "Service Completed"
-                                            : data['isRescheduling'] == true
-                                            ? "Booking Rescheduled"
-                                            : isActive
-                                            ? "Service Confirmed"
-                                            : "New Order Assigned",
+                                        getStatusLabel(data, isActive),
                                         style: const TextStyle(
                                           color: Colors.white,
                                           fontWeight: FontWeight.w500,
@@ -268,57 +282,77 @@ class _p_BookingHistoryState extends State<p_BookingHistory> {
 
                                 if (data['status'] == 'Active' && data['pCompleted'] != true) ...[
                                   Row(
-                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    crossAxisAlignment: CrossAxisAlignment.center,
                                     children: [
-                                      ElevatedButton.icon(
-                                        icon: const Icon(Icons.check_circle_outline),
-                                        label: const Text("Mark as Completed"),
-                                        style: ElevatedButton.styleFrom(backgroundColor: Colors.blueGrey),
-                                        onPressed: () {
-                                          showDialog(
-                                            context: context,
-                                            builder: (context) => ConfirmationDialog(
-                                              title: "Mark as Completed?",
-                                              message:
-                                              "Please confirm that the service has been completed.\nThe seeker will be notified to verify.",
-                                              confirmText: "Confirm",
-                                              cancelText: "Cancel",
-                                              icon: Icons.check_circle,
-                                              iconColor: Colors.green,
-                                              confirmButtonColor: Colors.green,
-                                              cancelButtonColor: Colors.grey.shade300,
-                                              onConfirm: () async {
-                                                Navigator.pop(context); // Close dialog
-
-                                                await doc.reference.update({
-                                                  'pCompleted': true,
-                                                  'sCompleted': false,
-                                                });
-
-                                                await FirebaseFirestore.instance.collection('s_notifications').add({
-                                                  'seekerId': data['serviceSeekerId'],
-                                                  'providerId': providerId,
-                                                  'bookingId': data['bookingId'],
-                                                  'postId': data['postId'],
-                                                  'title': 'Service Completed',
-                                                  'message': 'Provider marked the service as completed. Please confirm or report issue.',
-                                                  'isRead': false,
-                                                  'createdAt': FieldValue.serverTimestamp(),
-                                                });
-
-                                                ReusableSnackBar(
-                                                  context,
-                                                  "Service marked as completed!",
-                                                  icon: Icons.check_circle,
-                                                  iconColor: Colors.green,
-                                                );
-                                              },
-                                            ),
-                                          );
-                                        },
+                                      Icon(Icons.warning_amber_rounded, color: Colors.orange.shade600, size: 18),
+                                      const SizedBox(width: 6),
+                                      Expanded(
+                                        child: Text(
+                                          "Don’t forget to upload at least 3 service photos before clicking “Service Completed” — tap the card to begin!",
+                                          style: TextStyle(
+                                            color: Colors.orange.shade700,
+                                            fontSize: 12.5,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
                                       ),
                                     ],
                                   ),
+
+
+
+                                  // Row(
+                                  //   mainAxisAlignment: MainAxisAlignment.end,
+                                  //   children: [
+                                  //     ElevatedButton.icon(
+                                  //       icon: const Icon(Icons.check_circle_outline),
+                                  //       label: const Text("Mark as Completed"),
+                                  //       style: ElevatedButton.styleFrom(backgroundColor: Colors.blueGrey),
+                                  //       onPressed: () {
+                                  //         showDialog(
+                                  //           context: context,
+                                  //           builder: (context) => ConfirmationDialog(
+                                  //             title: "Mark as Completed?",
+                                  //             message:
+                                  //             "Please proceed to the booking summary page to upload at least 3 photos as evidence before marking this service as completed.",
+                                  //             confirmText: "Proceed",
+                                  //             cancelText: "Cancel",
+                                  //             icon: Icons.check_circle,
+                                  //             iconColor: Colors.green,
+                                  //             confirmButtonColor: Colors.green,
+                                  //             cancelButtonColor: Colors.grey.shade300,
+                                  //             onConfirm: () async {
+                                  //               Navigator.pop(context); // Close dialog
+                                  //
+                                  //               await doc.reference.update({
+                                  //                 'pCompleted': true,
+                                  //                 'sCompleted': false,
+                                  //               });
+                                  //
+                                  //               await FirebaseFirestore.instance.collection('s_notifications').add({
+                                  //                 'seekerId': data['serviceSeekerId'],
+                                  //                 'providerId': providerId,
+                                  //                 'bookingId': data['bookingId'],
+                                  //                 'postId': data['postId'],
+                                  //                 'title': 'Service Completed',
+                                  //                 'message': 'Provider marked the service as completed. Please confirm or report issue.',
+                                  //                 'isRead': false,
+                                  //                 'createdAt': FieldValue.serverTimestamp(),
+                                  //               });
+                                  //
+                                  //               ReusableSnackBar(
+                                  //                 context,
+                                  //                 "Service marked as completed!",
+                                  //                 icon: Icons.check_circle,
+                                  //                 iconColor: Colors.green,
+                                  //               );
+                                  //             },
+                                  //           ),
+                                  //         );
+                                  //       },
+                                  //     ),
+                                  //   ],
+                                  // ),
                                 ] else if (data['pCompleted'] == true && data['status'] != 'Completed') ...[
                                   const Padding(
                                     padding: EdgeInsets.only(top: 6),

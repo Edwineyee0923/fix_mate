@@ -2,6 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fix_mate/service_seeker/s_BookingModule/s_SetBookingDetails.dart';
 import 'package:flutter/material.dart';
 import 'package:fix_mate/reusable_widget/reusable_widget.dart';
+import 'package:fix_mate/services/FullScreenImageViewer.dart';
+
 
 class InstantPost {
   final String title;
@@ -129,10 +131,23 @@ class _s_InstantPostInfoState extends State<s_InstantPostInfo> with TickerProvid
                         });
                       },
                       itemBuilder: (context, index) {
-                        return post!.imageUrls.isNotEmpty
-                            ? Image.network(post!.imageUrls[index], fit: BoxFit.cover)
-                            : Image.asset('assets/design_course/webInterFace.png', fit: BoxFit.cover);
+                        return GestureDetector(
+                          onTap: () {
+                            showDialog(
+                              context: context,
+                              builder: (_) => FullScreenImageViewer(
+                                imageUrls: post!.imageUrls,
+                                initialIndex: index,
+                              ),
+                            );
+                          },
+                          child: Image.network(
+                            post!.imageUrls[index],
+                            fit: BoxFit.cover,
+                          ),
+                        );
                       },
+
                     ),
 
                     /// **Page Indicator (e.g., 1/3)**

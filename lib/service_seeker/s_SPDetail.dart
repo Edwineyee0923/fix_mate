@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/services.dart';
+import 'package:fix_mate/services/FullScreenImageViewer.dart';
 
 class SPDetailScreen extends StatefulWidget {
   final String docId;
@@ -66,11 +67,24 @@ class _SPDetailScreenState extends State<SPDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            CircleAvatar(
-              radius: 60,
-              backgroundImage: spData!["profilePic"] != null
-                  ? NetworkImage(spData!["profilePic"])
-                  : const AssetImage("assets/default_profile.png") as ImageProvider,
+            GestureDetector(
+              onTap: () {
+                if (spData!["profilePic"] != null) {
+                  showDialog(
+                    context: context,
+                    builder: (_) => FullScreenImageViewer(
+                      imageUrls: [spData!["profilePic"]], // must be a List<String>
+                      initialIndex: 0,
+                    ),
+                  );
+                }
+              },
+              child: CircleAvatar(
+                radius: 60,
+                backgroundImage: spData!["profilePic"] != null
+                    ? NetworkImage(spData!["profilePic"])
+                    : const AssetImage("assets/default_profile.png") as ImageProvider,
+              ),
             ),
             const SizedBox(height: 16),
             Card(

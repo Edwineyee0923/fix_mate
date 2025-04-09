@@ -1,6 +1,7 @@
 import 'package:fix_mate/admin/admin_layout.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:fix_mate/reusable_widget/reusable_widget.dart';
 
 class U_inquiries extends StatefulWidget {
   static String routeName = "/admin/U_inquiries";
@@ -32,16 +33,33 @@ class _U_inquiriesState extends State<U_inquiries> {
   //   }
   // }
 
-  void _openGmail() async {
-    const gmailUri = "googlegmail://inbox";
-    const webFallback = "https://mail.google.com/mail/u/0/#inbox";
+  void _openGmail(BuildContext context) async {
+    const gmailPackageUrl = "mailto:"; // Opens available email apps (Gmail is likely default)
+    final Uri gmailWebUri = Uri.parse("https://mail.google.com/mail/u/0/#inbox");
 
-    if (await canLaunch(gmailUri)) {
-      await launch(gmailUri); // try open app
-    } else {
-      await launch(webFallback); // fallback to browser
+    try {
+      // Try opening email apps (Gmail included if installed)
+      if (await canLaunchUrl(Uri.parse(gmailPackageUrl))) {
+        await launchUrl(Uri.parse(gmailPackageUrl), mode: LaunchMode.externalApplication);
+      }
+      // Fallback to Gmail web
+      else if (await canLaunchUrl(gmailWebUri)) {
+        await launchUrl(gmailWebUri, mode: LaunchMode.externalApplication);
+      }
+      // If everything fails
+      else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("❌ Could not open Gmail.")),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("❌ Failed to open Gmail: $e")),
+      );
     }
   }
+
+
 
 
 
@@ -66,7 +84,7 @@ class _U_inquiriesState extends State<U_inquiries> {
           child: Column(
             children: [
               // 📧 Top Image Section with Shadow
-// 📧 Top Image Section with Rounded Shadow
+              // 📧 Top Image Section with Rounded Shadow
               Container(
                 decoration: BoxDecoration(
                   borderRadius: const BorderRadius.only(
@@ -105,7 +123,28 @@ class _U_inquiriesState extends State<U_inquiries> {
 
               // 📩 Email Container with Image on Top
               GestureDetector(
-                onTap: _openGmail,
+                // onTap: _openGmail,
+                onTap: () {
+                  showDialog(
+                    context: context,
+                    builder: (BuildContext context) {
+                      return ConfirmationDialog(
+                        title: "Redirect to Gmail",
+                        message: "You’ll be redirected to the FixMate Gmail inbox to view user inquiries.\n\nIf the email app opens a new message screen, simply close it to access the inbox.\n\n Please ensure also you're signed in to the official FixMate Gmail account.",
+                        confirmText: "Open",
+                        cancelText: "Cancel",
+                        onConfirm: () {
+                          _openGmail(context); // <-- Your existing email launcher
+                        },
+                        icon: Icons.email_outlined,
+                        iconColor: Color(0xFFFF9342),
+                        confirmButtonColor: Color(0xFFFF9342),
+                        cancelButtonColor: Colors.grey.shade300,
+                      );
+                    },
+                  );
+                },
+
                 child: Container(
                   margin: const EdgeInsets.symmetric(horizontal: 35), // Reduced margin
                   padding: const EdgeInsets.all(12), // Reduced padding

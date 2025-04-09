@@ -435,7 +435,7 @@ class _s_registerState extends State<s_register> {
                           }
                         },
                       ),
-
+                      SizedBox(height: 20),
                     ],
                   ),
                 ),

@@ -1,4 +1,5 @@
 import 'package:firebase_core/firebase_core.dart';
+import 'package:fix_mate/service_provider/p_BookingModule/p_BookingHistory.dart';
 import 'package:fix_mate/service_provider/p_HomePage.dart';
 import 'package:fix_mate/service_seeker/s_HomePage.dart';
 import 'package:fix_mate/service_seeker/s_profile.dart';
@@ -128,7 +129,7 @@ class _MyAppState extends State<MyApp> {
           'postId': postId,
           'seekerId': serviceSeekerId,
           'title': 'New Order Assigned (#$bookingId)',
-          'message': 'Please review and confirm the booking schedule. If unavailable, kindly coordinate with the service seeker to reschedule.',
+          'message': 'Please review and confirm the booking schedule. If unavailable, kindly coordinate with the service seeker via WhatsApp to reschedule.',
           'isRead': false,
           'createdAt': FieldValue.serverTimestamp(),
         });
@@ -187,7 +188,7 @@ class _MyAppState extends State<MyApp> {
         primarySwatch: Colors.orange,
         fontFamily: 'Poppins',
       ),
-      home: HomePage(),
+      home: s_BookingHistory(),
     );
   }
 }

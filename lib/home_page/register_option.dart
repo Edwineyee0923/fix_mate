@@ -33,23 +33,7 @@ class register_option extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    'You want to ',
-                    style: TextStyle(
-                      color: Colors.black,
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Text(
-                    'REGISTER ',
-                    style: TextStyle(
-                      color: Colors.black,
-                      fontSize: 35,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Text(
-                    'as...',
+                    'You want to register as',
                     style: TextStyle(
                       color: Colors.black,
                       fontSize: 22,
