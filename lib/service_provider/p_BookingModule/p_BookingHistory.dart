@@ -33,6 +33,20 @@ class _p_BookingHistoryState extends State<p_BookingHistory> {
     _selectedIndex = widget.initialTabIndex;
   }
 
+  // Function to format timestamps
+  String formatTimestamp(Timestamp? timestamp) {
+    if (timestamp == null) return "N/A";
+    DateTime dateTime = timestamp.toDate().add(const Duration(hours: 8));
+
+    List<String> monthNames = ["Jan", "Feb", "Mac", "Apr", "Mei", "Jun", "Jul", "Ogo", "Sep", "Okt", "Nov", "Dis"];
+
+    String hour = (dateTime.hour % 12 == 0 ? 12 : dateTime.hour % 12).toString(); // No padLeft here
+    String minute = dateTime.minute.toString().padLeft(2, '0');
+    String period = dateTime.hour >= 12 ? 'PM' : 'AM';
+
+    return "${dateTime.day.toString().padLeft(2, '0')} ${monthNames[dateTime.month - 1]} ${dateTime.year}, "
+        "$hour:$minute $period";
+  }
 
   Color getStatusColor(Map<String, dynamic> data, bool isActive) {
     if (data['status'] == "Completed") return Colors.green;
@@ -271,7 +285,10 @@ class _p_BookingHistoryState extends State<p_BookingHistory> {
                                   if (data['alternativeDate'] != null && data['alternativeTime'] != null)
                                     Text("Alternative Schedule: ${data['alternativeDate']}, ${data['alternativeTime']}"),
                                 ],
-
+                                if (data['status'] == 'Completed' && data['completedAt'] != null)
+                                  Text(
+                                    "Completed At: ${formatTimestamp(data['completedAt'])}",
+                                  ),
                                 Text(
                                   "Type: ${isInstantBooking ? "Instant Booking" : "Promotion"}",
                                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),

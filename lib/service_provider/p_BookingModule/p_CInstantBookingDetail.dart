@@ -4,6 +4,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/services.dart';
 import 'package:fix_mate/reusable_widget/reusable_widget.dart';
+import 'package:smooth_page_indicator/smooth_page_indicator.dart';
+import 'package:carousel_slider/carousel_slider.dart';
+import 'package:fix_mate/services/FullScreenImageViewer.dart';
 
 class p_CInstantBookingDetail extends StatefulWidget {
   final String bookingId;
@@ -114,13 +117,13 @@ class _p_CInstantBookingDetailState extends State<p_CInstantBookingDetail> {
       appBar: AppBar(
         backgroundColor:  const Color(0xFF464E65),
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new_rounded),
+          icon: Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
           onPressed: () {
             Navigator.pop(context);
           },
         ),
-        title: const Text("Booking History", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
-        titleSpacing: 25,
+        title: const Text("Booking History", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+        titleSpacing: 5,
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -200,7 +203,131 @@ class _p_CInstantBookingDetailState extends State<p_CInstantBookingDetail> {
               ),
             ),
 
-          const SizedBox(height: 24),
+          Builder(
+            builder: (context) {
+              final List<String> photos = List<String>.from(bookingData!['evidencePhotos']);
+              final PageController _pageController = PageController();
+              int _currentIndex = 0;
+              return StatefulBuilder(
+                builder: (context, setState) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Container(
+                        margin: const EdgeInsets.symmetric(vertical: 20, horizontal: 5),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 4,
+                              spreadRadius: 2,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            // Header
+                            Container(
+                              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
+                              decoration: const BoxDecoration(
+                                color: Color(0xFF464E65),
+                                borderRadius: BorderRadius.only(
+                                  topLeft: Radius.circular(20),
+                                  topRight: Radius.circular(20),
+                                ),
+                              ),
+                              child: const Align(
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  "Service Evidence Photos",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 15,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+
+                            // Carousel
+                            CarouselSlider.builder(
+                              itemCount: photos.length,
+                              itemBuilder: (context, index, realIdx) {
+                                return GestureDetector(
+                                  onTap: () {
+                                    showDialog(
+                                      context: context,
+                                      builder: (_) => FullScreenImageViewer(
+                                        imageUrls: photos,
+                                        initialIndex: index,
+                                      ),
+                                    );
+                                  },
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(16),
+                                    child: Image.network(
+                                      photos[index],
+                                      width: double.infinity,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
+                                );
+                              },
+                              options: CarouselOptions(
+                                height: 200,
+                                autoPlay: true,
+                                enlargeCenterPage: true,
+                                viewportFraction: 0.9,
+                                onPageChanged: (index, reason) {
+                                  setState(() {
+                                    _currentIndex = index;
+                                  });
+                                },
+                              ),
+                            ),
+
+                            const SizedBox(height: 10),
+
+                            // Dots + Page Indicator
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                AnimatedSmoothIndicator(
+                                  activeIndex: _currentIndex,
+                                  count: photos.length,
+                                  effect: const ExpandingDotsEffect(
+                                    dotHeight: 8,
+                                    dotWidth: 8,
+                                    spacing: 6,
+                                    activeDotColor: Color(0xFF464E65),
+                                    dotColor: Colors.black26,
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Text(
+                                  "${_currentIndex + 1}/${photos.length}",
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.black87,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                          ],
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              );
+            },
+          ),
         ],
       ),
     );

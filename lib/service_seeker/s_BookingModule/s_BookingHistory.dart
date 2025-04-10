@@ -1,4 +1,5 @@
 import 'package:fix_mate/service_seeker/s_BookingModule/s_AInstantBookingDetail.dart';
+import 'package:fix_mate/service_seeker/s_BookingModule/s_CInstantBookingDetail.dart';
 import 'package:fix_mate/service_seeker/s_BookingModule/s_Notification.dart';
 import 'package:fix_mate/service_seeker/s_BookingModule/s_PInstantBookingDetail.dart';
 import 'package:flutter/material.dart';
@@ -32,6 +33,23 @@ class _s_BookingHistoryState extends State<s_BookingHistory> {
     _selectedIndex = widget.initialTabIndex;
   }
 
+  // Function to format timestamps
+  String formatTimestamp(Timestamp? timestamp) {
+    if (timestamp == null) return "N/A";
+    // DateTime dateTime = timestamp.toDate().add(const Duration(hours: 8));
+    DateTime dateTime = timestamp.toDate();
+    List<String> monthNames = ["Jan", "Feb", "Mac", "Apr", "Mei", "Jun", "Jul", "Ogo", "Sep", "Okt", "Nov", "Dis"];
+
+    String hour = (dateTime.hour % 12 == 0 ? 12 : dateTime.hour % 12).toString(); // No padLeft here
+    String minute = dateTime.minute.toString().padLeft(2, '0');
+    String period = dateTime.hour >= 12 ? 'PM' : 'AM';
+
+    return "${dateTime.day.toString().padLeft(2, '0')} ${monthNames[dateTime.month - 1]} ${dateTime.year}, "
+        "$hour:$minute $period";
+  }
+
+
+
   @override
   Widget build(BuildContext context) {
     return SeekerLayout(
@@ -42,7 +60,7 @@ class _s_BookingHistoryState extends State<s_BookingHistory> {
           backgroundColor: const Color(0xFFfb9798),
           title: const Text(
             "Booking History",
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
           ),
           titleSpacing: 25,
           automaticallyImplyLeading: false,
@@ -143,6 +161,7 @@ class _s_BookingHistoryState extends State<s_BookingHistory> {
                     children: snapshot.data!.docs.map((doc) {
                       final data = doc.data() as Map<String, dynamic>;
                       final isActive = data['status'] == 'Active';
+                      final isCompleted = data['status'] == 'Completed';
                       final isInstantBooking = data['bookingId'].toString().startsWith('BKIB');
                       final bookingId = data['bookingId'];
                       final seekerId = FirebaseAuth.instance.currentUser?.uid ?? '';
@@ -169,7 +188,13 @@ class _s_BookingHistoryState extends State<s_BookingHistory> {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) => isActive
+                                    builder: (context) => isCompleted
+                                        ? s_CInstantBookingDetail(
+                                      bookingId: bookingId,
+                                      postId: data['postId'],
+                                      providerId: data['serviceProviderId'],
+                                    )
+                                        : isActive
                                         ? s_AInstantBookingDetail(
                                       bookingId: bookingId,
                                       postId: data['postId'],
@@ -182,7 +207,8 @@ class _s_BookingHistoryState extends State<s_BookingHistory> {
                                     ),
                                   ),
                                 );
-                              } else {
+                              }
+                               else {
                                 // TODO: Navigate to promotion booking detail
                               }
                             },
@@ -197,25 +223,41 @@ class _s_BookingHistoryState extends State<s_BookingHistory> {
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
 
-                                        if (data['status'] == 'Active') ...[
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                            decoration: BoxDecoration(
-                                              color: data['pCompleted'] == true
-                                                  ? Colors.green  // ✅ Green for Service Delivered
-                                                  : Colors.orange, // 🟠 Orange for In Progress
-                                              borderRadius: BorderRadius.circular(8),
-                                            ),
-                                            child: Text(
-                                              data['pCompleted'] == true ? "Service Delivered" : "Service in Progress",
-                                              style: const TextStyle(
-                                                color: Colors.white,
-                                                fontWeight: FontWeight.w500,
-                                                fontSize: 14,
-                                              ),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: data['status'] == 'Completed'
+                                                ? Colors.green
+                                                : data['status'] == 'Pending Confirmation' &&
+                                                (data['sCancelled'] ?? false) == true &&
+                                                (data['isRescheduling'] ?? false) == false
+                                                ? Colors.redAccent
+                                                : data['status'] == 'Active' && (data['pCompleted'] ?? false) == true
+                                                ? Colors.green
+                                                : data['status'] == 'Active'
+                                                ? Colors.orange
+                                                : const Color(0xFFfb9798), // Default color for New Order Assigned
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: Text(
+                                            data['status'] == 'Completed'
+                                                ? "Service Completed"
+                                                : data['status'] == 'Pending Confirmation' &&
+                                                (data['sCancelled'] ?? false) == true &&
+                                                (data['isRescheduling'] ?? false) == false
+                                                ? "Cancellation Requested"
+                                                : data['status'] == 'Active' && (data['pCompleted'] ?? false) == true
+                                                ? "Service Delivered"
+                                                : data['status'] == 'Active'
+                                                ? "Service in Progress"
+                                                : "Service Assigned - Waiting SP Confirmation",
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.w500,
+                                              fontSize: 14,
                                             ),
                                           ),
-                                        ],
+                                        ),
 
 
                                         Text("Another User", style: TextStyle(fontWeight: FontWeight.bold)),
@@ -246,6 +288,10 @@ class _s_BookingHistoryState extends State<s_BookingHistory> {
                                             Text("Alternative Schedule: ${data['alternativeDate']}, ${data['alternativeTime']}"),
                                           ],
                                         ],
+                                        if (data['status'] == 'Completed' && data['completedAt'] != null)
+                                          Text(
+                                            "Completed At: ${formatTimestamp(data['completedAt'])}",
+                                          ),
                                         Text(
                                           "Type: ${isInstantBooking ? "Instant Booking" : "Promotion"}",
                                           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
@@ -322,13 +368,16 @@ class _s_BookingHistoryState extends State<s_BookingHistory> {
                                                     await Future.delayed(const Duration(milliseconds: 400));
 
                                                     // ✅ Switch tab without pushing a new screen
-                                                    setState(() {
-                                                      _selectedIndex = 2; // ✅ go to Completed tab directly
-                                                    });
-
+                                                    // ✅ FULL redirect that resets state properly
+                                                    Navigator.pushAndRemoveUntil(
+                                                      context,
+                                                      MaterialPageRoute(
+                                                        builder: (_) => s_BookingHistory(initialTabIndex: 2),
+                                                      ),
+                                                          (route) => false,
+                                                    );
                                                   }
                                                 },
-
 
                                                 child: Text("Service Received"),
                                                 style: ElevatedButton.styleFrom(
@@ -356,10 +405,6 @@ class _s_BookingHistoryState extends State<s_BookingHistory> {
                                       ),
                                     ),
                                 ],
-
-
-
-
                               ),
                             ),
                           );
@@ -367,8 +412,6 @@ class _s_BookingHistoryState extends State<s_BookingHistory> {
                       );
                     }).toList(),
                   );
-
-
                 },
               ),
             ),

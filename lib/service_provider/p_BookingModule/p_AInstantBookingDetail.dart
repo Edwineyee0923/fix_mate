@@ -9,6 +9,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:fix_mate/services/upload_service.dart';
 import 'package:dotted_border/dotted_border.dart';
 import 'package:fix_mate/services/FullScreenImageViewer.dart';
+import 'package:carousel_slider/carousel_slider.dart';
+import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 
 class p_AInstantBookingDetail extends StatefulWidget {
   final String bookingId;
@@ -92,7 +94,7 @@ class _p_AInstantBookingDetailState extends State<p_AInstantBookingDetail> {
           'providerId': instantPostData!['userId'],
           'bookingId': widget.bookingId,
           'postId': widget.postId,
-          'title': 'Service Delivered',
+          'title': 'Service Delivered (#${widget.bookingId})',
           'message': 'Provider marked the service as completed. Please check the service evidence uploaded and complete the service.',
           'isRead': false,
           'createdAt': FieldValue.serverTimestamp(),
@@ -260,7 +262,7 @@ class _p_AInstantBookingDetailState extends State<p_AInstantBookingDetail> {
               ),
             ),
 
-          const SizedBox(height: 24),
+          const SizedBox(height: 5),
 
           if (bookingData!['status'] == 'Active') ...[
             if ((bookingData!['pCompleted'] ?? false) == false)Container(
@@ -354,7 +356,6 @@ class _p_AInstantBookingDetailState extends State<p_AInstantBookingDetail> {
                               ),
                             ),
 
-
                             Positioned(
                               top: 6,
                               right: 6,
@@ -432,23 +433,140 @@ class _p_AInstantBookingDetailState extends State<p_AInstantBookingDetail> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 10),
                 ],
               ),
             )
-                else
-                  const Padding(
-              padding: EdgeInsets.only(top: 6),
-              child: Text(
-                "✅ You have marked this service as completed.\nWaiting for seeker confirmation or auto-complete after three days.",
-                style: TextStyle(
-                  color: Colors.green,
-                  fontStyle: FontStyle.italic,
-                ),
-              ),
-            ),
-          ]
+          ],
+          if (bookingData!['status'] == 'Active' &&
+              (bookingData!['pCompleted'] ?? false) == true &&
+              bookingData!['evidencePhotos'] != null &&
+              (bookingData!['evidencePhotos'] as List).isNotEmpty)
+            Builder(
+              builder: (context) {
+                final List<String> photos = List<String>.from(bookingData!['evidencePhotos']);
+                final PageController _pageController = PageController();
+                int _currentIndex = 0;
 
+                return StatefulBuilder(
+                  builder: (context, setState) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Container(
+                          margin: const EdgeInsets.symmetric(vertical: 20, horizontal: 5),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 4,
+                                spreadRadius: 2,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            children: [
+                              // Header
+                              Container(
+                                padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFF464E65),
+                                  borderRadius: BorderRadius.only(
+                                    topLeft: Radius.circular(20),
+                                    topRight: Radius.circular(20),
+                                  ),
+                                ),
+                                child: const Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    "Service Evidence Photos",
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 15,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+
+                              // Carousel
+                              CarouselSlider.builder(
+                                itemCount: photos.length,
+                                itemBuilder: (context, index, realIdx) {
+                                  return GestureDetector(
+                                    onTap: () {
+                                      showDialog(
+                                        context: context,
+                                        builder: (_) => FullScreenImageViewer(
+                                          imageUrls: photos,
+                                          initialIndex: index,
+                                        ),
+                                      );
+                                    },
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(16),
+                                      child: Image.network(
+                                        photos[index],
+                                        width: double.infinity,
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ),
+                                  );
+                                },
+                                options: CarouselOptions(
+                                  height: 200,
+                                  autoPlay: true,
+                                  enlargeCenterPage: true,
+                                  viewportFraction: 0.9,
+                                  onPageChanged: (index, reason) {
+                                    setState(() {
+                                      _currentIndex = index;
+                                    });
+                                  },
+                                ),
+                              ),
+
+                              const SizedBox(height: 10),
+
+                              // Dots + Page Indicator
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  AnimatedSmoothIndicator(
+                                    activeIndex: _currentIndex,
+                                    count: photos.length,
+                                    effect: const ExpandingDotsEffect(
+                                      dotHeight: 8,
+                                      dotWidth: 8,
+                                      spacing: 6,
+                                      activeDotColor: Color(0xFF464E65),
+                                      dotColor: Colors.black26,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Text(
+                                    "${_currentIndex + 1}/${photos.length}",
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.black87,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+                            ],
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                );
+              },
+            ),
         ],
       ),
     );

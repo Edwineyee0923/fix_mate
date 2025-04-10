@@ -118,14 +118,14 @@ class _s_PInstantBookingDetailState extends State<s_PInstantBookingDetail> {
   /// ⏰ Selects a time and ensures valid selections
   Future<void> _selectTime(BuildContext context, bool isPreferred) async {
     DateTime now = DateTime.now();
-    // TimeOfDay nowTime = TimeOfDay(hour: now.hour, minute: now.minute);
-    // TimeOfDay initialTime = TimeOfDay(hour: now.hour + 1, minute: now.minute); // Default 1 hour later
-    TimeOfDay nowTime = TimeOfDay.fromDateTime(
-      now.add(const Duration(hours: 8)),
-    );
-    TimeOfDay initialTime = TimeOfDay.fromDateTime(
-      now.add(const Duration(hours: 9)),
-    );
+    TimeOfDay nowTime = TimeOfDay(hour: now.hour, minute: now.minute);
+    TimeOfDay initialTime = TimeOfDay(hour: now.hour + 1, minute: now.minute); // Default 1 hour later
+    // TimeOfDay nowTime = TimeOfDay.fromDateTime(
+    //   now.add(const Duration(hours: 8)),
+    // );
+    // TimeOfDay initialTime = TimeOfDay.fromDateTime(
+    //   now.add(const Duration(hours: 9)),
+    // );
     TimeOfDay? picked = await showTimePicker(
       context: context,
       initialTime: initialTime,
@@ -267,8 +267,16 @@ class _s_PInstantBookingDetailState extends State<s_PInstantBookingDetail> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Instant Booking Detail"),
         backgroundColor: const Color(0xFFfb9798),
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          "Instant Booking Detail",
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+        ),
+        titleSpacing: 5,
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -451,14 +459,6 @@ class _s_PInstantBookingDetailState extends State<s_PInstantBookingDetail> {
             ),
           ]
 
-          // ✏️ Step 3: If editing manually
-          else if (isEditingSchedule) ...[
-            _buildDateTimePicker("Select Preferred Date", _newPreferredDate, () => _selectDate(context, true), isDate: true),
-            _buildDateTimePicker("Select Preferred Time", _newPreferredTime, () => _selectTime(context, true), isDate: false),
-            _buildDateTimePicker("Select Alternative Date", _newAlternativeDate, () => _selectDate(context, false), isDate: true),
-            _buildDateTimePicker("Select Alternative Time", _newAlternativeTime, () => _selectTime(context, false), isDate: false),
-          ]
-
             // 🔚 Default: show the preferred + alternative date/time
           else ...[
               Text("Preferred Date: ${_formatDate(parseCustomDate(bookingData!["preferredDate"]))}"),
@@ -521,43 +521,31 @@ class _s_PInstantBookingDetailState extends State<s_PInstantBookingDetail> {
           ],
 
           // Only show the edit UI if reschedule == false and isRescheduling == false
-          if (!(bookingData?['rescheduleSent'] ?? false) && !(bookingData?['isRescheduling'] ?? false)) ...[
-            Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: Text(
-                "📌 You can edit and reschedule the booking before confirming.",
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.orange.shade700,
-                  fontStyle: FontStyle.italic,
-                ),
-              ),
-            ),
-            if (!isEditingSchedule)
-              ElevatedButton(
-                onPressed: () {
-                  setState(() {
-                    isEditingSchedule = true;
+          if (!(bookingData?['sCancelled'] ?? false) &&
+              !(bookingData?['rescheduleSent'] ?? false) &&
+              !(bookingData?['isRescheduling'] ?? false)) ...[
+            const SizedBox(height: 10),
 
-                    // Pre-fill from existing booking data
-                    _newPreferredDate = parseCustomDate(bookingData!['preferredDate']);
-                    _newPreferredTime = parseTimeOfDay(bookingData!['preferredTime']);
+            if (isEditingSchedule) ...[
+              Text("Pick your new desired time slot", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              const SizedBox(height: 10),
 
-                    _newAlternativeDate = bookingData!['alternativeDate'] != null
-                        ? parseCustomDate(bookingData!['alternativeDate'])
-                        : null;
-                    _newAlternativeTime = bookingData!['alternativeTime'] != null
-                        ? parseTimeOfDay(bookingData!['alternativeTime'])
-                        : null;
-                  });
-                },
-                child: const Text("Edit Schedule"),
-              )
-            else
+              Text("New Preferred Date & Time", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+              _buildDateTimePicker("Select Preferred Date", _newPreferredDate, () => _selectDate(context, true), isDate: true),
+              _buildDateTimePicker("Select Preferred Time", _newPreferredTime, () => _selectTime(context, true), isDate: false),
+
+              const SizedBox(height: 20),
+
+              Text("New Alternative Date & Time", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+              _buildDateTimePicker("Select Alternative Date", _newAlternativeDate, () => _selectDate(context, false), isDate: true),
+              _buildDateTimePicker("Select Alternative Time", _newAlternativeTime, () => _selectTime(context, false), isDate: false),
+
+              const SizedBox(height: 16),
+
+              // Buttons: Cancel and Save Changes
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Cancel Button
                   TextButton(
                     onPressed: () {
                       setState(() {
@@ -570,26 +558,155 @@ class _s_PInstantBookingDetailState extends State<s_PInstantBookingDetail> {
                     },
                     child: const Text("Cancel", style: TextStyle(color: Colors.red)),
                   ),
-
-                  // Save Changes Button
                   ElevatedButton(
                     onPressed: _saveUpdatedSchedule,
                     child: const Text("Save Changes"),
                   ),
                 ],
               ),
+            ]
+            else ...[
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Text(
+                  "📌 You can edit and reschedule the booking before service provider confirming the service.",
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.orange.shade700,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  setState(() {
+                    isEditingSchedule = true;
+
+                    // Pre-fill from existing booking data
+                    _newPreferredDate = parseCustomDate(bookingData!['preferredDate']);
+                    _newPreferredTime = parseTimeOfDay(bookingData!['preferredTime']);
+
+                    _newAlternativeDate = bookingData!['alternativeDate'] != null
+                        ? parseCustomDate(bookingData!['alternativeDate'])
+                        : null;
+
+                    _newAlternativeTime = bookingData!['alternativeTime'] != null
+                        ? parseTimeOfDay(bookingData!['alternativeTime'])
+                        : null;
+                  });
+                },
+                child: const Text("Edit Schedule"),
+              ),
+            ]
           ],
 
 
+          if (!(bookingData?['isRescheduling'] ?? false) && !(bookingData?['sCancelled'] ?? false)) ...[
+            pk_button(context, "Request Cancellation", () async {
+              showDialog(
+                context: context,
+                builder: (_) => ConfirmationDialog(
+                  title: "Cancel Service Booking?",
+                  message:
+                  "Are you sure you want to cancel this service booking?\n\n⚠️ The provider may reject your request and refunds are not guaranteed.\n\n💵 RM1 transaction fee is non-refundable.\n\n📲 Please contact the provider via WhatsApp before confirming.",
+                  confirmText: "Confirm",
+                  cancelText: "Cancel",
+                  icon: Icons.cancel,
+                  iconColor: Colors.redAccent,
+                  confirmButtonColor: Colors.red,
+                  cancelButtonColor: Colors.grey.shade300,
+                  onConfirm: () async {
+                    Navigator.pop(context); // Close dialog
 
-          const SizedBox(height: 10),
-          if (!(bookingData?['isRescheduling'] ?? false)) ...[
-            ElevatedButton(
-              onPressed: () {},
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-              child: const Text("Request Cancellation", style: TextStyle(color: Colors.white)),
-            ),
-          ]
+                    final doc = await FirebaseFirestore.instance
+                        .collection('bookings')
+                        .where('bookingId', isEqualTo: widget.bookingId)
+                        .limit(1)
+                        .get();
+
+                    if (doc.docs.isNotEmpty) {
+                      final bookingRef = doc.docs.first.reference;
+
+                      await bookingRef.update({
+                        'sCancelled': true,
+                      });
+
+                      // Send notification to provider
+                      await FirebaseFirestore.instance.collection('p_notifications').add({
+                        'providerId': bookingData!["serviceProviderId"],
+                        'bookingId': widget.bookingId,
+                        'postId': widget.postId,
+                        'seekerId': bookingData?['serviceSeekerId'],
+                        'title': 'Cancellation Requested',
+                        'message':
+                        'The service seeker has requested to cancel the booking. Please approve or reject the request.',
+                        'isRead': false,
+                        'createdAt': FieldValue.serverTimestamp(),
+                      });
+
+                      ReusableSnackBar(
+                        context,
+                        "Cancellation request sent to provider.",
+                        icon: Icons.info_outline,
+                        iconColor: Colors.orange,
+                      );
+                    } else {
+                      ReusableSnackBar(
+                        context,
+                        "Booking not found.",
+                        icon: Icons.error_outline,
+                        iconColor: Colors.red,
+                      );
+                    }
+                  },
+                ),
+              );
+            }),
+          ],
+
+          if (bookingData?['sCancelled'] == true)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF7E6), // soft orange background
+                  borderRadius: BorderRadius.circular(20), // extra rounded corners
+                  border: Border.all(color: const Color(0xFFFFCC99)), // light orange border
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      color: const Color(0xFFFF9900), // soft orange icon
+                      size: 18,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        "Cancellation request sent. Please wait for the provider's decision. Thank you.",
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontStyle: FontStyle.italic,
+                          color: Color(0xFFFF6600), // deeper orange text
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+
+
+
+
+
+
+
+
 
 
         ],
