@@ -8,6 +8,8 @@ import 'package:fix_mate/services/upload_service.dart';
 import 'package:fix_mate/home_page/HomePage.dart';
 import 'package:intl/intl.dart';
 import 'package:fix_mate/service_seeker/s_layout.dart';
+import 'package:fix_mate/services/FullScreenImageViewer.dart';
+
 
 class s_profile extends StatefulWidget {
   static String routeName = "/service_seeker/s_profile";
@@ -32,6 +34,7 @@ class _s_profileState extends State<s_profile> {
   bool isPhoneValid = true;
   String? selectedGender;
   String? selectedGenderError;
+  String? addressError;
   final List<String> genderOptions = ["Male", "Female", "Prefer not to say"];
 
   TextEditingController nameController = TextEditingController();
@@ -39,7 +42,7 @@ class _s_profileState extends State<s_profile> {
   TextEditingController dobController = TextEditingController();
   TextEditingController phoneController = TextEditingController();
   TextEditingController emailController = TextEditingController();
-
+  TextEditingController addressController = TextEditingController();
 
   void onEditPressed() {
     setState(() {
@@ -64,6 +67,7 @@ class _s_profileState extends State<s_profile> {
             nameController.text = data['name'] ?? '';
             bioController.text = data['bio'] ?? '';
             phoneController.text = data['phone'] ?? '';
+            addressController.text = data['address'] ?? "";
             emailController.text = data['email'] ?? '';
             dobController.text = data['dob'] ?? '';
             selectedGender = data['gender'];
@@ -95,10 +99,11 @@ class _s_profileState extends State<s_profile> {
       isDobValid = dobController.text.trim().isNotEmpty;
       isPhoneValid = phoneController.text.trim().isNotEmpty && isValidPhoneNumber(phoneController.text);
       selectedGenderError = selectedGender == null ? "Please select a gender!" : null;
+      addressError = addressController.text.trim().isEmpty ? "Address is required!" : null;
     });
 
     // Check for any validation errors
-    if (!isNameValid || !isPhoneValid || !isDobValid || selectedGender == null) {
+    if (!isNameValid || !isPhoneValid || !isDobValid || selectedGender == null || addressError != null ) {
       ReusableSnackBar(
         context,
         "Please fill in all required fields correctly!",
@@ -115,6 +120,7 @@ class _s_profileState extends State<s_profile> {
           'name': nameController.text.trim(),
           'bio': bioController.text.trim(),
           'phone': phoneController.text.trim(),
+          'address': addressController.text.trim(),
           'dob': dobController.text.trim(),
           'gender': selectedGender,
           'profilePic': _imageUrl ?? '',
@@ -245,7 +251,7 @@ class _s_profileState extends State<s_profile> {
             : null, // ✅ Hides the back button when `isEditing` is false
 
         title: Text("My Profile", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white,)),
-        titleSpacing: isEditing ? 2 : 25, // ✅ Adjust title spacing dynamically
+        titleSpacing: isEditing ? 5 : 25, // ✅ Adjust title spacing dynamically
         automaticallyImplyLeading: false,
         actions: [
           Padding(
@@ -272,7 +278,21 @@ class _s_profileState extends State<s_profile> {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 _imageUrl != null
-                    ? CircleAvatar(radius: 50, backgroundImage: NetworkImage(_imageUrl!))
+                    ? GestureDetector(
+                  onTap: () {
+                    showDialog(
+                      context: context,
+                      builder: (_) => FullScreenImageViewer(
+                        imageUrls: [_imageUrl!],
+                        images: const [],
+                      ),
+                    );
+                  },
+                  child: CircleAvatar(
+                    radius: 50,
+                    backgroundImage: NetworkImage(_imageUrl!),
+                  ),
+                )
                     : Icon(Icons.person, size: 100, color: Colors.grey),
                 if (isEditing)
                   TextButton(
@@ -405,6 +425,22 @@ class _s_profileState extends State<s_profile> {
               });
             },
           ),
+
+          const SizedBox(height: 15),
+
+          LongInputContainer(
+            labelText: "Address",
+            controller: addressController,
+            enabled: isEditing,
+            isRequired: true, // ✅ Required field
+            requiredMessage: "Address is required.",
+            maxWords: 500,
+            width: 340,
+            placeholder: "Please enter your address",
+            height: 120,
+            errorMessage: addressError, // ✅ Pass validation error
+          ),
+
 
           SizedBox(height: 15),
           GestureDetector(

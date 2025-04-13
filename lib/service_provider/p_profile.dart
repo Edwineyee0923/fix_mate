@@ -10,6 +10,7 @@ import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/services.dart';
 import 'package:fix_mate/service_provider/p_layout.dart';
+import 'package:fix_mate/services/FullScreenImageViewer.dart';
 
 
 class p_profile extends StatefulWidget {
@@ -262,8 +263,8 @@ class _p_profileState extends State<p_profile> {
         )
             : null, // ✅ Hides the back button when `isEditing` is false
 
-        title: Text("My Profile", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white,)),
-        titleSpacing: isEditing ? 2 : 25, // ✅ Adjust title spacing dynamically
+        title: Text("My Profile", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white,)),
+        titleSpacing: isEditing ? 5 : 25, // ✅ Adjust title spacing dynamically
         automaticallyImplyLeading: false,
         actions: [
           Padding(
@@ -290,8 +291,23 @@ class _p_profileState extends State<p_profile> {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 _imageUrl != null
-                    ? CircleAvatar(radius: 50, backgroundImage: NetworkImage(_imageUrl!))
+                    ? GestureDetector(
+                  onTap: () {
+                    showDialog(
+                      context: context,
+                      builder: (_) => FullScreenImageViewer(
+                        imageUrls: [_imageUrl!],
+                        images: const [],
+                      ),
+                    );
+                  },
+                  child: CircleAvatar(
+                    radius: 50,
+                    backgroundImage: NetworkImage(_imageUrl!),
+                  ),
+                )
                     : Icon(Icons.person, size: 100, color: Colors.grey),
+
                 if (isEditing)
                   TextButton(
                     onPressed: _pickAndUploadImage,

@@ -118,7 +118,7 @@ class _s_AInstantBookingDetailState extends State<s_AInstantBookingDetail> {
         ),
         title: Text(
           "Instant Booking Detail",
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
         ),
         titleSpacing: 5,
       ),

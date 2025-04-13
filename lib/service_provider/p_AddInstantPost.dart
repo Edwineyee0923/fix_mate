@@ -6,6 +6,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:fix_mate/services/upload_service.dart';
 import 'package:fix_mate/reusable_widget/reusable_widget.dart';
 import 'package:flutter/services.dart';
+import 'package:fix_mate/services/FullScreenImageViewer.dart';
+
 
 
 class p_AddInstantPost extends StatefulWidget {
@@ -275,8 +277,9 @@ class _p_AddInstantPostState extends State<p_AddInstantPost> {
         ),
         title: Text(
           "Add Instant Booking Post",
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
         ),
+        titleSpacing: 5,
       ),
       body: SingleChildScrollView(
         padding: EdgeInsets.all(16),
@@ -293,15 +296,26 @@ class _p_AddInstantPostState extends State<p_AddInstantPost> {
                   itemBuilder: (context, index) {
                     return Stack(
                       children: [
-                        Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 10),
-                          width: 120,
-                          height: 150,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
-                            image: DecorationImage(
-                              image: FileImage(_images[index]),
-                              fit: BoxFit.cover,
+                        GestureDetector(
+                          onTap: () {
+                            showDialog(
+                              context: context,
+                              builder: (_) => FullScreenImageViewer(
+                                images: _images,
+                                initialIndex: index,
+                              ),
+                            );
+                          },
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 10),
+                            width: 120,
+                            height: 150,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              image: DecorationImage(
+                                image: FileImage(_images[index]),
+                                fit: BoxFit.cover,
+                              ),
                             ),
                           ),
                         ),
@@ -311,7 +325,7 @@ class _p_AddInstantPostState extends State<p_AddInstantPost> {
                           child: GestureDetector(
                             onTap: () => _removeImage(index),
                             child: Container(
-                              decoration: BoxDecoration(
+                              decoration: const BoxDecoration(
                                 shape: BoxShape.circle,
                                 color: Colors.white,
                               ),

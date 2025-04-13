@@ -6,6 +6,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:fix_mate/services/upload_service.dart';
 import 'package:fix_mate/reusable_widget/reusable_widget.dart';
 import 'package:flutter/services.dart';
+import 'package:fix_mate/services/FullScreenImageViewer.dart';
+
 
 
 class p_EditInstantPost extends StatefulWidget {
@@ -341,9 +343,9 @@ class _p_EditInstantPostState extends State<p_EditInstantPost> {
         ),
         title: Text(
           "Edit Instant Booking Post",
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
         ),
-        titleSpacing: 2,
+        titleSpacing: 5,
       ),
       body: SingleChildScrollView(
         padding: EdgeInsets.all(16),
@@ -356,21 +358,35 @@ class _p_EditInstantPostState extends State<p_EditInstantPost> {
                 height: 150,
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
-                  itemCount: _imageUrls.length + _images.length, // ✅ Count both lists
+                  itemCount: _imageUrls.length + _images.length,
                   itemBuilder: (context, index) {
+                    final isNetworkImage = index < _imageUrls.length;
+
                     return Stack(
                       children: [
-                        Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 10),
-                          width: 120,
-                          height: 150,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
-                            image: DecorationImage(
-                              image: index < _imageUrls.length
-                                  ? NetworkImage(_imageUrls[index]) // ✅ Fetch from Firestore
-                                  : FileImage(_images[index - _imageUrls.length]) as ImageProvider<Object>, // ✅ Local File
-                              fit: BoxFit.cover,
+                        GestureDetector(
+                          onTap: () {
+                            showDialog(
+                              context: context,
+                              builder: (_) => FullScreenImageViewer(
+                                imageUrls: _imageUrls,
+                                images: _images,
+                                initialIndex: index,
+                              ),
+                            );
+                          },
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 10),
+                            width: 120,
+                            height: 150,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              image: DecorationImage(
+                                image: isNetworkImage
+                                    ? NetworkImage(_imageUrls[index])
+                                    : FileImage(_images[index - _imageUrls.length]) as ImageProvider,
+                                fit: BoxFit.cover,
+                              ),
                             ),
                           ),
                         ),
@@ -380,7 +396,7 @@ class _p_EditInstantPostState extends State<p_EditInstantPost> {
                           child: GestureDetector(
                             onTap: () => _removeImage(index),
                             child: Container(
-                              decoration: BoxDecoration(
+                              decoration: const BoxDecoration(
                                 shape: BoxShape.circle,
                                 color: Colors.white,
                               ),
@@ -398,6 +414,7 @@ class _p_EditInstantPostState extends State<p_EditInstantPost> {
                   },
                 ),
               ),
+
             Center(
               child: TextButton(
                 onPressed: _pickAndUploadImage,

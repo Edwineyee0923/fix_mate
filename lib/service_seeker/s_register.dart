@@ -7,6 +7,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fix_mate/reusable_widget/reusable_widget.dart';
 import 'package:intl/intl.dart'; // For formatting date
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:fix_mate/services/FullScreenImageViewer.dart';
+
 
 class s_register extends StatefulWidget {
   final bool isEditing;
@@ -109,6 +111,7 @@ class _s_registerState extends State<s_register> {
   TextEditingController bioController = TextEditingController();
   TextEditingController dobController = TextEditingController();
   TextEditingController phoneController = TextEditingController();
+  TextEditingController addressController = TextEditingController();
   TextEditingController emailController = TextEditingController();
   TextEditingController passwordController = TextEditingController();
   TextEditingController confirmPasswordController = TextEditingController();
@@ -122,12 +125,19 @@ class _s_registerState extends State<s_register> {
   bool isConfirmPasswordValid = true;
   bool isEditing = true;
   String? selectedGender; // Holds selected gender value
+  String? addressError;
   final List<String> genderOptions = ["Male", "Female", "Prefer not to say"]; // Dropdown options
 
 
   // 🔹 Register User & Save Data
   Future<bool> registerUser() async {
-    if (!isNameValid || !isEmailValid || !isPhoneValid || !isDobValid || !isPasswordValid || !isConfirmPasswordValid || selectedGender == null) {
+
+    // Trigger validation manually
+    setState(() {
+      addressError = addressController.text.trim().isEmpty ? "Address is required!" : null;
+    });
+
+    if (!isNameValid || !isEmailValid || !isPhoneValid || !isDobValid || !isPasswordValid || !isConfirmPasswordValid || selectedGender == null || addressError != null) {
       ReusableSnackBar(context, "Please fill all fields correctly!", icon: Icons.warning, iconColor: Colors.orange);
       return false; // Registration failed
     }
@@ -161,6 +171,7 @@ class _s_registerState extends State<s_register> {
         'dob': dobController.text.trim(),
         'gender': selectedGender,
         'bio': bioController.text.trim(),
+        'address': addressController.text.trim(),
         'profilePic': _imageUrl ?? '',
         'role': "Service Seeker",
         'createdAt': Timestamp.now(),
@@ -208,7 +219,7 @@ class _s_registerState extends State<s_register> {
             color: Colors.white,
           ),
         ),
-        titleSpacing: 2, // Aligns title closer to the leading icon (left-aligned)
+        titleSpacing: 5, // Aligns title closer to the leading icon (left-aligned)
       ),
       body: SingleChildScrollView(
         child: Center( // Centers everything
@@ -238,7 +249,21 @@ class _s_registerState extends State<s_register> {
                 ),
                 SizedBox(height: 15),
                 _imageUrl != null
-                    ? CircleAvatar(radius: 50, backgroundImage: NetworkImage(_imageUrl!))
+                    ? GestureDetector(
+                  onTap: () {
+                    showDialog(
+                      context: context,
+                      builder: (_) => FullScreenImageViewer(
+                        imageUrls: [_imageUrl!],
+                        images: const [],
+                      ),
+                    );
+                  },
+                  child: CircleAvatar(
+                    radius: 50,
+                    backgroundImage: NetworkImage(_imageUrl!),
+                  ),
+                )
                     : Icon(Icons.person, size: 100, color: Colors.grey),
                 TextButton(
                   onPressed: _pickAndUploadImage,
@@ -369,6 +394,20 @@ class _s_registerState extends State<s_register> {
                             isPhoneValid = RegExp(r'^[1-9]\d{9,11}$').hasMatch(value);
                           });
                         },
+                      ),
+                      const SizedBox(height: 10),
+
+                      LongInputContainer(
+                        labelText: "Address",
+                        controller: addressController,
+                        enabled: isEditing,
+                        isRequired: true, // ✅ Required field
+                        requiredMessage: "Address is required.",
+                        maxWords: 500,
+                        width: 340,
+                        placeholder: "Please enter your address",
+                        height: 120,
+                        errorMessage: addressError, // ✅ Pass validation error
                       ),
                       const SizedBox(height: 10),
 

@@ -745,11 +745,6 @@ class _LongInputContainerState extends State<LongInputContainer> {
 }
 
 
-
-
-
-
-
 void ReusableSnackBar(BuildContext context, String message, {
   IconData? icon,
   Color iconColor = Colors.black,
@@ -1356,6 +1351,55 @@ class _ResponsiveTextAreaState extends State<ResponsiveTextArea> {
   }
 }
 
+void showFloatingMessage(
+    BuildContext context,
+    String message, {
+      IconData icon = Icons.info,
+      Duration duration = const Duration(seconds: 2),
+    }) {
+  final overlay = Overlay.of(context);
+  final overlayEntry = OverlayEntry(
+    builder: (context) => Stack(
+      children: [
+        Positioned.fill(
+          child: Container(
+            alignment: Alignment.center,
+            child: Material(
+              color: Colors.transparent,
+              child: Container(
+                width: 250,
+                padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.75), // ✅ fixed color
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(icon, size: 36, color: Colors.white),
+                    const SizedBox(height: 10),
+                    Text(
+                      message,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+
+  overlay.insert(overlayEntry);
+  Future.delayed(duration, () => overlayEntry.remove());
+}
 
 
 

@@ -8,6 +8,8 @@ import 'package:fix_mate/reusable_widget/reusable_widget.dart';
 import 'package:intl/intl.dart'; // For formatting date
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fix_mate/services/send_email.dart';
+import 'package:fix_mate/services/FullScreenImageViewer.dart';
+
 
 class p_register extends StatefulWidget {
   final bool isEditing;
@@ -268,12 +270,12 @@ class _p_registerState extends State<p_register> {
         title: Text(
           "Service Provider Application",
           style: TextStyle(
-            fontSize: 22,
+            fontSize: 20,
             fontWeight: FontWeight.bold,
             color: Colors.white,
           ),
         ),
-        titleSpacing: 2, // Aligns title closer to the leading icon (left-aligned)
+        titleSpacing: 5, // Aligns title closer to the leading icon (left-aligned)
       ),
 
       body: SingleChildScrollView(
@@ -305,7 +307,21 @@ class _p_registerState extends State<p_register> {
                 ),
                 SizedBox(height: 15),
                 _imageUrl != null
-                    ? CircleAvatar(radius: 50, backgroundImage: NetworkImage(_imageUrl!))
+                    ? GestureDetector(
+                  onTap: () {
+                    showDialog(
+                      context: context,
+                      builder: (_) => FullScreenImageViewer(
+                        imageUrls: [_imageUrl!],
+                        images: const [],
+                      ),
+                    );
+                  },
+                  child: CircleAvatar(
+                    radius: 50,
+                    backgroundImage: NetworkImage(_imageUrl!),
+                  ),
+                )
                     : Icon(Icons.person, size: 100, color: Colors.grey),
                 TextButton(
                   onPressed: _pickAndUploadImage,

@@ -273,8 +273,8 @@ class _s_PInstantBookingDetailState extends State<s_PInstantBookingDetail> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          "Instant Booking Detail",
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+          "Booking Summary Detail",
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
         ),
         titleSpacing: 5,
       ),
@@ -601,66 +601,124 @@ class _s_PInstantBookingDetailState extends State<s_PInstantBookingDetail> {
           ],
 
 
+          // if (!(bookingData?['isRescheduling'] ?? false) && !(bookingData?['sCancelled'] ?? false)) ...[
+          //   pk_button(context, "Request Cancellation", () async {
+          //     showDialog(
+          //       context: context,
+          //       builder: (_) => ConfirmationDialog(
+          //         title: "Cancel Service Booking?",
+          //         message:
+          //         "Are you sure you want to cancel this service booking?\n\n⚠️ The provider may reject your request and refunds are not guaranteed.\n\n💵 RM1 transaction fee is non-refundable.\n\n📲 Please contact the provider via WhatsApp before confirming.",
+          //         confirmText: "Confirm",
+          //         cancelText: "Cancel",
+          //         icon: Icons.cancel,
+          //         iconColor: Colors.redAccent,
+          //         confirmButtonColor: Colors.red,
+          //         cancelButtonColor: Colors.grey.shade300,
+          //         onConfirm: () async {
+          //           Navigator.pop(context); // Close dialog
+          //
+          //           final doc = await FirebaseFirestore.instance
+          //               .collection('bookings')
+          //               .where('bookingId', isEqualTo: widget.bookingId)
+          //               .limit(1)
+          //               .get();
+          //
+          //           if (doc.docs.isNotEmpty) {
+          //             final bookingRef = doc.docs.first.reference;
+          //
+          //             await bookingRef.update({
+          //               'sCancelled': true,
+          //             });
+          //
+          //             // Send notification to provider
+          //             await FirebaseFirestore.instance.collection('p_notifications').add({
+          //               'providerId': bookingData!["serviceProviderId"],
+          //               'bookingId': widget.bookingId,
+          //               'postId': widget.postId,
+          //               'seekerId': bookingData?['serviceSeekerId'],
+          //               'title': 'Cancellation Requested (#${widget.bookingId})',
+          //               'message':
+          //               'The service seeker has requested to cancel the booking. Please approve or reject the request.',
+          //               'isRead': false,
+          //               'createdAt': FieldValue.serverTimestamp(),
+          //             });
+          //
+          //             ReusableSnackBar(
+          //               context,
+          //               "Cancellation request sent to provider.",
+          //               icon: Icons.info_outline,
+          //               iconColor: Colors.orange,
+          //             );
+          //
+          //             // 🔁 Redirect back to Cancellation tab
+          //             await Future.delayed(const Duration(milliseconds: 300)); // optional short delay
+          //             Navigator.pushReplacement(
+          //               context,
+          //               MaterialPageRoute(
+          //                 builder: (_) => s_BookingHistory(initialTabIndex: 3),
+          //               ),
+          //             );
+          //           } else {
+          //             ReusableSnackBar(
+          //               context,
+          //               "Booking not found.",
+          //               icon: Icons.error_outline,
+          //               iconColor: Colors.red,
+          //             );
+          //           }
+          //         },
+          //       ),
+          //     );
+          //   }),
+          // ],
+          // if (!(bookingData?['isRescheduling'] ?? false) && !(bookingData?['sCancelled'] ?? false)) ...[
+          //   pk_button(context, "Request Cancellation", () {
+          //     showModalBottomSheet(
+          //       context: context,
+          //       isScrollControlled: true,
+          //       shape: const RoundedRectangleBorder(
+          //         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          //       ),
+          //       builder: (_) => CancelReasonBottomSheet(
+          //         bookingId: widget.bookingId,
+          //         postId: widget.postId,
+          //         seekerId: bookingData!['serviceSeekerId'],
+          //         providerId: bookingData!['serviceProviderId'],
+          //       ),
+          //     );
+          //   }),
+          //
+          // ],
+
           if (!(bookingData?['isRescheduling'] ?? false) && !(bookingData?['sCancelled'] ?? false)) ...[
             pk_button(context, "Request Cancellation", () async {
-              showDialog(
+              final result = await showModalBottomSheet(
                 context: context,
-                builder: (_) => ConfirmationDialog(
-                  title: "Cancel Service Booking?",
-                  message:
-                  "Are you sure you want to cancel this service booking?\n\n⚠️ The provider may reject your request and refunds are not guaranteed.\n\n💵 RM1 transaction fee is non-refundable.\n\n📲 Please contact the provider via WhatsApp before confirming.",
-                  confirmText: "Confirm",
-                  cancelText: "Cancel",
-                  icon: Icons.cancel,
-                  iconColor: Colors.redAccent,
-                  confirmButtonColor: Colors.red,
-                  cancelButtonColor: Colors.grey.shade300,
-                  onConfirm: () async {
-                    Navigator.pop(context); // Close dialog
-
-                    final doc = await FirebaseFirestore.instance
-                        .collection('bookings')
-                        .where('bookingId', isEqualTo: widget.bookingId)
-                        .limit(1)
-                        .get();
-
-                    if (doc.docs.isNotEmpty) {
-                      final bookingRef = doc.docs.first.reference;
-
-                      await bookingRef.update({
-                        'sCancelled': true,
-                      });
-
-                      // Send notification to provider
-                      await FirebaseFirestore.instance.collection('p_notifications').add({
-                        'providerId': bookingData!["serviceProviderId"],
-                        'bookingId': widget.bookingId,
-                        'postId': widget.postId,
-                        'seekerId': bookingData?['serviceSeekerId'],
-                        'title': 'Cancellation Requested',
-                        'message':
-                        'The service seeker has requested to cancel the booking. Please approve or reject the request.',
-                        'isRead': false,
-                        'createdAt': FieldValue.serverTimestamp(),
-                      });
-
-                      ReusableSnackBar(
-                        context,
-                        "Cancellation request sent to provider.",
-                        icon: Icons.info_outline,
-                        iconColor: Colors.orange,
-                      );
-                    } else {
-                      ReusableSnackBar(
-                        context,
-                        "Booking not found.",
-                        icon: Icons.error_outline,
-                        iconColor: Colors.red,
-                      );
-                    }
-                  },
+                isScrollControlled: true,
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                ),
+                builder: (_) => CancelReasonBottomSheet(
+                  bookingId: widget.bookingId,
+                  postId: widget.postId,
+                  seekerId: bookingData!['serviceSeekerId'],
+                  providerId: bookingData!['serviceProviderId'],
                 ),
               );
+
+              // ✅ Now that the sheet is closed and returned result
+              if (result == true) {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => s_BookingHistory(
+                      key: UniqueKey(),
+                      initialTabIndex: 0, // Go to Pending tab
+                    ),
+                  ),
+                );
+              }
             }),
           ],
 
@@ -699,16 +757,6 @@ class _s_PInstantBookingDetailState extends State<s_PInstantBookingDetail> {
                 ),
               ),
             )
-
-
-
-
-
-
-
-
-
-
         ],
       ),
     );
@@ -765,3 +813,499 @@ class _s_PInstantBookingDetailState extends State<s_PInstantBookingDetail> {
   }
 
 }
+
+// class CancelReasonBottomSheet extends StatefulWidget {
+//   final String bookingId;
+//   final String postId;
+//   final String seekerId;
+//   final String providerId;
+//
+//   const CancelReasonBottomSheet({
+//     required this.bookingId,
+//     required this.postId,
+//     required this.seekerId,
+//     required this.providerId,
+//   });
+//
+//   @override
+//   State<CancelReasonBottomSheet> createState() => _CancelReasonBottomSheetState();
+// }
+//
+// class _CancelReasonBottomSheetState extends State<CancelReasonBottomSheet> {
+//   String? _selectedReason;
+//   bool _agreedToTerms = false;
+//
+//   final List<String> cancellationReasons = [
+//     "Need to change delivery address",
+//     "Booked the wrong service or package",
+//     "No longer need the service",
+//     "Found a more suitable service provider",
+//     "Found cheaper elsewhere",
+//   ];
+//
+//   @override
+//   Widget build(BuildContext context) {
+//     return DraggableScrollableSheet(
+//       initialChildSize: 0.85,
+//       expand: false,
+//       builder: (_, controller) => Padding(
+//       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+//       child: SingleChildScrollView(
+//         controller: controller,
+//         padding: const EdgeInsets.all(20),
+//         child: Column(
+//           crossAxisAlignment: CrossAxisAlignment.start,
+//           children: [
+//             Center(
+//               child: Container(width: 50, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2))),
+//             ),
+//             const SizedBox(height: 20),
+//             const Text("Select Cancellation Reason", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+//             const SizedBox(height: 15),
+//
+//             Container(
+//               padding: const EdgeInsets.all(12),
+//               decoration: BoxDecoration(
+//                 color: Colors.orange.shade50,
+//                 borderRadius: BorderRadius.circular(10),
+//                 border: Border.all(color: Colors.orange.shade100),
+//               ),
+//               child: Column(
+//                 crossAxisAlignment: CrossAxisAlignment.start,
+//                 children: [
+//                   Row(
+//                     children: [
+//                       Icon(Icons.announcement_outlined, color: Colors.orange.shade800, size: 20),
+//                       const SizedBox(width: 6),
+//                       Text(
+//                         "Terms & Conditions",
+//                         style: TextStyle(
+//                           fontWeight: FontWeight.bold,
+//                           color: Colors.orange.shade800,
+//                           fontSize: 14,
+//                         ),
+//                       ),
+//                     ],
+//                   ),
+//                   const SizedBox(height: 10),
+//                   Text(
+//                     "⚠️ The provider may reject your request and refunds are not guaranteed.\n"
+//                         "💵 RM1 transaction fee is non-refundable.\n"
+//                         "📲 Please contact the provider via WhatsApp before confirming.",
+//                     style: TextStyle(
+//                       fontSize: 13.5,
+//                       color: Colors.orange.shade800,
+//                       height: 1.4,
+//                     ),
+//                   ),
+//                 ],
+//               ),
+//             ),
+//
+//
+//             const SizedBox(height: 20),
+//             ...cancellationReasons.map((reason) {
+//               return RadioListTile<String>(
+//                 title: Text(reason),
+//                 value: reason,
+//                 groupValue: _selectedReason,
+//                 onChanged: (value) => setState(() => _selectedReason = value),
+//                 activeColor: Colors.redAccent,
+//               );
+//             }).toList(),
+//
+//             // // Show input box if 'Others' selected
+//             // if (_selectedReason == "Others") ...[
+//             //   Padding(
+//             //     padding: const EdgeInsets.symmetric(horizontal: 10),
+//             //     child: TextField(
+//             //       onChanged: (value) => _selectedReason = value,  // replaces radio label with actual user input
+//             //       decoration: InputDecoration(
+//             //         labelText: "Please specify your reason",
+//             //         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+//             //         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+//             //       ),
+//             //     ),
+//             //   ),
+//             //   const SizedBox(height: 10),
+//             // ],
+//
+//             RadioListTile<String>(
+//               value: "Others",
+//               groupValue: _selectedReason,
+//               onChanged: (value) => setState(() => _selectedReason = value),
+//               activeColor: Colors.redAccent,
+//               title: Column(
+//                 crossAxisAlignment: CrossAxisAlignment.start,
+//                 children: [
+//                   const Text("Others"),
+//                   if (_selectedReason == "Others") ...[
+//                     const SizedBox(height: 8),
+//                     TextField(
+//                       onChanged: (value) => _selectedReason = value,
+//                       decoration: InputDecoration(
+//                         hintText: "Please specify your reason",
+//                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+//                         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+//                       ),
+//                     ),
+//                   ],
+//                 ],
+//               ),
+//             ),
+//
+//             CheckboxListTile(
+//               value: _agreedToTerms,
+//               onChanged: (val) => setState(() => _agreedToTerms = val!),
+//               title: const Text(
+//                 "I agree to the cancellation terms and conditions as above stated.",
+//                 style: TextStyle(fontSize: 13),
+//               ),
+//               controlAffinity: ListTileControlAffinity.leading,
+//             ),
+//
+//             const SizedBox(height: 20),
+//             SizedBox(
+//               width: double.infinity,
+//               child: ElevatedButton(
+//                 onPressed: (_selectedReason != null && _agreedToTerms)
+//                     ? () async {
+//                   Navigator.pop(context); // Close bottom sheet
+//
+//                   // Firestore: update cancellation reason + flag
+//                   final doc = await FirebaseFirestore.instance
+//                       .collection('bookings')
+//                       .where('bookingId', isEqualTo: widget.bookingId)
+//                       .limit(1)
+//                       .get();
+//
+//                   if (doc.docs.isNotEmpty) {
+//                     final bookingRef = doc.docs.first.reference;
+//                     await bookingRef.update({
+//                       'sCancelled': true,
+//                       'cancellationReason': _selectedReason,
+//                       'status': 'Pending Confirmation',
+//                     });
+//
+//                     await FirebaseFirestore.instance.collection('p_notifications').add({
+//                       'providerId': widget.providerId,
+//                       'bookingId': widget.bookingId,
+//                       'postId': widget.postId,
+//                       'seekerId': widget.seekerId,
+//                       'title': 'Cancellation Requested (#${widget.bookingId})',
+//                       'message': 'The service seeker has requested to cancel the booking. Please approve or reject the request.',
+//                       'isRead': false,
+//                       'createdAt': FieldValue.serverTimestamp(),
+//                     });
+//
+//                     ReusableSnackBar(
+//                       context,
+//                       "Cancellation request sent to provider.",
+//                       icon: Icons.info_outline,
+//                       iconColor: Colors.orange,
+//                     );
+//
+//                     Navigator.pop(context); // Close bottom sheet
+//
+//                     Future.delayed(Duration(milliseconds: 300), () {
+//                       Navigator.pushReplacement(
+//                         context,
+//                         MaterialPageRoute(
+//                           builder: (_) => s_BookingHistory(
+//                             key: UniqueKey(),
+//                             initialTabIndex: 0,
+//                           ),
+//                         ),
+//                       );
+//                     });
+//
+//
+//                   }
+//                 }
+//                     : null,
+//                 style: ElevatedButton.styleFrom(
+//                   backgroundColor: Colors.redAccent,
+//                   padding: const EdgeInsets.symmetric(vertical: 14),
+//                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+//                 ),
+//                 child: const Text("Confirm Cancellation", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+//               ),
+//             ),
+//           ],
+//         ),
+//       ),
+//       )
+//     );
+//   }
+// }
+
+
+class CancelReasonBottomSheet extends StatefulWidget {
+  final String bookingId;
+  final String postId;
+  final String seekerId;
+  final String providerId;
+
+  const CancelReasonBottomSheet({
+    required this.bookingId,
+    required this.postId,
+    required this.seekerId,
+    required this.providerId,
+  });
+
+  @override
+  State<CancelReasonBottomSheet> createState() => _CancelReasonBottomSheetState();
+}
+
+class _CancelReasonBottomSheetState extends State<CancelReasonBottomSheet> {
+  String? _selectedReason;
+  bool _agreedToTerms = false;
+
+  final List<String> cancellationReasons = [
+    "Need to change delivery address",
+    "Booked the wrong service or package",
+    "No longer need the service",
+    "Found a more suitable service provider",
+    "Found cheaper elsewhere",
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+        initialChildSize: 0.85,
+        expand: false,
+        builder: (_, controller) => Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+          child: SingleChildScrollView(
+            controller: controller,
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(width: 50, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2))),
+                ),
+                const SizedBox(height: 20),
+                const Text("Select Cancellation Reason", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 15),
+
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.orange.shade100),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.announcement_outlined, color: Colors.orange.shade800, size: 20),
+                          const SizedBox(width: 6),
+                          Text(
+                            "Terms & Conditions",
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.orange.shade800,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      ExpandableTermsText(),
+                    ],
+                  ),
+                ),
+
+
+                const SizedBox(height: 20),
+                ...cancellationReasons.map((reason) {
+                  return RadioListTile<String>(
+                    title: Text(reason),
+                    value: reason,
+                    groupValue: _selectedReason,
+                    onChanged: (value) => setState(() => _selectedReason = value),
+                    activeColor: Colors.redAccent,
+                  );
+                }).toList(),
+
+                // // Show input box if 'Others' selected
+                // if (_selectedReason == "Others") ...[
+                //   Padding(
+                //     padding: const EdgeInsets.symmetric(horizontal: 10),
+                //     child: TextField(
+                //       onChanged: (value) => _selectedReason = value,  // replaces radio label with actual user input
+                //       decoration: InputDecoration(
+                //         labelText: "Please specify your reason",
+                //         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                //         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                //       ),
+                //     ),
+                //   ),
+                //   const SizedBox(height: 10),
+                // ],
+
+                RadioListTile<String>(
+                  value: "Others",
+                  groupValue: _selectedReason,
+                  onChanged: (value) => setState(() => _selectedReason = value),
+                  activeColor: Colors.redAccent,
+                  title: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text("Others"),
+                      if (_selectedReason == "Others") ...[
+                        const SizedBox(height: 8),
+                        TextField(
+                          onChanged: (value) => _selectedReason = value,
+                          decoration: InputDecoration(
+                            hintText: "Please specify your reason",
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+
+                CheckboxListTile(
+                  value: _agreedToTerms,
+                  onChanged: (val) => setState(() => _agreedToTerms = val!),
+                  title: const Text(
+                    "I agree to the cancellation terms and conditions as above stated.",
+                    style: TextStyle(fontSize: 13),
+                  ),
+                  controlAffinity: ListTileControlAffinity.leading,
+                ),
+
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: (_selectedReason != null && _agreedToTerms)
+                        ? () async {
+                      // Firestore: update cancellation reason + flag
+                      final doc = await FirebaseFirestore.instance
+                          .collection('bookings')
+                          .where('bookingId', isEqualTo: widget.bookingId)
+                          .limit(1)
+                          .get();
+
+                      if (doc.docs.isNotEmpty) {
+                        final bookingRef = doc.docs.first.reference;
+                        await bookingRef.update({
+                          'sCancelled': true,
+                          'cancellationReason': _selectedReason,
+                          'status': 'Pending Confirmation',
+                          'cancelledRequestedAt': FieldValue.serverTimestamp(),
+                        });
+
+                        await FirebaseFirestore.instance.collection('p_notifications').add({
+                          'providerId': widget.providerId,
+                          'bookingId': widget.bookingId,
+                          'postId': widget.postId,
+                          'seekerId': widget.seekerId,
+                          'title': 'Cancellation Requested (#${widget.bookingId})',
+                          'message': 'The service seeker has requested to cancel the booking. Please approve or reject the request.',
+                          'isRead': false,
+                          'createdAt': FieldValue.serverTimestamp(),
+                        });
+
+                        Navigator.pop(context, true); // ✅ return success to caller
+                      }
+                    }
+                        : null,
+
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.redAccent,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: const Text("Confirm Cancellation", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        )
+    );
+  }
+}
+
+class ExpandableTermsText extends StatefulWidget {
+  const ExpandableTermsText({Key? key}) : super(key: key);
+
+  @override
+  State<ExpandableTermsText> createState() => _ExpandableTermsTextState();
+}
+
+class _ExpandableTermsTextState extends State<ExpandableTermsText> {
+  bool _isExpanded = false;
+
+  final String shortText =
+      "⚠️ Cancellations are subject to provider approval and refunds are not guaranteed.\n"
+      "💬 Contact your provider via WhatsApp before confirming.\n"
+      "💵 RM1 transaction fee is non-refundable.";
+
+  final String fullText =
+      "⚠️ Cancellation Approval Is Subject to Provider’s Discretion\n\n"
+      "Submitting a cancellation request does not guarantee approval or refund. "
+      "The provider reserves full rights to approve or reject your request. "
+      "If rejected, the original booking will proceed as scheduled.\n\n"
+      "💬 Communication Is Recommended\n\n"
+      "Contact the provider via WhatsApp before submitting a cancellation request. "
+      "This ensures clarity on whether they will approve and whether a refund (partial/full) applies.\n\n"
+      "💵 Transaction Fee Notice\n\n"
+      "The RM1 platform transaction fee is strictly non-refundable.\n\n"
+      "📌 Summary:\n"
+      "• Provider have the right to approve and reject the booking service cancellation request.\n"
+      "• If they approve the cancellation, refunds are not guaranteed.\n"
+      "• If rejected, the booking will continues.\n"
+      "•Contact provider before submitting the cancellation request is highly recommended.\n"
+      "• RM1 fee is not refundable.\n\n"
+      "By submitting the cancellation request, you confirm that you understand and agree to these terms and conditions.";
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        AnimatedCrossFade(
+          crossFadeState: _isExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+          duration: const Duration(milliseconds: 300),
+          firstChild: Text(
+            shortText,
+            textAlign: TextAlign.justify,
+            style: TextStyle(
+              fontSize: 12.5,
+              color: Colors.orange.shade800,
+              height: 1.5,
+            ),
+          ),
+          secondChild: Text(
+            fullText,
+            textAlign: TextAlign.justify,
+            style: TextStyle(
+              fontSize: 12.5,
+              color: Colors.orange.shade800,
+              height: 1.5,
+            ),
+          ),
+        ),
+        Center(
+          child: IconButton(
+            onPressed: () => setState(() => _isExpanded = !_isExpanded),
+            icon: Icon(
+              _isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+              color: Colors.orange.shade800,
+              size: 24,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+

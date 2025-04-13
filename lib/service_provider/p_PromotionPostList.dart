@@ -12,6 +12,7 @@ class p_PromotionPostList extends StatefulWidget {
   final RangeValues initialPriceRange; // ✅ Add price range parameter
   final String initialSortOrder; // ✅ Sorting order
   final RangeValues initialDiscountRange;
+  final String? initialPostType;
 
   const p_PromotionPostList({
     Key? key,
@@ -21,6 +22,7 @@ class p_PromotionPostList extends StatefulWidget {
     this.initialPriceRange = const RangeValues(0, 1000), // ✅ Default price range
     this.initialSortOrder = "Newest", // ✅ Default sorting order
     this.initialDiscountRange = const RangeValues(0, 100), // ✅ Default price range
+    this.initialPostType = "No selected",
   }) : super(key: key);
 
   @override
@@ -41,7 +43,7 @@ class _p_PromotionPostListState extends State<p_PromotionPostList> {
   RangeValues selectedPriceRange = RangeValues(0, 1000); // ✅ Store price range
   String? selectedSortOrder; // Can be null when nothing is selected
   RangeValues selectedDiscountRange = RangeValues(0, 100); // ✅ Store price range
-
+  String? selectedPostType;
 
   @override
   void initState() {
@@ -52,6 +54,7 @@ class _p_PromotionPostListState extends State<p_PromotionPostList> {
     selectedPriceRange = widget.initialPriceRange; // ✅ Initialize price range
     selectedSortOrder = widget.initialSortOrder; // ✅ Initialize sorting
     selectedDiscountRange = widget.initialDiscountRange;
+    selectedPostType = widget.initialPostType;
 
     _searchController.text = searchQuery; // ✅ Set initial text
     _searchController.addListener(() {
@@ -110,7 +113,7 @@ class _p_PromotionPostListState extends State<p_PromotionPostList> {
     print("Price Range: $selectedPriceRange");
     print("Discount Range: $selectedDiscountRange");
     print("Sort Order: $selectedSortOrder");
-
+    print("Post Type: $selectedPostType");
 
     try {
       User? user = _auth.currentUser;
@@ -125,6 +128,11 @@ class _p_PromotionPostListState extends State<p_PromotionPostList> {
       Query query = _firestore
           .collection('promotion')
           .where('userId', isEqualTo: user.uid);
+
+      // ✅ Apply post type filter if selected
+      if (selectedPostType != "Not selected") {
+        query = query.where('status', isEqualTo: selectedPostType);
+      }
 
       // ✅ Apply Sorting Based on updatedAt Timestamp
       if (selectedSortOrder != null) {
@@ -191,6 +199,8 @@ class _p_PromotionPostListState extends State<p_PromotionPostList> {
             PPrice: postPrice,
             PAPrice: (data['PAPrice'] as num?)?.toInt() ?? 0,
             PDiscountPercentage: postDiscount,
+            isActive: data['isActive'] ?? true,
+            postId: doc.id,
             onEdit: () async {
               final result = await Navigator.push(
                 context,
@@ -206,6 +216,7 @@ class _p_PromotionPostListState extends State<p_PromotionPostList> {
             onDelete: () {
               _confirmP_Delete(doc.id);
             },
+            onToggleComplete: _loadPromotionPosts,
           ),
         );
       }
@@ -229,6 +240,7 @@ class _p_PromotionPostListState extends State<p_PromotionPostList> {
           initialPriceRange: selectedPriceRange,
           initialSortOrder: selectedSortOrder,
           initialDiscountRange: selectedDiscountRange,
+          initialPostType: selectedPostType,
         ),
       ),
     );
@@ -241,6 +253,7 @@ class _p_PromotionPostListState extends State<p_PromotionPostList> {
         selectedPriceRange = result["priceRange"];
         selectedSortOrder = result["sortOrder"];
         selectedDiscountRange = result["discountRange"];
+        selectedPostType = result["postType"];
 
         // ✅ Mark filters as applied
         hasFiltered = true;
@@ -250,6 +263,7 @@ class _p_PromotionPostListState extends State<p_PromotionPostList> {
             selectedCategories.isNotEmpty ||
             selectedStates.isNotEmpty ||
             selectedSortOrder != null ||
+            selectedPostType != null ||
             (selectedPriceRange.start > 0 || selectedPriceRange.end < 1000) ||
             (selectedDiscountRange.start > 0 || selectedDiscountRange.end < 100);
 
@@ -425,9 +439,12 @@ Widget buildPromotionCard({
   required List<String> imageUrls,
   required int PPrice,
   required int PAPrice,
+  required bool isActive,
+  required String postId,
   required double PDiscountPercentage,
   required VoidCallback onEdit,
   required VoidCallback onDelete,
+  required VoidCallback onToggleComplete,
 }) {
   return Container(
     width: 220, // Adjust width for better spacing in horizontal scroll
@@ -514,7 +531,7 @@ Widget buildPromotionCard({
                       icon: const Icon(Icons.more_horiz, size: 18, color: Colors.black), // ✅ Smaller icon
                       padding: EdgeInsets.zero, // ✅ No extra padding
                       constraints: const BoxConstraints(minWidth: 40, minHeight: 20), // ✅ Forces a smaller button
-                      onPressed: () {
+                      onPressed: () async {
                         final RenderBox button = context.findRenderObject() as RenderBox;
                         final RenderBox overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
                         final RelativeRect position = RelativeRect.fromRect(
@@ -525,43 +542,79 @@ Widget buildPromotionCard({
                           Offset.zero & overlay.size,
                         );
 
-                        showMenu(
+                        final result = await showMenu<String>(
                           context: context,
                           position: position,
-                          color: Colors.white, // ✅ White background for dropdown
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12), // ✅ More rounded edges
-                          ),
-                          elevation: 8, // ✅ Adds depth with a shadow
+                          color: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          elevation: 8,
                           items: [
-                            PopupMenuItem(
+                            const PopupMenuItem<String>(
                               value: 'edit',
-                              onTap: () {
-                                onEdit(); // ✅ Now the Edit button works
-                              },
                               child: Row(
-                                children: const [
-                                  Icon(Icons.edit, color: Color(0xFF464E65), size: 18), // ✅ Custom color & size
+                                children: [
+                                  Icon(Icons.edit, color: Color(0xFF464E65), size: 18),
                                   SizedBox(width: 14),
                                   Text('Edit', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
                                 ],
                               ),
                             ),
-                            PopupMenuItem(
+                            const PopupMenuItem<String>(
                               value: 'delete',
-                              onTap: () {
-                                onDelete(); // ✅ Now the Delete button works
-                              },
                               child: Row(
-                                children: const [
+                                children: [
                                   Icon(Icons.delete, color: Colors.red, size: 18),
                                   SizedBox(width: 14),
                                   Text('Delete', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
                                 ],
                               ),
                             ),
+                            PopupMenuItem<String>(
+                              value: 'toggle',
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    isActive ? Icons.visibility_off : Icons.visibility,
+                                    color: isActive ? Colors.red : Colors.green,
+                                    size: 18,
+                                  ),
+                                  const SizedBox(width: 14),
+                                  Text(
+                                    isActive ? 'Set Inactive' : 'Set Active',
+                                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ],
                         );
+
+                        if (result == 'edit') {
+                          onEdit();
+                        } else if (result == 'delete') {
+                          onDelete();
+                        } else if (result == 'toggle') {
+                          try {
+                            final newStatus = !isActive;
+
+                            await FirebaseFirestore.instance
+                                .collection('promotion')
+                                .doc(postId)
+                                .update({'isActive': newStatus});
+
+
+                            ReusableSnackBar(
+                              context,
+                              "Post is now ${newStatus ? 'Active' : 'Inactive'}",
+                              icon: Icons.check_circle,
+                              iconColor: Colors.green,
+                            );
+
+                            onToggleComplete(); // ✅ Refresh from parent!
+                          } catch (e) {
+                            print("Toggle failed: \$e");
+                          }
+                        }
                       },
                     ),
                   ),
@@ -593,7 +646,7 @@ Widget buildPromotionCard({
 
           // 📌 Price Display (Bottom-right)
           Positioned(
-            bottom: 8,
+            bottom: 7,
             right: 10,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.end,
@@ -603,7 +656,7 @@ Widget buildPromotionCard({
                   "RM $PAPrice",
                   style: const TextStyle(
                     color: Colors.redAccent,
-                    fontSize: 14,
+                    fontSize: 12,
                     decoration: TextDecoration.lineThrough, // Strikethrough effect
                   ),
                 ),
@@ -613,13 +666,36 @@ Widget buildPromotionCard({
                   "RM $PPrice",
                   style: const TextStyle(
                     color: Color(0xFF464E65),
-                    fontSize: 26,
+                    fontSize: 24,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
               ],
             ),
           ),
+
+          // ✅ Status chip at the bottom-left inside the card
+          Positioned(
+            bottom: 10,
+            left: 10,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: isActive ? Colors.green.shade100 : Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                isActive ? "Active" : "Inactive",
+                style: TextStyle(
+                  color: isActive ? Colors.green.shade800 : Colors.grey.shade700,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+
+
         ],
       ),
     ),

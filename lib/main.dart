@@ -3,6 +3,7 @@ import 'package:fix_mate/service_provider/p_BookingModule/p_BookingHistory.dart'
 import 'package:fix_mate/service_provider/p_HomePage.dart';
 import 'package:fix_mate/service_seeker/s_HomePage.dart';
 import 'package:fix_mate/service_seeker/s_profile.dart';
+import 'package:fix_mate/service_seeker/s_register.dart';
 import 'package:flutter_branch_sdk/flutter_branch_sdk.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -188,7 +189,7 @@ class _MyAppState extends State<MyApp> {
         primarySwatch: Colors.orange,
         fontFamily: 'Poppins',
       ),
-      home: s_BookingHistory(),
+      home: p_HomePage(),
     );
   }
 }

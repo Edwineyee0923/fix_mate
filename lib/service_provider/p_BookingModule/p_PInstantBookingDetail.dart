@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/services.dart';
 import 'package:fix_mate/reusable_widget/reusable_widget.dart';
+import 'package:fix_mate/services/RefundEvidenceUpload.dart';
 
 class p_PInstantBookingDetail extends StatefulWidget {
   final String bookingId;
@@ -100,6 +101,210 @@ class _p_PInstantBookingDetailState extends State<p_PInstantBookingDetail> {
       }
 
       setState(() => _rescheduleTime = picked);
+    }
+  }
+
+
+  Future<void> _handleCancelDecision(bool approve) async {
+    final query = await FirebaseFirestore.instance
+        .collection('bookings')
+        .where('bookingId', isEqualTo: widget.bookingId)
+        .limit(1)
+        .get();
+
+    if (query.docs.isEmpty) return;
+
+    final docRef = query.docs.first.reference;
+
+    if (approve) {
+      // 👇 Show confirmation dialog to choose refund or not
+      // final refundChoice = await showDialog<bool>(
+      //   context: context,
+      //   builder: (context) => AlertDialog(
+      //     title: const Text("Refund Decision"),
+      //     content: const Text("Do you want to refund the user?"),
+      //     actions: [
+      //       TextButton(
+      //         child: const Text("Don't Refund"),
+      //         onPressed: () => Navigator.pop(context, false),
+      //       ),
+      //       ElevatedButton(
+      //         child: const Text("Refund"),
+      //         onPressed: () => Navigator.pop(context, true),
+      //       ),
+      //     ],
+      //   ),
+      // );
+
+      final refundChoice = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          backgroundColor: Colors.white,
+          contentPadding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.attach_money, color: Colors.green, size: 60),
+              const SizedBox(height: 15),
+              const Text(
+                "Refund Decision",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                "Do you want to refund the user?",
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.black54,
+                ),
+              ),
+              const SizedBox(height: 25),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      style: OutlinedButton.styleFrom(
+                        backgroundColor: Colors.grey.shade200,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        side: const BorderSide(color: Colors.grey),
+                      ),
+                      child: const Text(
+                        "Don't Refund",
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      child: const Text(
+                        "Refund",
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              )
+            ],
+          ),
+        ),
+      );
+
+
+
+      if (refundChoice == true) {
+        // ✅ Await result from refund evidence bottom sheet
+        final result = await showModalBottomSheet<bool>(
+          context: context,
+          isScrollControlled: true,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          builder: (_) => RefundEvidenceUpload(
+            bookingRef: docRef,
+            seekerId: widget.seekerId,
+            bookingId: widget.bookingId,
+          ),
+        );
+
+
+        if (result == true && context.mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => p_BookingHistory(initialTabIndex: 3),
+            ),
+          );
+        }
+      } else {
+        await docRef.update({
+          'pCancelled': true,
+          'status': 'Cancelled',
+          'refundIssued': false,
+          'cancelledAt': FieldValue.serverTimestamp(),
+        });
+
+        await FirebaseFirestore.instance.collection('s_notifications').add({
+          'seekerId': widget.seekerId,
+          'providerId': bookingData?['serviceProviderId'],
+          'bookingId': widget.bookingId,
+          'postId': widget.postId,
+          'title': 'Cancellation Approved (No Refund) (#${widget.bookingId})',
+          'message': 'Your cancellation was approved by the provider. However, no refund will be given.',
+          'isRead': false,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+
+        ReusableSnackBar(
+          context,
+          "Booking cancelled without refund.",
+          icon: Icons.check_circle,
+          iconColor: Colors.green,
+        );
+
+        if (context.mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => p_BookingHistory(initialTabIndex: 3)),
+          );
+        }
+      }
+    } else {
+      await docRef.update({
+        'sCancelled': false,
+      });
+
+      await FirebaseFirestore.instance.collection('s_notifications').add({
+        'seekerId': widget.seekerId,
+        'providerId': bookingData?['serviceProviderId'],
+        'bookingId': widget.bookingId,
+        'postId': widget.postId,
+        'title': 'Cancellation Rejected (#${widget.bookingId})',
+        'message': 'The provider has rejected your cancellation request. Please proceed with the service as scheduled.',
+        'isRead': false,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      ReusableSnackBar(
+        context,
+        "Cancellation request rejected.",
+        icon: Icons.info_outline,
+        iconColor: Colors.orange,
+      );
+
+      if (context.mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => p_BookingHistory(initialTabIndex: 0)),
+        );
+      }
     }
   }
 
@@ -393,8 +598,8 @@ class _p_PInstantBookingDetailState extends State<p_PInstantBookingDetail> {
             Navigator.pop(context);
           },
         ),
-        title: const Text("Booking Summary Detail", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
-        titleSpacing: 25,
+        title: const Text("Booking Summary Detail", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+        titleSpacing: 5,
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -487,76 +692,263 @@ class _p_PInstantBookingDetailState extends State<p_PInstantBookingDetail> {
             ),
 
           const SizedBox(height: 20),
+          // if (!isRescheduling) ...[
+          // Opacity(
+          //   opacity: isRescheduling ? 0.5 : 1.0, // 🔸 Fade out when rescheduling
+          //   child: IgnorePointer(
+          //     ignoring: isRescheduling, // 🔒 Prevent interaction
+          //     child: Column(
+          //       crossAxisAlignment: CrossAxisAlignment.start,
+          //       children: [
+          //         Text("Choose Schedule to Confirm", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          //         CheckboxListTile(
+          //           title: Text(
+          //             "Preferred Schedule: ${_formatDate(bookingData!["preferredDate"])} at ${_formatTime(bookingData!["preferredTime"])}",
+          //             style: TextStyle(color: isRescheduling ? Colors.grey : Colors.black),
+          //           ),
+          //           value: selectedSchedule == 'preferred',
+          //           activeColor: isRescheduling ? Colors.grey : Colors.green,
+          //           onChanged: isRescheduling
+          //               ? null
+          //               : (val) {
+          //             setState(() => selectedSchedule = 'preferred');
+          //           },
+          //         ),
+          //         if (bookingData!["alternativeDate"] != null && bookingData!["alternativeTime"] != null)
+          //           CheckboxListTile(
+          //             title: Text(
+          //               "Alternative Schedule: ${_formatDate(bookingData!["alternativeDate"])} at ${_formatTime(bookingData!["alternativeTime"])}",
+          //               style: TextStyle(color: isRescheduling ? Colors.grey : Colors.black),
+          //             ),
+          //             value: selectedSchedule == 'alternative',
+          //             activeColor: isRescheduling ? Colors.grey : Colors.green,
+          //             onChanged: isRescheduling
+          //                 ? null
+          //                 : (val) {
+          //               setState(() => selectedSchedule = 'alternative');
+          //             },
+          //           ),
+          //       ],
+          //     ),
+          //   ),
+          // ),
+          // const SizedBox(height: 16),
+          // ElevatedButton.icon(
+          //   icon: isSubmitting ? CircularProgressIndicator(color: Colors.white) : Icon(Icons.check),
+          //   label: Text("Confirm Schedule"),
+          //   style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
+          //   onPressed: selectedSchedule == null || isSubmitting
+          //       ? null
+          //       : () async {
+          //     await _confirmSchedule();
+          //   },
+          // ),
+          // if (!isRescheduling) ...[
+          //   const SizedBox(height: 16),
+          //   Text(
+          //     "⚠ Both booking schedules are unavailable.\nTry to contact seeker via WhatsApp and reschedule below.",
+          //     style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+          //   ),
+          //   const SizedBox(height: 10),
+          //   ElevatedButton.icon(
+          //     icon: Icon(Icons.edit_calendar),
+          //     label: Text("Edit Schedule"),
+          //     style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+          //     onPressed: () {
+          //       setState(() {
+          //         isRescheduling = true;
+          //       });
+          //     },
+          //   ),
+          // ],
+          // ],
+
           if (!isRescheduling) ...[
-          Opacity(
-            opacity: isRescheduling ? 0.5 : 1.0, // 🔸 Fade out when rescheduling
-            child: IgnorePointer(
-              ignoring: isRescheduling, // 🔒 Prevent interaction
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text("Choose Schedule to Confirm", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                  CheckboxListTile(
-                    title: Text(
-                      "Preferred Schedule: ${_formatDate(bookingData!["preferredDate"])} at ${_formatTime(bookingData!["preferredTime"])}",
-                      style: TextStyle(color: isRescheduling ? Colors.grey : Colors.black),
+            if (bookingData?['sCancelled'] == true) ...[
+              Container(
+                margin: const EdgeInsets.symmetric(vertical: 20, horizontal: 5),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 4,
+                      spreadRadius: 2,
+                      offset: const Offset(0, 4),
                     ),
-                    value: selectedSchedule == 'preferred',
-                    activeColor: isRescheduling ? Colors.grey : Colors.green,
-                    onChanged: isRescheduling
-                        ? null
-                        : (val) {
-                      setState(() => selectedSchedule = 'preferred');
-                    },
-                  ),
-                  if (bookingData!["alternativeDate"] != null && bookingData!["alternativeTime"] != null)
-                    CheckboxListTile(
-                      title: Text(
-                        "Alternative Schedule: ${_formatDate(bookingData!["alternativeDate"])} at ${_formatTime(bookingData!["alternativeTime"])}",
-                        style: TextStyle(color: isRescheduling ? Colors.grey : Colors.black),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF464E65),
+                        borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(20),
+                          topRight: Radius.circular(20),
+                        ),
                       ),
-                      value: selectedSchedule == 'alternative',
-                      activeColor: isRescheduling ? Colors.grey : Colors.green,
-                      onChanged: isRescheduling
-                          ? null
-                          : (val) {
-                        setState(() => selectedSchedule = 'alternative');
-                      },
+                      child: const Text(
+                        "Cancellation Request",
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                      ),
                     ),
-                ],
+                    const SizedBox(height: 16),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            "Cancellation Reason from Seeker:",
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade100,
+                              border: Border.all(color: Colors.grey.shade300),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              bookingData!["cancellationReason"] ?? "No reason provided.",
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.black87,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Row(
+                        children: [
+
+                          // ❌ Reject Button - Outlined
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () => _handleCancelDecision(false),
+                              style: OutlinedButton.styleFrom(
+                                side: const BorderSide(color: Color(0xFF464E65), width: 2),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(50),
+                                ),
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                              ),
+                              child: const Text(
+                                "Reject",
+                                style: TextStyle(
+                                  color: Color(0xFF464E65),
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+
+                          // ✅ Approve Button - Filled
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () => _handleCancelDecision(true),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF464E65),
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(50),
+                                ),
+                              ),
+                              child: const Text(
+                                "Approve",
+                                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
+                  ],
+                ),
+              )
+            ] else ...[
+              Opacity(
+                opacity: isRescheduling ? 0.5 : 1.0,
+                child: IgnorePointer(
+                  ignoring: isRescheduling,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text("Choose Schedule to Confirm", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      CheckboxListTile(
+                        title: Text(
+                          "Preferred Schedule: ${_formatDate(bookingData!["preferredDate"])} at ${_formatTime(bookingData!["preferredTime"])}",
+                          style: TextStyle(color: isRescheduling ? Colors.grey : Colors.black),
+                        ),
+                        value: selectedSchedule == 'preferred',
+                        activeColor: isRescheduling ? Colors.grey : Colors.green,
+                        onChanged: isRescheduling ? null : (val) {
+                          setState(() => selectedSchedule = 'preferred');
+                        },
+                      ),
+                      if (bookingData!["alternativeDate"] != null && bookingData!["alternativeTime"] != null)
+                        CheckboxListTile(
+                          title: Text(
+                            "Alternative Schedule: ${_formatDate(bookingData!["alternativeDate"])} at ${_formatTime(bookingData!["alternativeTime"])}",
+                            style: TextStyle(color: isRescheduling ? Colors.grey : Colors.black),
+                          ),
+                          value: selectedSchedule == 'alternative',
+                          activeColor: isRescheduling ? Colors.grey : Colors.green,
+                          onChanged: isRescheduling ? null : (val) {
+                            setState(() => selectedSchedule = 'alternative');
+                          },
+                        ),
+                    ],
+                  ),
+                ),
               ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          ElevatedButton.icon(
-            icon: isSubmitting ? CircularProgressIndicator(color: Colors.white) : Icon(Icons.check),
-            label: Text("Confirm Schedule"),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
-            onPressed: selectedSchedule == null || isSubmitting
-                ? null
-                : () async {
-              await _confirmSchedule();
-            },
-          ),
-          if (!isRescheduling) ...[
-            const SizedBox(height: 16),
-            Text(
-              "⚠ Both booking schedules are unavailable.\nTry to contact seeker via WhatsApp and reschedule below.",
-              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 10),
-            ElevatedButton.icon(
-              icon: Icon(Icons.edit_calendar),
-              label: Text("Edit Schedule"),
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
-              onPressed: () {
-                setState(() {
-                  isRescheduling = true;
-                });
-              },
-            ),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                icon: isSubmitting ? CircularProgressIndicator(color: Colors.white) : Icon(Icons.check),
+                label: Text("Confirm Schedule"),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
+                onPressed: selectedSchedule == null || isSubmitting ? null : () async {
+                  await _confirmSchedule();
+                },
+              ),
+              const SizedBox(height: 16),
+              Text(
+                "⚠ Both booking schedules are unavailable.\nTry to contact seeker via WhatsApp and reschedule below.",
+                style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 10),
+              ElevatedButton.icon(
+                icon: Icon(Icons.edit_calendar),
+                label: Text("Edit Schedule"),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+                onPressed: () {
+                  setState(() {
+                    isRescheduling = true;
+                  });
+                },
+              ),
+            ]
           ],
-          ],
+
           if (isRescheduling && !rescheduleSent) ...[
             const SizedBox(height: 5),
             Text(

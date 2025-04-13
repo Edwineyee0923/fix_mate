@@ -181,7 +181,7 @@ class _p_AInstantBookingDetailState extends State<p_AInstantBookingDetail> {
             Navigator.pop(context);
           },
         ),
-        title: const Text("Booking Summary Detail", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+        title: const Text("Booking Summary Detail", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
         titleSpacing: 5,
       ),
       body: ListView(

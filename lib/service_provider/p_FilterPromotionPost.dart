@@ -10,6 +10,8 @@ class p_FilterPromotionPost extends StatefulWidget {
   final RangeValues initialPriceRange;
   final String? initialSortOrder; // ✅ Allow null values
   final RangeValues initialDiscountRange;
+  final String? initialPostType;
+
 
   const p_FilterPromotionPost({
     Key? key,
@@ -19,6 +21,7 @@ class p_FilterPromotionPost extends StatefulWidget {
     required this.initialPriceRange,
     this.initialSortOrder, // ✅ Now accepts null
     this.initialDiscountRange = const RangeValues(0, 100), // ✅ Default price range
+    this.initialPostType,
   }) : super(key: key);
 
   @override
@@ -39,7 +42,7 @@ class _p_FilterPromotionPostState extends State<p_FilterPromotionPost> {
   RangeValues _discountRange = RangeValues(0, 100);
   String? selectedSortOrder; // Can be null when nothing is selected
   RangeValues selectedDiscountRange = RangeValues(0, 100); // ✅ Store price range
-
+  String? selectedPostType = "No selected"; // ✅ Neutral starting state
 
   // final List<String> categories = [
   //   "Cleaning", "Electrical", "Plumbing", "Painting",
@@ -78,7 +81,7 @@ class _p_FilterPromotionPostState extends State<p_FilterPromotionPost> {
   }
 
 
-
+  final List<String> postType = ["No selected", "Active", "Inactive"];
   final List<String> sortOptions = [ "Random" ,"Newest", "Oldest"]; // ✅ Sorting options
 
   @override
@@ -91,6 +94,7 @@ class _p_FilterPromotionPostState extends State<p_FilterPromotionPost> {
     _priceRange = widget.initialPriceRange;
     _discountRange = widget.initialDiscountRange;
     selectedSortOrder = widget.initialSortOrder; // ✅ Initialize sorting order
+    selectedPostType = widget.initialPostType ?? "No selected"; // ✅ Fixed line
   }
 
   void _applyFilters() {
@@ -101,6 +105,7 @@ class _p_FilterPromotionPostState extends State<p_FilterPromotionPost> {
       "priceRange": _priceRange,
       "discountRange": _discountRange,
       "sortOrder": selectedSortOrder, // ✅ Pass sorting order
+      "postType": selectedPostType,
     });
   }
 
@@ -388,8 +393,56 @@ class _p_FilterPromotionPostState extends State<p_FilterPromotionPost> {
               onChanged: (value) => setState(() => selectedSortOrder = value ?? "Newest"),
             ),
 
+            const SizedBox(height: 10),
+            /// **Thick Grey Divider**
+            const Divider(
+              color: Colors.grey, // Grey color
+              thickness: 1.0, // Make it thicker
+              height: 10, // Adjust spacing above and below the divider
+            ),
 
+            const SizedBox(height: 10),
 
+            DropdownButtonFormField<String>(
+              value: selectedPostType,
+              decoration: InputDecoration(
+                labelText: "Post Type (Active/Inactive)",
+                labelStyle: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.black87,
+                ),
+                filled: true,
+                fillColor: Colors.white,
+                contentPadding: EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Color(0xFF464E65), width: 1.5),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Color(0xFF464E65), width: 1.5),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Color(0xFF464E65), width: 2),
+                ),
+              ),
+              dropdownColor: Colors.white,
+              icon: Icon(Icons.keyboard_arrow_down, color: Color(0xFF464E65)),
+              style: TextStyle(fontSize: 16, color: Colors.black87),
+              items: postType.map((type) {
+                return DropdownMenuItem(
+                  value: type,
+                  child: Text(type, style: TextStyle(fontSize: 16)),
+                );
+              }).toList(),
+              onChanged: (value) {
+                setState(() {
+                  selectedPostType = value ?? "No selected";
+                });
+              },
+            ),
             SizedBox(height: 20),
 
             dk_button(

@@ -38,6 +38,31 @@ class _s_SetBookingDetailsState extends State<s_SetBookingDetails> {
   DateTime? _alternativeDate;
   TimeOfDay? _alternativeTime;
 
+  @override
+  void initState() {
+    super.initState();
+    _fetchAndSetUserAddress();
+  }
+
+  Future<void> _fetchAndSetUserAddress() async {
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    QuerySnapshot snapshot = await FirebaseFirestore.instance
+        .collection('service_seekers')
+        .where('id', isEqualTo: user.uid)
+        .limit(1)
+        .get();
+
+    if (snapshot.docs.isNotEmpty) {
+      String? address = snapshot.docs.first['address'];
+      if (address != null && address.isNotEmpty) {
+        setState(() {
+          _locationController.text = address;
+        });
+      }
+    }
+  }
 
   /// 🗓 Formats the date to "29 Mac 2025"
   String _formatDate(DateTime date) {
@@ -224,6 +249,7 @@ class _s_SetBookingDetailsState extends State<s_SetBookingDetails> {
       String? seekerId;
       String? seekerEmail;
       String? seekerPhone;
+      String? seekerAddress;
       QuerySnapshot querySnapshot = await FirebaseFirestore.instance
           .collection('service_seekers')
           .where('id', isEqualTo: user.uid) // Match by UID instead of email
@@ -234,6 +260,7 @@ class _s_SetBookingDetailsState extends State<s_SetBookingDetails> {
         seekerId = querySnapshot.docs.first['id'];
         seekerEmail = querySnapshot.docs.first['email']; // Fetch email
         seekerPhone = querySnapshot.docs.first['phone'];
+        seekerAddress = querySnapshot.docs.first['address'];
       }
 
       if (seekerId == null) {
@@ -307,7 +334,7 @@ class _s_SetBookingDetailsState extends State<s_SetBookingDetails> {
           "Set Booking Details",
           style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
         ),
-        titleSpacing: 25,
+        titleSpacing: 5,
       ),
       body: SingleChildScrollView(
         padding: EdgeInsets.all(16),

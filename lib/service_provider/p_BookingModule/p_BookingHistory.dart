@@ -1,4 +1,5 @@
 import 'package:fix_mate/service_provider/p_BookingModule/p_AInstantBookingDetail.dart';
+import 'package:fix_mate/service_provider/p_BookingModule/p_CCInstantBookingDetail.dart';
 import 'package:fix_mate/service_provider/p_BookingModule/p_CInstantBookingDetail.dart';
 import 'package:fix_mate/service_provider/p_BookingModule/p_Notification.dart';
 import 'package:fix_mate/service_provider/p_BookingModule/p_PInstantBookingDetail.dart';
@@ -23,6 +24,7 @@ class _p_BookingHistoryState extends State<p_BookingHistory> {
   String? providerId;
   int _selectedIndex = 0;
   final List<String> statuses = ["Pending Confirmation", "Active", "Completed", "Cancelled"];
+  final ScrollController _tabScrollController = ScrollController();
 
 
   @override
@@ -31,13 +33,23 @@ class _p_BookingHistoryState extends State<p_BookingHistory> {
     final user = FirebaseAuth.instance.currentUser;
     providerId = user?.uid;
     _selectedIndex = widget.initialTabIndex;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Estimate the width of each button + padding (adjust if needed)
+      final buttonWidth = 120.0;
+      _tabScrollController.animateTo(
+        _selectedIndex * buttonWidth,
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeOut,
+      );
+    });
+
   }
 
   // Function to format timestamps
   String formatTimestamp(Timestamp? timestamp) {
     if (timestamp == null) return "N/A";
-    DateTime dateTime = timestamp.toDate().add(const Duration(hours: 8));
-
+    // DateTime dateTime = timestamp.toDate().add(const Duration(hours: 8));
+    DateTime dateTime = timestamp.toDate();
     List<String> monthNames = ["Jan", "Feb", "Mac", "Apr", "Mei", "Jun", "Jul", "Ogo", "Sep", "Okt", "Nov", "Dis"];
 
     String hour = (dateTime.hour % 12 == 0 ? 12 : dateTime.hour % 12).toString(); // No padLeft here
@@ -50,19 +62,64 @@ class _p_BookingHistoryState extends State<p_BookingHistory> {
 
   Color getStatusColor(Map<String, dynamic> data, bool isActive) {
     if (data['status'] == "Completed") return Colors.green;
+
+    // Cancelled - Refunded
+    if (data['status'] == "Cancelled" && (data['refundIssued'] ?? false) == true) {
+      return Colors.redAccent; // or another color indicating success
+    }
+
+    // Cancelled - Rejected (no refund)
+    if (data['status'] == "Cancelled" && (data['refundIssued'] ?? false) == false) {
+      return Colors.redAccent;
+    }
+
+    // Cancellation Requested
+    if (data['status'] == "Pending Confirmation" &&
+        (data['sCancelled'] ?? false) == true &&
+        (data['isRescheduling'] ?? false) == false) {
+      return Colors.redAccent;
+    }
+
     if (data['isRescheduling'] == true) return Colors.amber;
+
     if (data['pCompleted'] == true && data['status'] != "Completed") return Colors.orange;
+
     if (isActive) return Colors.green;
+
     return const Color(0xFFfb9798); // Fallback
   }
 
+
   String getStatusLabel(Map<String, dynamic> data, bool isActive) {
     if (data['status'] == "Completed") return "Service Completed";
+
+    // Cancelled - Refunded
+    if (data['status'] == "Cancelled" && (data['refundIssued'] ?? false) == true) {
+      return "Cancelled - Refunded";
+    }
+
+    // Cancelled - No refund
+    if (data['status'] == "Cancelled" && (data['refundIssued'] ?? false) == false) {
+      return "Cancelled - Refund Rejected";
+    }
+
+    // Cancellation Requested
+    if (data['status'] == "Pending Confirmation" &&
+        (data['sCancelled'] ?? false) == true &&
+        (data['isRescheduling'] ?? false) == false) {
+      return "Cancellation Requested";
+    }
+
     if (data['isRescheduling'] == true) return "Booking Rescheduled";
+
     if (data['pCompleted'] == true && data['status'] != "Completed") return "Awaiting Service Completion";
+
     if (isActive) return "Service Schedule Confirmed";
+
     return "New Order Assigned";
   }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -74,7 +131,7 @@ class _p_BookingHistoryState extends State<p_BookingHistory> {
           backgroundColor: const Color(0xFF464E65),
           title: const Text(
             "Booking History",
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
           ),
           titleSpacing: 25,
           automaticallyImplyLeading: false,
@@ -125,6 +182,7 @@ class _p_BookingHistoryState extends State<p_BookingHistory> {
         body: Column(
           children: [
             SingleChildScrollView(
+              controller: _tabScrollController,
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.only(left: 12, right: 12, top: 15, bottom: 0),
               child: Row(
@@ -135,7 +193,16 @@ class _p_BookingHistoryState extends State<p_BookingHistory> {
                     child: ElevatedButton(
                       onPressed: () {
                         setState(() => _selectedIndex = index);
+
+                        // 👇 Auto-scroll to bring selected tab into view
+                        final buttonWidth = 120.0; // Approximate width of each button
+                        _tabScrollController.animateTo(
+                          index * buttonWidth,
+                          duration: const Duration(milliseconds: 400),
+                          curve: Curves.easeOut,
+                        );
                       },
+
                       style: ElevatedButton.styleFrom(
                         backgroundColor: isSelected ? Color(0xFF464E65) : Colors.grey[300],
                         foregroundColor: isSelected ? Colors.white : Colors.black45,
@@ -172,7 +239,7 @@ class _p_BookingHistoryState extends State<p_BookingHistory> {
                       final data = doc.data() as Map<String, dynamic>;
                       final isActive = data['status'] == 'Active';
                       final isCompleted = data['status'] == 'Completed';
-                      final isNew = doc['status'] == 'Pending Confirmation';
+                      final isCancelled = data['status'] == 'Cancelled';
                       final isInstantBooking = data['bookingId'].toString().startsWith('BKIB');
                       return GestureDetector(
                         onTap: () async {
@@ -211,6 +278,12 @@ class _p_BookingHistoryState extends State<p_BookingHistory> {
                                 )
                                 : isActive
                                     ? p_AInstantBookingDetail(
+                                  bookingId: data['bookingId'],
+                                  postId: data['postId'],
+                                  seekerId: data['serviceSeekerId'],
+                                )
+                                : isCancelled
+                                    ? p_CCInstantBookingDetail(
                                   bookingId: data['bookingId'],
                                   postId: data['postId'],
                                   seekerId: data['serviceSeekerId'],
@@ -269,6 +342,7 @@ class _p_BookingHistoryState extends State<p_BookingHistory> {
                                 Text("Service Title: ${doc['IPTitle']}"),
                                 Text("Booking ID: ${doc['bookingId']}"),
                                 Text("Status: ${doc['status']}", style: const TextStyle(color: Colors.red)),
+                                Text("Service Category: ${data['serviceCategory']}"),
                                 Text("Price: RM ${doc['price']}",),
                                 Text("Location: ${doc['location']}",),
                                 if (data['isRescheduling'] == true && data['rescheduleSent'] == false) ...[
@@ -279,6 +353,10 @@ class _p_BookingHistoryState extends State<p_BookingHistory> {
                                   Text("⚠ Awaiting confirmation from seeker", style: TextStyle(color: Colors.orange, fontWeight: FontWeight.w500)),
                                 ] else if (isActive || data['status'] == "Completed") ...[
                                   Text("Final Schedule: ${data['finalDate']}, ${data['finalTime']}"),
+                                ] else if (data['status'] == 'Cancelled')...[
+                                  Text(
+                                  "Cancelled At: ${formatTimestamp(data['cancelledAt'])}",
+                                  ),
                                 ]
                                 else ...[
                                   Text("Preferred Schedule: ${data['preferredDate']}, ${data['preferredTime']}"),
@@ -289,6 +367,8 @@ class _p_BookingHistoryState extends State<p_BookingHistory> {
                                   Text(
                                     "Completed At: ${formatTimestamp(data['completedAt'])}",
                                   ),
+
+
                                 Text(
                                   "Type: ${isInstantBooking ? "Instant Booking" : "Promotion"}",
                                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
@@ -316,60 +396,6 @@ class _p_BookingHistoryState extends State<p_BookingHistory> {
                                     ],
                                   ),
 
-
-
-                                  // Row(
-                                  //   mainAxisAlignment: MainAxisAlignment.end,
-                                  //   children: [
-                                  //     ElevatedButton.icon(
-                                  //       icon: const Icon(Icons.check_circle_outline),
-                                  //       label: const Text("Mark as Completed"),
-                                  //       style: ElevatedButton.styleFrom(backgroundColor: Colors.blueGrey),
-                                  //       onPressed: () {
-                                  //         showDialog(
-                                  //           context: context,
-                                  //           builder: (context) => ConfirmationDialog(
-                                  //             title: "Mark as Completed?",
-                                  //             message:
-                                  //             "Please proceed to the booking summary page to upload at least 3 photos as evidence before marking this service as completed.",
-                                  //             confirmText: "Proceed",
-                                  //             cancelText: "Cancel",
-                                  //             icon: Icons.check_circle,
-                                  //             iconColor: Colors.green,
-                                  //             confirmButtonColor: Colors.green,
-                                  //             cancelButtonColor: Colors.grey.shade300,
-                                  //             onConfirm: () async {
-                                  //               Navigator.pop(context); // Close dialog
-                                  //
-                                  //               await doc.reference.update({
-                                  //                 'pCompleted': true,
-                                  //                 'sCompleted': false,
-                                  //               });
-                                  //
-                                  //               await FirebaseFirestore.instance.collection('s_notifications').add({
-                                  //                 'seekerId': data['serviceSeekerId'],
-                                  //                 'providerId': providerId,
-                                  //                 'bookingId': data['bookingId'],
-                                  //                 'postId': data['postId'],
-                                  //                 'title': 'Service Completed',
-                                  //                 'message': 'Provider marked the service as completed. Please confirm or report issue.',
-                                  //                 'isRead': false,
-                                  //                 'createdAt': FieldValue.serverTimestamp(),
-                                  //               });
-                                  //
-                                  //               ReusableSnackBar(
-                                  //                 context,
-                                  //                 "Service marked as completed!",
-                                  //                 icon: Icons.check_circle,
-                                  //                 iconColor: Colors.green,
-                                  //               );
-                                  //             },
-                                  //           ),
-                                  //         );
-                                  //       },
-                                  //     ),
-                                  //   ],
-                                  // ),
                                 ] else if (data['pCompleted'] == true && data['status'] != 'Completed') ...[
                                   const Padding(
                                     padding: EdgeInsets.only(top: 6),

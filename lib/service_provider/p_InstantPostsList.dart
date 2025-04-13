@@ -179,6 +179,10 @@ class _p_InstantPostListState extends State<p_InstantPostList> {
                 : [],
             // IPPrice: (data['IPPrice'] as num?)?.toInt() ?? 0,
             IPPrice: postPrice,
+
+            isActive: data['isActive'] ?? true,
+            postId: doc.id,
+
             onEdit: () async {
               final result = await Navigator.push(
                 context,
@@ -194,6 +198,8 @@ class _p_InstantPostListState extends State<p_InstantPostList> {
             onDelete: () {
               _confirmDelete(doc.id);
             },
+
+            onToggleComplete: _loadInstantPosts,
           ),
         );
       }
@@ -405,8 +411,11 @@ Widget buildInstantBookingCard({
   required String ServiceCategory,
   required List<String> imageUrls,
   required int IPPrice,
+  required bool isActive,
+  required String postId,
   required VoidCallback onEdit,
   required VoidCallback onDelete,
+  required VoidCallback onToggleComplete,
 }) {
   return Container(
     width: 220, // Adjust width for better spacing in horizontal scroll
@@ -493,7 +502,7 @@ Widget buildInstantBookingCard({
                       icon: const Icon(Icons.more_horiz, size: 18, color: Colors.black), // ✅ Smaller icon
                       padding: EdgeInsets.zero, // ✅ No extra padding
                       constraints: const BoxConstraints(minWidth: 40, minHeight: 20), // ✅ Forces a smaller button
-                      onPressed: () {
+                      onPressed: () async {
                         final RenderBox button = context.findRenderObject() as RenderBox;
                         final RenderBox overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
                         final RelativeRect position = RelativeRect.fromRect(
@@ -504,43 +513,78 @@ Widget buildInstantBookingCard({
                           Offset.zero & overlay.size,
                         );
 
-                        showMenu(
+                        final result = await showMenu<String>(
                           context: context,
                           position: position,
-                          color: Colors.white, // ✅ White background for dropdown
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12), // ✅ More rounded edges
-                          ),
-                          elevation: 8, // ✅ Adds depth with a shadow
+                          color: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          elevation: 8,
                           items: [
-                            PopupMenuItem(
+                            const PopupMenuItem<String>(
                               value: 'edit',
-                              onTap: () {
-                                onEdit(); // ✅ Now the Edit button works
-                              },
                               child: Row(
-                                children: const [
-                                  Icon(Icons.edit, color: Color(0xFF464E65), size: 18), // ✅ Custom color & size
+                                children: [
+                                  Icon(Icons.edit, color: Color(0xFF464E65), size: 18),
                                   SizedBox(width: 14),
                                   Text('Edit', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
                                 ],
                               ),
                             ),
-                            PopupMenuItem(
+                            const PopupMenuItem<String>(
                               value: 'delete',
-                              onTap: () {
-                                onDelete(); // ✅ Now the Delete button works
-                              },
                               child: Row(
-                                children: const [
+                                children: [
                                   Icon(Icons.delete, color: Colors.red, size: 18),
                                   SizedBox(width: 14),
                                   Text('Delete', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
                                 ],
                               ),
                             ),
+                            PopupMenuItem<String>(
+                              value: 'toggle',
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    isActive ? Icons.visibility_off : Icons.visibility,
+                                    color: isActive ? Colors.red : Colors.green,
+                                    size: 18,
+                                  ),
+                                  const SizedBox(width: 14),
+                                  Text(
+                                    isActive ? 'Set Inactive' : 'Set Active',
+                                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ],
                         );
+
+                        if (result == 'edit') {
+                          onEdit();
+                        } else if (result == 'delete') {
+                          onDelete();
+                        } else if (result == 'toggle') {
+                          try {
+                            final newStatus = !isActive;
+
+                            await FirebaseFirestore.instance
+                                .collection('instant_booking')
+                                .doc(postId)
+                                .update({'isActive': newStatus});
+
+                            ReusableSnackBar(
+                              context,
+                              "Post is now ${newStatus ? 'Active' : 'Inactive'}",
+                              icon: Icons.check_circle,
+                              iconColor: Colors.green,
+                            );
+
+                            onToggleComplete(); // ✅ Refresh from parent!
+                          } catch (e) {
+                            print("Toggle failed: \$e");
+                          }
+                        }
                       },
                     ),
                   ),
@@ -552,14 +596,36 @@ Widget buildInstantBookingCard({
 
           // 📌 Price (Bottom-right of the card)
           Positioned(
-            bottom: 8,
+            bottom: 7,
             right: 10,
             child: Text(
               "RM $IPPrice", // Directly use the stored integer
               style: const TextStyle(
                 color: Color(0xFF464E65),
-                fontSize: 26,
+                fontSize: 24,
                 fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+
+
+          // 👇 Status label at bottom-right of the card (beside price)
+          Positioned(
+            bottom: 10,
+            left: 10,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: isActive ? Colors.green.shade100 : Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                isActive ? "Active" : "Inactive",
+                style: TextStyle(
+                  color: isActive ? Colors.green.shade800 : Colors.grey.shade700,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ),
