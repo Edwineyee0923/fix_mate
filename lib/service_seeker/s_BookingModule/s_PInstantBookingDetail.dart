@@ -382,7 +382,7 @@ class _s_PInstantBookingDetailState extends State<s_PInstantBookingDetail> {
                           'bookingId': widget.bookingId,
                           'postId': widget.postId,
                           'seekerId': bookingData?['serviceSeekerId'],
-                          'title': 'Reschedule Rejected (#${widget.bookingId})',
+                          'title': 'Reschedule Rejected\n(#${widget.bookingId})',
                           'message': 'Seeker rejected the new schedule. Please coordinate with them to reset.',
                           'isRead': false,
                           'createdAt': FieldValue.serverTimestamp(),
@@ -426,7 +426,7 @@ class _s_PInstantBookingDetailState extends State<s_PInstantBookingDetail> {
                         'bookingId': widget.bookingId,
                         'postId': widget.postId,
                         'seekerId': bookingData?['serviceSeekerId'],
-                        'title': 'Reschedule Approved (#${widget.bookingId})',
+                        'title': 'Reschedule Approved\n(#${widget.bookingId})',
                         'message': 'Seeker confirmed the new schedule.',
                         'isRead': false,
                         'createdAt': FieldValue.serverTimestamp(),
@@ -461,12 +461,13 @@ class _s_PInstantBookingDetailState extends State<s_PInstantBookingDetail> {
 
             // 🔚 Default: show the preferred + alternative date/time
           else ...[
-              Text("Preferred Date: ${_formatDate(parseCustomDate(bookingData!["preferredDate"]))}"),
-              Text("Preferred Time: ${_formatTime(parseTimeOfDay(bookingData!["preferredTime"]))}"),
-              if (bookingData!["alternativeDate"] != null)
-                Text("Alternative Date: ${_formatDate(parseCustomDate(bookingData!["alternativeDate"]))}"),
-              if (bookingData!["alternativeTime"] != null)
-                Text("Alternative Time: ${_formatTime(parseTimeOfDay(bookingData!["alternativeTime"]))}"),
+              Text(
+                "Preferred Schedule: ${_formatDate(parseCustomDate(bookingData!["preferredDate"]))}, ${_formatTime(parseTimeOfDay(bookingData!["preferredTime"]))}",
+              ),
+              if (bookingData!["alternativeDate"] != null && bookingData!["alternativeTime"] != null)
+                Text(
+                  "Alternative Schedule: ${_formatDate(parseCustomDate(bookingData!["alternativeDate"]))}, ${_formatTime(parseTimeOfDay(bookingData!["alternativeTime"]))}",
+                ),
             ],
 
           GestureDetector(
@@ -1208,7 +1209,7 @@ class _CancelReasonBottomSheetState extends State<CancelReasonBottomSheet> {
                           'bookingId': widget.bookingId,
                           'postId': widget.postId,
                           'seekerId': widget.seekerId,
-                          'title': 'Cancellation Requested (#${widget.bookingId})',
+                          'title': 'Cancellation Requested\n(#${widget.bookingId})',
                           'message': 'The service seeker has requested to cancel the booking. Please approve or reject the request.',
                           'isRead': false,
                           'createdAt': FieldValue.serverTimestamp(),

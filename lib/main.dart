@@ -129,8 +129,8 @@ class _MyAppState extends State<MyApp> {
           'bookingId': bookingId,
           'postId': postId,
           'seekerId': serviceSeekerId,
-          'title': 'New Order Assigned (#$bookingId)',
-          'message': 'Please review and confirm the booking schedule. If unavailable, kindly coordinate with the service seeker via WhatsApp to reschedule.',
+          'title': 'New Order Assigned\n(#$bookingId)',
+          'message': 'Please review and confirm the booking schedule. If both schedule is unavailable, kindly coordinate with the service seeker via WhatsApp to reschedule.',
           'isRead': false,
           'createdAt': FieldValue.serverTimestamp(),
         });
@@ -189,7 +189,7 @@ class _MyAppState extends State<MyApp> {
         primarySwatch: Colors.orange,
         fontFamily: 'Poppins',
       ),
-      home: p_HomePage(),
+      home: s_HomePage(),
     );
   }
 }

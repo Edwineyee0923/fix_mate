@@ -94,7 +94,7 @@ class _p_AInstantBookingDetailState extends State<p_AInstantBookingDetail> {
           'providerId': instantPostData!['userId'],
           'bookingId': widget.bookingId,
           'postId': widget.postId,
-          'title': 'Service Delivered (#${widget.bookingId})',
+          'title': 'Service Delivered\n(#${widget.bookingId})',
           'message': 'Provider marked the service as completed. Please check the service evidence uploaded and complete the service.',
           'isRead': false,
           'createdAt': FieldValue.serverTimestamp(),

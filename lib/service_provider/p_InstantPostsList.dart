@@ -1,5 +1,6 @@
 import 'package:fix_mate/service_provider/p_EditInstantPost.dart';
 import 'package:fix_mate/service_provider/p_FilterInstantPost.dart';
+import 'package:fix_mate/service_provider/p_ServiceDirectoryModule/p_InstantPostInfo.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -11,6 +12,7 @@ class p_InstantPostList extends StatefulWidget {
   final List<String> initialStates; // ✅ Ensure it's a List<String>
   final RangeValues initialPriceRange; // ✅ Add price range parameter
   final String initialSortOrder; // ✅ Sorting order
+  final String? initialPostType;
 
   const p_InstantPostList({
     Key? key,
@@ -19,6 +21,7 @@ class p_InstantPostList extends StatefulWidget {
     this.initialStates = const [], // ✅ Default to empty list
     this.initialPriceRange = const RangeValues(0, 1000), // ✅ Default price range
     this.initialSortOrder = "Newest", // ✅ Default sorting order
+    this.initialPostType = "No selected",
   }) : super(key: key);
 
   @override
@@ -38,15 +41,19 @@ class _p_InstantPostListState extends State<p_InstantPostList> {
   List<String> selectedStates = []; // ✅ Declare selectedStates
   RangeValues selectedPriceRange = RangeValues(0, 1000); // ✅ Store price range
   String? selectedSortOrder; // Can be null when nothing is selected
+  String? selectedPostType;
 
   @override
   void initState() {
     super.initState();
     searchQuery = widget.initialSearchQuery;
-    selectedCategories = List<String>.from(widget.initialCategories); // ✅ Ensure list format
-    selectedStates = List<String>.from(widget.initialStates); // ✅ Ensure list format
+    selectedCategories =
+    List<String>.from(widget.initialCategories); // ✅ Ensure list format
+    selectedStates =
+    List<String>.from(widget.initialStates); // ✅ Ensure list format
     selectedPriceRange = widget.initialPriceRange; // ✅ Initialize price range
     selectedSortOrder = widget.initialSortOrder; // ✅ Initialize sorting
+    selectedPostType = widget.initialPostType;
 
     _searchController.text = searchQuery; // ✅ Set initial text
     _searchController.addListener(() {
@@ -95,6 +102,20 @@ class _p_InstantPostListState extends State<p_InstantPostList> {
     );
   }
 
+  Future<bool> _hasBookingReference(String postId) async {
+    try {
+      QuerySnapshot snapshot = await FirebaseFirestore.instance
+          .collection('bookings')
+          .where('postId', isEqualTo: postId)
+          .limit(1)
+          .get();
+
+      return snapshot.docs.isNotEmpty;
+    } catch (e) {
+      print("Error checking booking reference: $e");
+      return false;
+    }
+  }
 
   Future<void> _loadInstantPosts() async {
     print("🔍 Loading Instant Posts...");
@@ -120,6 +141,13 @@ class _p_InstantPostListState extends State<p_InstantPostList> {
           .collection('instant_booking')
           .where('userId', isEqualTo: user.uid);
 
+      // ✅ Apply post type filter if selected
+      if (selectedPostType == "Active") {
+        query = query.where('isActive', isEqualTo: true);
+      } else if (selectedPostType == "Inactive") {
+        query = query.where('isActive', isEqualTo: false);
+      }
+
       // ✅ Apply Sorting Based on updatedAt Timestamp
       if (selectedSortOrder != null) {
         if (selectedSortOrder == "Newest") {
@@ -129,11 +157,10 @@ class _p_InstantPostListState extends State<p_InstantPostList> {
         }
       }
 
-
       // ✅ Execute the query only once
       QuerySnapshot snapshot = await query.get();
 
-// ✅ Shuffle documents for random order if needed
+      // ✅ Shuffle documents for random order if needed
       List<QueryDocumentSnapshot> docs = snapshot.docs.toList();
       if (selectedSortOrder == "Random") {
         docs.shuffle();
@@ -159,22 +186,28 @@ class _p_InstantPostListState extends State<p_InstantPostList> {
                 .any((state) => selectedStates.contains(state));
 
         bool matchesSearch = searchQuery.isEmpty ||
-            (data['IPTitle'] as String).toLowerCase().contains(searchQuery.toLowerCase());
+            (data['IPTitle'] as String).toLowerCase().contains(
+                searchQuery.toLowerCase());
 
         int postPrice = (data['IPPrice'] as num?)?.toInt() ?? 0;
-        bool matchesPrice = postPrice >= selectedPriceRange.start && postPrice <= selectedPriceRange.end;
+        bool matchesPrice = postPrice >= selectedPriceRange.start &&
+            postPrice <= selectedPriceRange.end;
 
         // ✅ Exclude posts that do NOT match the filters
-        if (!matchesCategory || !matchesState || !matchesSearch || !matchesPrice) {
+        if (!matchesCategory || !matchesState || !matchesSearch ||
+            !matchesPrice) {
           continue;
         }
 
         instantPosts.add(
           buildInstantBookingCard(
             IPTitle: data['IPTitle'] ?? "Unknown",
-            ServiceStates: (data['ServiceStates'] as List<dynamic>?)?.join(", ") ?? "Unknown",
-            ServiceCategory: (data['ServiceCategory'] as List<dynamic>?)?.join(", ") ?? "No services listed",
-            imageUrls: (data['IPImage'] != null && data['IPImage'] is List<dynamic>)
+            ServiceStates: (data['ServiceStates'] as List<dynamic>?)?.join(
+                ", ") ?? "Unknown",
+            ServiceCategory: (data['ServiceCategory'] as List<dynamic>?)?.join(
+                ", ") ?? "No services listed",
+            imageUrls: (data['IPImage'] != null &&
+                data['IPImage'] is List<dynamic>)
                 ? List<String>.from(data['IPImage'])
                 : [],
             // IPPrice: (data['IPPrice'] as num?)?.toInt() ?? 0,
@@ -199,6 +232,15 @@ class _p_InstantPostListState extends State<p_InstantPostList> {
               _confirmDelete(doc.id);
             },
 
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => p_InstantPostInfo(docId: doc.id),
+                ),
+              );
+            },
+
             onToggleComplete: _loadInstantPosts,
           ),
         );
@@ -216,23 +258,27 @@ class _p_InstantPostListState extends State<p_InstantPostList> {
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => p_FilterInstantPost(
-          initialSearchQuery: searchQuery,
-          initialCategories: selectedCategories,
-          initialStates: selectedStates,
-          initialPriceRange: selectedPriceRange,
-          initialSortOrder: selectedSortOrder,
-        ),
+        builder: (context) =>
+            p_FilterInstantPost(
+              initialSearchQuery: searchQuery,
+              initialCategories: selectedCategories,
+              initialStates: selectedStates,
+              initialPriceRange: selectedPriceRange,
+              initialSortOrder: selectedSortOrder,
+              initialPostType: selectedPostType,
+            ),
       ),
     );
 
     if (result != null) {
       setState(() {
         searchQuery = result['searchQuery'] ?? "";
-        selectedCategories = List<String>.from(result['selectedCategories'] ?? []);
+        selectedCategories =
+        List<String>.from(result['selectedCategories'] ?? []);
         selectedStates = List<String>.from(result['selectedStates'] ?? []);
         selectedPriceRange = result["priceRange"];
         selectedSortOrder = result["sortOrder"];
+        selectedPostType = result["postType"];
 
         // ✅ Mark filters as applied
         hasFiltered = true;
@@ -257,35 +303,78 @@ class _p_InstantPostListState extends State<p_InstantPostList> {
     }
   }
 
-  void _confirmDelete(String docId) {
-    showDialog(
-      context: context,
-      builder: (context) => ConfirmationDialog(
-        title: "Delete Post",
-        message: "Are you sure you want to delete this post?",
-        confirmText: "Delete",
-        cancelText: "Cancel",
-        onConfirm: () async {
-          await _deletePost(docId); // ✅ Call delete function first
+  // void _confirmDelete(String docId) {
+  //   showDialog(
+  //     context: context,
+  //     builder: (context) => ConfirmationDialog(
+  //       title: "Delete Post",
+  //       message: "Are you sure you want to delete this post?",
+  //       confirmText: "Delete",
+  //       cancelText: "Cancel",
+  //       onConfirm: () async {
+  //         await _deletePost(docId); // ✅ Call delete function first
+  //
+  //         // ✅ Show success message using ReusableSnackBar
+  //         ReusableSnackBar(
+  //           context,
+  //           "Instant Booking post successfully deleted!",
+  //           icon: Icons.check_circle,
+  //           iconColor: Colors.green,
+  //         );
+  //
+  //         // ✅ Navigate back to the original screen after deleting
+  //         Navigator.popUntil(context, (route) => route.isFirst);
+  //       },
+  //       icon: Icons.delete,
+  //       iconColor: Colors.red,
+  //       confirmButtonColor: Colors.red,
+  //       cancelButtonColor: Colors.grey.shade300,
+  //     ),
+  //   );
+  // }
 
-          // ✅ Show success message using ReusableSnackBar
-          ReusableSnackBar(
-            context,
-            "Instant Booking post successfully deleted!",
-            icon: Icons.check_circle,
-            iconColor: Colors.green,
-          );
+  void _confirmDelete(String docId) async {
+    final hasBooking = await _hasBookingReference(docId);
 
-          // ✅ Navigate back to the original screen after deleting
-          Navigator.popUntil(context, (route) => route.isFirst);
-        },
-        icon: Icons.delete,
-        iconColor: Colors.red,
-        confirmButtonColor: Colors.red,
-        cancelButtonColor: Colors.grey.shade300,
-      ),
-    );
+
+    if (hasBooking) {
+      showFloatingMessage(
+        context,
+        "Deletion blocked!\n This post has a booking record.",
+        icon: Icons.warning_amber_rounded,
+      );
+    } else {
+      showDialog(
+        context: context,
+        builder: (context) =>
+            ConfirmationDialog(
+              title: "Delete Post",
+              message: "Are you sure you want to delete this post?",
+              confirmText: "Delete",
+              cancelText: "Cancel",
+              onConfirm: () async {
+                await _deletePost(docId); // ✅ Call delete function first
+
+                // ✅ Show success message using ReusableSnackBar
+                ReusableSnackBar(
+                  context,
+                  "Instant Booking post successfully deleted!",
+                  icon: Icons.check_circle,
+                  iconColor: Colors.green,
+                );
+
+                // ✅ Navigate back to the original screen after deleting
+                Navigator.pop(context, true);
+              },
+              icon: Icons.delete,
+              iconColor: Colors.red,
+              confirmButtonColor: Colors.red,
+              cancelButtonColor: Colors.grey.shade300,
+            ),
+      );
+    }
   }
+
 
   Future<void> _deletePost(String docId) async {
     try {
@@ -416,8 +505,12 @@ Widget buildInstantBookingCard({
   required VoidCallback onEdit,
   required VoidCallback onDelete,
   required VoidCallback onToggleComplete,
+  required VoidCallback onTap,
+
 }) {
-  return Container(
+  return GestureDetector(
+    onTap: onTap,
+    child: Container(
     width: 220, // Adjust width for better spacing in horizontal scroll
     margin: const EdgeInsets.symmetric(horizontal: 8),
     child: Card(
@@ -632,5 +725,6 @@ Widget buildInstantBookingCard({
         ],
       ),
     ),
+  ),
   );
 }

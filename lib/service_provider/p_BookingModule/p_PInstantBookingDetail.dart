@@ -256,7 +256,7 @@ class _p_PInstantBookingDetailState extends State<p_PInstantBookingDetail> {
           'providerId': bookingData?['serviceProviderId'],
           'bookingId': widget.bookingId,
           'postId': widget.postId,
-          'title': 'Cancellation Approved (No Refund) (#${widget.bookingId})',
+          'title': 'Cancellation Approved (No Refund)\n(#${widget.bookingId})',
           'message': 'Your cancellation was approved by the provider. However, no refund will be given.',
           'isRead': false,
           'createdAt': FieldValue.serverTimestamp(),
@@ -286,7 +286,7 @@ class _p_PInstantBookingDetailState extends State<p_PInstantBookingDetail> {
         'providerId': bookingData?['serviceProviderId'],
         'bookingId': widget.bookingId,
         'postId': widget.postId,
-        'title': 'Cancellation Rejected (#${widget.bookingId})',
+        'title': 'Cancellation Rejected\n(#${widget.bookingId})',
         'message': 'The provider has rejected your cancellation request. Please proceed with the service as scheduled.',
         'isRead': false,
         'createdAt': FieldValue.serverTimestamp(),
@@ -407,7 +407,7 @@ class _p_PInstantBookingDetailState extends State<p_PInstantBookingDetail> {
           'providerId': bookingData?['serviceProviderId'],
           'bookingId': widget.bookingId,
           'postId': widget.postId,
-          'title': 'Booking Rescheduled (#${widget.bookingId})',
+          'title': 'Booking Rescheduled\n(#${widget.bookingId})',
           'message': 'Your provider has rescheduled a custom time for your service. Please review and confirm with the schedule.',
           'isRead': false,
           'createdAt': FieldValue.serverTimestamp(),
@@ -553,7 +553,7 @@ class _p_PInstantBookingDetailState extends State<p_PInstantBookingDetail> {
           'providerId': bookingData?['serviceProviderId'],
           'bookingId': widget.bookingId,
           'postId': widget.postId,
-          'title': 'Service Confirmed (#${widget.bookingId})',
+          'title': 'Service Confirmed\n(#${widget.bookingId})',
           'message': 'Your service booking has been confirmed by the provider.',
           'isRead': false,
           'createdAt': FieldValue.serverTimestamp(),
@@ -598,7 +598,7 @@ class _p_PInstantBookingDetailState extends State<p_PInstantBookingDetail> {
             Navigator.pop(context);
           },
         ),
-        title: const Text("Booking Summary Detail", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+        title: const Text("Booking Summary Detail", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
         titleSpacing: 5,
       ),
       body: ListView(
@@ -651,11 +651,13 @@ class _p_PInstantBookingDetailState extends State<p_PInstantBookingDetail> {
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
           ] else ...[
-            Text("Preferred Date: ${_formatDate(bookingData!["preferredDate"])}"),
-            Text("Preferred Time: ${_formatTime(bookingData!["preferredTime"])}"),
+            Text(
+              "Preferred Schedule: ${_formatDate(bookingData!["preferredDate"])}, ${_formatTime(bookingData!["preferredTime"])}",
+            ),
             if (bookingData!["alternativeDate"] != null && bookingData!["alternativeTime"] != null) ...[
-              Text("Alternative Date: ${_formatDate(bookingData!["alternativeDate"])}"),
-              Text("Alternative Time: ${_formatTime(bookingData!["alternativeTime"])}"),
+              Text(
+                "Alternative Schedule: ${_formatDate(bookingData!["alternativeDate"])}, ${_formatTime(bookingData!["alternativeTime"])}",
+              ),
             ],
           ],
           GestureDetector(

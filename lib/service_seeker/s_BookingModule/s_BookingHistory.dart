@@ -3,7 +3,6 @@ import 'package:fix_mate/service_seeker/s_BookingModule/s_CCInstantBookingDetail
 import 'package:fix_mate/service_seeker/s_BookingModule/s_CInstantBookingDetail.dart';
 import 'package:fix_mate/service_seeker/s_BookingModule/s_Notification.dart';
 import 'package:fix_mate/service_seeker/s_BookingModule/s_PInstantBookingDetail.dart';
-import 'package:fix_mate/service_seeker/s_BookingModule/s_SetBookingDetails.dart';
 import 'package:fix_mate/service_seeker/s_InstantPostInfo.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -150,35 +149,51 @@ class _s_BookingHistoryState extends State<s_BookingHistory> {
                     .snapshots(),
                 builder: (context, snapshot) {
                   int unreadCount = snapshot.data?.docs.length ?? 0;
-                  return IconButton(
-                    icon: Stack(
-                      children: [
-                        const Icon(Icons.notifications, color: Colors.white), // ✅ White icon
-                        if (unreadCount > 0)
-                          Positioned(
-                            right: 0,
-                            child: Container(
-                              padding: const EdgeInsets.all(3),
-                              decoration: BoxDecoration(
-                                color: Colors.red,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
-                              child: Text(
-                                '$unreadCount',
-                                style: const TextStyle(color: Colors.white, fontSize: 12),
-                                textAlign: TextAlign.center,
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 10), // 👈 Shift icon slightly left
+                    child: IconButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => s_Notification()),
+                        );
+                      },
+                      icon: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          const Icon(Icons.notifications_none_rounded, size: 28, color: Colors.white),
+                          if (unreadCount > 0)
+                            Positioned(
+                              top: -4,
+                              right: -4,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.redAccent,
+                                  borderRadius: BorderRadius.circular(12),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.2),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
+                                child: Text(
+                                  '$unreadCount',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
                               ),
                             ),
-                          ),
-                      ],
+                        ],
+                      ),
                     ),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => s_Notification()),
-                      );
-                    },
                   );
                 },
               ),
@@ -563,20 +578,32 @@ class _s_BookingHistoryState extends State<s_BookingHistory> {
                                           child: Column(
                                             crossAxisAlignment: CrossAxisAlignment.start,
                                             children: [
-                                              Container(
-                                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                                decoration: BoxDecoration(
-                                                  color: getStatusColor(data),
-                                                  borderRadius: BorderRadius.circular(8),
-                                                ),
-                                                child: Text(
-                                                  getStatusLabel(data),
-                                                  style: const TextStyle(
-                                                    color: Colors.white,
-                                                    fontWeight: FontWeight.w500,
-                                                    fontSize: 14,
+                                              Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Container(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                                    decoration: BoxDecoration(
+                                                      color: getStatusColor(data),
+                                                      borderRadius: BorderRadius.circular(8),
+                                                    ),
+                                                    child: Text(
+                                                      getStatusLabel(data),
+                                                      style: const TextStyle(
+                                                        color: Colors.white,
+                                                        fontWeight: FontWeight.w500,
+                                                        fontSize: 14,
+                                                      ),
+                                                    ),
                                                   ),
-                                                ),
+                                                  if (hasUnread) ...[
+                                                    const SizedBox(width: 6),
+                                                    const CircleAvatar(
+                                                      radius: 5,
+                                                      backgroundColor: Colors.red,
+                                                    ),
+                                                  ],
+                                                ],
                                               ),
                                               const SizedBox(height: 5),
                                               Text("Service Title: ${doc['IPTitle']}", style: const TextStyle(fontSize: 14)),
@@ -627,56 +654,105 @@ class _s_BookingHistoryState extends State<s_BookingHistory> {
                                                     const SizedBox(width: 6),
                                                     const Expanded(
                                                       child: Text(
-                                                        "You may tap on the card to view the service evidence photos before click on “Service Received”.",
+                                                        "You may tap on the card to view the service evidence photos before clicking on “Service Received”.",
                                                         style: TextStyle(color: Colors.green, fontSize: 12, fontWeight: FontWeight.w500),
                                                       ),
                                                     ),
                                                   ],
                                                 ),
                                                 const SizedBox(height: 10),
-                                                Row(
-                                                  mainAxisAlignment: MainAxisAlignment.end,
-                                                  children: [
-                                                    ElevatedButton(
-                                                      onPressed: () async {
-                                                        final docRef = FirebaseFirestore.instance.collection('bookings').doc(doc.id);
+                                                Align(
+                                                  alignment: Alignment.centerRight,
+                                                  child: ElevatedButton(
+                                                    // onPressed: () async {
+                                                    //   final docRef = FirebaseFirestore.instance.collection('bookings').doc(doc.id);
+                                                    //
+                                                    //   await docRef.update({'sCompleted': true});
+                                                    //
+                                                    //   final updatedDoc = await docRef.get();
+                                                    //   final updatedData = updatedDoc.data();
+                                                    //
+                                                    //   if (updatedData?['pCompleted'] == true) {
+                                                    //     await docRef.update({
+                                                    //       'status': 'Completed',
+                                                    //       'completedAt': FieldValue.serverTimestamp(),
+                                                    //     });
+                                                    //
+                                                    //     ReusableSnackBar(
+                                                    //       context,
+                                                    //       "Booking marked as completed!",
+                                                    //       icon: Icons.check_circle,
+                                                    //       iconColor: Colors.green,
+                                                    //     );
+                                                    //
+                                                    //     await Future.delayed(const Duration(milliseconds: 400));
+                                                    //     Navigator.push(
+                                                    //       context,
+                                                    //       MaterialPageRoute(
+                                                    //         builder: (_) => s_BookingHistory(initialTabIndex: 2),
+                                                    //       ),
+                                                    //     );
+                                                    //   }
+                                                    // },
+                                                    onPressed: () async {
+                                                      final docRef = FirebaseFirestore.instance.collection('bookings').doc(doc.id);
 
-                                                        await docRef.update({'sCompleted': true});
+                                                      await docRef.update({'sCompleted': true});
 
-                                                        final updatedDoc = await docRef.get();
-                                                        final updatedData = updatedDoc.data();
+                                                      final updatedDoc = await docRef.get();
+                                                      final updatedData = updatedDoc.data();
 
-                                                        if (updatedData?['pCompleted'] == true) {
-                                                          await docRef.update({
-                                                            'status': 'Completed',
-                                                            'completedAt': FieldValue.serverTimestamp(),
-                                                          });
+                                                      if (updatedData?['pCompleted'] == true) {
+                                                        await docRef.update({
+                                                          'status': 'Completed',
+                                                          'completedAt': FieldValue.serverTimestamp(),
+                                                        });
 
+                                                        // ✅ Update the tab and scroll
+                                                        setState(() {
+                                                          _selectedIndex = 2;
+                                                        });
+
+                                                        final buttonWidth = 120.0;
+                                                        _tabScrollController.animateTo(
+                                                          2 * buttonWidth,
+                                                          duration: const Duration(milliseconds: 400),
+                                                          curve: Curves.easeOut,
+                                                        );
+
+                                                        // ✅ Show snackbar
+                                                        WidgetsBinding.instance.addPostFrameCallback((_) {
                                                           ReusableSnackBar(
                                                             context,
                                                             "Booking marked as completed!",
                                                             icon: Icons.check_circle,
                                                             iconColor: Colors.green,
                                                           );
+                                                        });
+                                                      }
+                                                    },
 
-                                                          await Future.delayed(const Duration(milliseconds: 400));
-                                                          Navigator.push(
-                                                            context,
-                                                            MaterialPageRoute(
-                                                              builder: (_) => s_BookingHistory(initialTabIndex: 2),
-                                                            ),
-                                                          );
-                                                        }
-                                                      },
-                                                      style: ElevatedButton.styleFrom(
-                                                        backgroundColor: Colors.green,
-                                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+
+                                                    style: ElevatedButton.styleFrom(
+                                                      backgroundColor: const Color(0xFFfb9798),
+                                                      padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 11),
+                                                      shape: RoundedRectangleBorder(
+                                                        borderRadius: BorderRadius.circular(30),
                                                       ),
-                                                      child: const Text("Service Received"),
+                                                      elevation: 4,
                                                     ),
-                                                  ],
+                                                    child: const Text(
+                                                      "Service Received",
+                                                      style: TextStyle(
+                                                        fontSize: 16,
+                                                        fontWeight: FontWeight.w700,
+                                                        color: Colors.white,
+                                                      ),
+                                                    ),
+                                                  ),
                                                 ),
                                               ],
+
 
                                               if (data['status'] == 'Completed') ...[
                                                 const SizedBox(height: 12),
@@ -715,17 +791,42 @@ class _s_BookingHistoryState extends State<s_BookingHistory> {
                                                   mainAxisAlignment: MainAxisAlignment.end,
                                                   children: [
                                                     ElevatedButton(
-                                                      onPressed: () {
+                                                      // onPressed: () {
+                                                      //   Navigator.push(
+                                                      //     context,
+                                                      //     MaterialPageRoute(
+                                                      //       builder: (context) => s_InstantPostInfo(
+                                                      //         docId: data['postId'], // 🔁 Get postId directly from the booking data
+                                                      //       ),
+                                                      //     ),
+                                                      //   );
+                                                      // },
+                                                      onPressed: () async {
+                                                        final postDoc = await FirebaseFirestore.instance
+                                                            .collection('instant_booking')
+                                                            .doc(data['postId'])
+                                                            .get();
+
+                                                        if (!postDoc.exists || postDoc.data()?['isActive'] != true) {
+                                                          showFloatingMessage(
+                                                            context,
+                                                            "This item is not available for now.",
+                                                            icon: Icons.warning_amber_rounded,
+                                                          );
+                                                          return;
+                                                        }
+
+                                                        // ✅ Post is active → Navigate
                                                         Navigator.push(
                                                           context,
                                                           MaterialPageRoute(
                                                             builder: (context) => s_InstantPostInfo(
-                                                              docId: data['postId'], // 🔁 Get postId directly from the booking data
+                                                              docId: data['postId'],
                                                             ),
                                                           ),
                                                         );
-
                                                       },
+
                                                       style: ElevatedButton.styleFrom(
                                                         backgroundColor: const Color(0xFFfb9798),
                                                         padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 11),
@@ -751,21 +852,9 @@ class _s_BookingHistoryState extends State<s_BookingHistory> {
                                         ),
                                       ],
                                     ),
-                                    if (hasUnread)
-                                      const Positioned(
-                                        top: 8,
-                                        right: 8,
-                                        child: CircleAvatar(
-                                          radius: 5,
-                                          backgroundColor: Colors.red,
-                                        ),
-                                      ),
                                   ],
                                 ),
                               )
-
-
-
                           );
                         },
                       );

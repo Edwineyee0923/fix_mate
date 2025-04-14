@@ -119,7 +119,20 @@ class _p_BookingHistoryState extends State<p_BookingHistory> {
     return "New Order Assigned";
   }
 
+  Future<List<String>> fetchPostImages(String postId) async {
+    final postSnap = await FirebaseFirestore.instance
+        .collection('instant_booking')
+        .doc(postId)
+        .get();
 
+    if (postSnap.exists) {
+      final data = postSnap.data();
+      if (data != null && data['IPImage'] is List) {
+        return List<String>.from(data['IPImage']);
+      }
+    }
+    return [];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -145,35 +158,52 @@ class _p_BookingHistoryState extends State<p_BookingHistory> {
                     .snapshots(),
                 builder: (context, snapshot) {
                   int unreadCount = snapshot.data?.docs.length ?? 0;
-                  return IconButton(
-                    icon: Stack(
-                      children: [
-                        const Icon(Icons.notifications, color: Colors.white), // ✅ White icon
-                        if (unreadCount > 0)
-                          Positioned(
-                            right: 0,
-                            child: Container(
-                              padding: const EdgeInsets.all(3),
-                              decoration: BoxDecoration(
-                                color: Colors.red,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
-                              child: Text(
-                                '$unreadCount',
-                                style: const TextStyle(color: Colors.white, fontSize: 12),
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 10),
+                    child: IconButton(
                     onPressed: () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(builder: (_) => const p_Notification()),
                       );
                     },
+                    icon: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        const Icon(Icons.notifications_none_rounded, size: 28, color: Colors.white),
+
+                        if (unreadCount > 0)
+                          Positioned(
+                            top: -4,
+                            right: -4,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.redAccent,
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.2),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
+                              child: Text(
+                                '$unreadCount',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
                   );
                 },
               ),
@@ -245,9 +275,6 @@ class _p_BookingHistoryState extends State<p_BookingHistory> {
                         onTap: () async {
                           final bookingId = doc['bookingId'];
 
-                          if (!(doc['providerHasSeen'] ?? true)) {
-                            await doc.reference.update({'providerHasSeen': true});
-                          }
 
                           // Mark booking as seen
                           if (!(doc['providerHasSeen'] ?? true)) {
@@ -300,10 +327,160 @@ class _p_BookingHistoryState extends State<p_BookingHistory> {
                           }
 
                         },
+                        // child: Card(
+                        //   margin: const EdgeInsets.symmetric(vertical: 10),
+                        //   elevation: 3,
+                        //   child: Padding(
+                        //     padding: const EdgeInsets.all(16),
+                        //     child: Column(
+                        //       crossAxisAlignment: CrossAxisAlignment.start,
+                        //       children: [
+                        //         Row(
+                        //           children: [
+                        //             Container(
+                        //               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        //               decoration: BoxDecoration(
+                        //                 color: getStatusColor(data, isActive),
+                        //                 borderRadius: BorderRadius.circular(8),
+                        //               ),
+                        //               child: Text(
+                        //                 getStatusLabel(data, isActive),
+                        //                 style: const TextStyle(
+                        //                   color: Colors.white,
+                        //                   fontWeight: FontWeight.w500,
+                        //                   fontSize: 14,
+                        //                 ),
+                        //               ),
+                        //             ),
+                        //             if (!(doc['providerHasSeen'] ?? true))
+                        //               Container(
+                        //                 margin: const EdgeInsets.only(left: 5),
+                        //                 width: 10,
+                        //                 height: 10,
+                        //                 decoration: const BoxDecoration(
+                        //                   color: Colors.red,
+                        //                   shape: BoxShape.circle,
+                        //                 ),
+                        //               ),
+                        //           ],
+                        //         ),
+                        //
+                        //         const SizedBox(height: 5),
+                        //         Text("Service Title: ${doc['IPTitle']}"),
+                        //         Text("Booking ID: ${doc['bookingId']}"),
+                        //         Text("Status: ${doc['status']}", style: const TextStyle(color: Colors.red)),
+                        //         Text("Service Category: ${data['serviceCategory']}"),
+                        //         Text("Price: RM ${doc['price']}",),
+                        //         Text("Location: ${doc['location']}",),
+                        //         if (data['isRescheduling'] == true && data['rescheduleSent'] == false) ...[
+                        //           Text("Final Schedule (Rescheduled): ${data['finalDate']}, ${data['finalTime']}"),
+                        //           Text("❌ Reschedule rejected by seeker. Please suggest a new schedule based on your WhatsApp discussion.", style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.w500)),
+                        //         ] else if (data['isRescheduling'] == true && data['rescheduleSent'] == true) ...[
+                        //           Text("Final Schedule (Rescheduled): ${data['finalDate']}, ${data['finalTime']}"),
+                        //           Text("⚠ Awaiting confirmation from seeker", style: TextStyle(color: Colors.orange, fontWeight: FontWeight.w500)),
+                        //         ] else if (isActive || data['status'] == "Completed") ...[
+                        //           Text("Final Schedule: ${data['finalDate']}, ${data['finalTime']}"),
+                        //         ] else if (data['status'] == 'Cancelled')...[
+                        //           Text(
+                        //           "Cancelled At: ${formatTimestamp(data['cancelledAt'])}",
+                        //           ),
+                        //         ]
+                        //         else ...[
+                        //           Text("Preferred Schedule: ${data['preferredDate']}, ${data['preferredTime']}"),
+                        //           if (data['alternativeDate'] != null && data['alternativeTime'] != null)
+                        //             Text("Alternative Schedule: ${data['alternativeDate']}, ${data['alternativeTime']}"),
+                        //         ],
+                        //         if (data['status'] == 'Completed' && data['completedAt'] != null)
+                        //           Text(
+                        //             "Completed At: ${formatTimestamp(data['completedAt'])}",
+                        //           ),
+                        //
+                        //
+                        //         Text(
+                        //           "Type: ${isInstantBooking ? "Instant Booking" : "Promotion"}",
+                        //           style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        //         ),
+                        //
+                        //
+                        //         const SizedBox(height: 8),
+                        //
+                        //         if (data['status'] == 'Active' && data['pCompleted'] != true) ...[
+                        //           Row(
+                        //             crossAxisAlignment: CrossAxisAlignment.center,
+                        //             children: [
+                        //               Icon(Icons.warning_amber_rounded, color: Colors.orange.shade600, size: 18),
+                        //               const SizedBox(width: 6),
+                        //               Expanded(
+                        //                 child: Text(
+                        //                   "Don’t forget to upload at least 3 service photos before clicking “Service Completed” — tap the card to begin!",
+                        //                   style: TextStyle(
+                        //                     color: Colors.orange.shade700,
+                        //                     fontSize: 12.5,
+                        //                     fontWeight: FontWeight.w500,
+                        //                   ),
+                        //                 ),
+                        //               ),
+                        //             ],
+                        //           ),
+                        //
+                        //         ] else if (data['pCompleted'] == true && data['status'] != 'Completed') ...[
+                        //           const Padding(
+                        //             padding: EdgeInsets.only(top: 6),
+                        //             child: Text(
+                        //               "✅ You have marked this service as completed.\nWaiting for seeker confirmation or auto-complete after three days.",
+                        //               style: TextStyle(color: Colors.green, fontStyle: FontStyle.italic),
+                        //             ),
+                        //           ),
+                        //         ],
+                        //       ],
+                        //     ),
+                        //   ),
+                        // ),
                         child: Card(
                           margin: const EdgeInsets.symmetric(vertical: 10),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                           elevation: 3,
-                          child: Padding(
+                          child: Stack(
+                              children: [
+                              Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                          FutureBuilder<List<String>>(
+                            future: fetchPostImages(data['postId']),
+                            builder: (context, snapshot) {
+                              if (snapshot.connectionState == ConnectionState.waiting) {
+                                return const SizedBox(
+                                  height: 160,
+                                  child: Center(child: CircularProgressIndicator()),
+                                );
+                              }
+
+                              final imageUrls = snapshot.data ?? [];
+
+                              if (imageUrls.isEmpty) {
+                                return const SizedBox(); // No image
+                              }
+
+                              return ClipRRect(
+                                borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
+                                child: Image.network(
+                                  imageUrls.first,
+                                  height: 160,
+                                  width: double.infinity,
+                                  fit: BoxFit.cover,
+                                  loadingBuilder: (context, child, loadingProgress) {
+                                    if (loadingProgress == null) return child;
+                                    return const Center(child: CircularProgressIndicator());
+                                  },
+                                  errorBuilder: (context, error, stackTrace) =>
+                                  const Center(child: Icon(Icons.broken_image)),
+                                ),
+                              );
+                            },
+                          ),
+
+
+                          Padding(
                             padding: const EdgeInsets.all(16),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -344,7 +521,7 @@ class _p_BookingHistoryState extends State<p_BookingHistory> {
                                 Text("Status: ${doc['status']}", style: const TextStyle(color: Colors.red)),
                                 Text("Service Category: ${data['serviceCategory']}"),
                                 Text("Price: RM ${doc['price']}",),
-                                Text("Location: ${doc['location']}",),
+                                // Text("Location: ${doc['location']}",),
                                 if (data['isRescheduling'] == true && data['rescheduleSent'] == false) ...[
                                   Text("Final Schedule (Rescheduled): ${data['finalDate']}, ${data['finalTime']}"),
                                   Text("❌ Reschedule rejected by seeker. Please suggest a new schedule based on your WhatsApp discussion.", style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.w500)),
@@ -355,14 +532,14 @@ class _p_BookingHistoryState extends State<p_BookingHistory> {
                                   Text("Final Schedule: ${data['finalDate']}, ${data['finalTime']}"),
                                 ] else if (data['status'] == 'Cancelled')...[
                                   Text(
-                                  "Cancelled At: ${formatTimestamp(data['cancelledAt'])}",
+                                    "Cancelled At: ${formatTimestamp(data['cancelledAt'])}",
                                   ),
                                 ]
                                 else ...[
-                                  Text("Preferred Schedule: ${data['preferredDate']}, ${data['preferredTime']}"),
-                                  if (data['alternativeDate'] != null && data['alternativeTime'] != null)
-                                    Text("Alternative Schedule: ${data['alternativeDate']}, ${data['alternativeTime']}"),
-                                ],
+                                    Text("Preferred Schedule: ${data['preferredDate']}, ${data['preferredTime']}"),
+                                    if (data['alternativeDate'] != null && data['alternativeTime'] != null)
+                                      Text("Alternative Schedule: ${data['alternativeDate']}, ${data['alternativeTime']}"),
+                                  ],
                                 if (data['status'] == 'Completed' && data['completedAt'] != null)
                                   Text(
                                     "Completed At: ${formatTimestamp(data['completedAt'])}",
@@ -371,12 +548,10 @@ class _p_BookingHistoryState extends State<p_BookingHistory> {
 
                                 Text(
                                   "Type: ${isInstantBooking ? "Instant Booking" : "Promotion"}",
-                                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                                 ),
 
-
                                 const SizedBox(height: 8),
-
                                 if (data['status'] == 'Active' && data['pCompleted'] != true) ...[
                                   Row(
                                     crossAxisAlignment: CrossAxisAlignment.center,
@@ -397,6 +572,19 @@ class _p_BookingHistoryState extends State<p_BookingHistory> {
                                   ),
 
                                 ] else if (data['pCompleted'] == true && data['status'] != 'Completed') ...[
+                                  Row(
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    children: [
+                                      const Icon(Icons.hourglass_bottom, color: Colors.green, size: 18),
+                                      const SizedBox(width: 6),
+                                      const Expanded(
+                                        child: Text(
+                                          "You have marked this service as completed.\nWaiting for seeker confirmation or auto-complete after three days.",
+                                          style: TextStyle(color: Colors.green, fontSize: 12, fontWeight: FontWeight.w500),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                   const Padding(
                                     padding: EdgeInsets.only(top: 6),
                                     child: Text(
@@ -408,7 +596,11 @@ class _p_BookingHistoryState extends State<p_BookingHistory> {
                               ],
                             ),
                           ),
+                          ],
                         ),
+                      ],
+                      ),
+                      )
                       );
                     }).toList(),
                   );

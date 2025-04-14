@@ -774,9 +774,7 @@ void ReusableSnackBar(BuildContext context, String message, {
   );
 }
 
-
 class CustomRadioGroup extends StatefulWidget {
-  // final String labelText;
   final List<String> options;
   final Function(List<String>) onSelected;
   final List<String>? selectedValues;
@@ -785,20 +783,19 @@ class CustomRadioGroup extends StatefulWidget {
   final bool isRequired;
   final String requiredMessage;
   final Function(String?)? onValidation;
+  final bool isSingleSelect; // ✅ NEW FLAG
 
   const CustomRadioGroup({
     Key? key,
-    // required this.labelText,
     required this.options,
     required this.onSelected,
     this.selectedValues,
-    // this.activeColor = const Color(0xFF464E65),
-    // this.inactiveColor = const Color(0xFF464E65),
     this.activeColor,
     this.inactiveColor,
     this.isRequired = false,
     this.requiredMessage = "This field is required",
     this.onValidation,
+    this.isSingleSelect = false, // ✅ default to multi-select
   }) : super(key: key);
 
   @override
@@ -833,21 +830,11 @@ class _CustomRadioGroupState extends State<CustomRadioGroup> {
   Widget build(BuildContext context) {
     Color activeColor = widget.activeColor ?? const Color(0xFF464E65);
     Color inactiveColor = widget.inactiveColor ?? const Color(0xFF464E65);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Label Text
-        // Text(
-        //   widget.labelText,
-        //   style: const TextStyle(
-        //     fontSize: 16,
-        //     fontWeight: FontWeight.w600,
-        //     color: Colors.black,
-        //   ),
-        // ),
         const SizedBox(height: 5),
-
-        // Options with Wrapping Layout
         Wrap(
           spacing: 10,
           runSpacing: 10,
@@ -857,24 +844,28 @@ class _CustomRadioGroupState extends State<CustomRadioGroup> {
             return GestureDetector(
               onTap: () {
                 setState(() {
-                  if (isSelected) {
-                    _selected.remove(option);
+                  if (widget.isSingleSelect) {
+                    // ✅ Only allow one selection at a time
+                    _selected = [option];
                   } else {
-                    _selected.add(option);
+                    if (isSelected) {
+                      _selected.remove(option);
+                    } else {
+                      _selected.add(option);
+                    }
                   }
                 });
+
                 widget.onSelected(_selected);
                 _validateSelection();
               },
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
                 decoration: BoxDecoration(
-                  // color: isSelected ? widget.activeColor : Colors.white,
-                  color: isSelected ? (widget.activeColor ?? const Color(0xFF464E65)) : Colors.white,
+                  color: isSelected ? activeColor : Colors.white,
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    // color: isSelected ? widget.activeColor : widget.inactiveColor,
-                    color: isSelected ? (widget.activeColor ?? const Color(0xFF464E65)) : (widget.inactiveColor ?? const Color(0xFF464E65)),
+                    color: isSelected ? activeColor : inactiveColor,
                     width: 2,
                   ),
                 ),
@@ -882,8 +873,7 @@ class _CustomRadioGroupState extends State<CustomRadioGroup> {
                   option,
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    // color: isSelected ? Colors.white : widget.inactiveColor,
-                    color: isSelected ? Colors.white : (widget.inactiveColor ?? const Color(0xFF464E65)),
+                    color: isSelected ? Colors.white : inactiveColor,
                     fontSize: 14,
                     fontWeight: FontWeight.w400,
                     letterSpacing: -0.30,
@@ -909,6 +899,141 @@ class _CustomRadioGroupState extends State<CustomRadioGroup> {
     );
   }
 }
+
+// class CustomRadioGroup extends StatefulWidget {
+//   // final String labelText;
+//   final List<String> options;
+//   final Function(List<String>) onSelected;
+//   final List<String>? selectedValues;
+//   final Color? activeColor;
+//   final Color? inactiveColor;
+//   final bool isRequired;
+//   final String requiredMessage;
+//   final Function(String?)? onValidation;
+//
+//   const CustomRadioGroup({
+//     Key? key,
+//     // required this.labelText,
+//     required this.options,
+//     required this.onSelected,
+//     this.selectedValues,
+//     // this.activeColor = const Color(0xFF464E65),
+//     // this.inactiveColor = const Color(0xFF464E65),
+//     this.activeColor,
+//     this.inactiveColor,
+//     this.isRequired = false,
+//     this.requiredMessage = "This field is required",
+//     this.onValidation,
+//   }) : super(key: key);
+//
+//   @override
+//   _CustomRadioGroupState createState() => _CustomRadioGroupState();
+// }
+//
+// class _CustomRadioGroupState extends State<CustomRadioGroup> {
+//   late List<String> _selected;
+//   String? _errorMessage;
+//
+//   @override
+//   void initState() {
+//     super.initState();
+//     _selected = widget.selectedValues ?? [];
+//   }
+//
+//   void _validateSelection() {
+//     setState(() {
+//       if (widget.isRequired && _selected.isEmpty) {
+//         _errorMessage = widget.requiredMessage;
+//       } else {
+//         _errorMessage = null;
+//       }
+//     });
+//
+//     if (widget.onValidation != null) {
+//       widget.onValidation!(_errorMessage);
+//     }
+//   }
+//
+//   @override
+//   Widget build(BuildContext context) {
+//     Color activeColor = widget.activeColor ?? const Color(0xFF464E65);
+//     Color inactiveColor = widget.inactiveColor ?? const Color(0xFF464E65);
+//     return Column(
+//       crossAxisAlignment: CrossAxisAlignment.start,
+//       children: [
+//         // Label Text
+//         // Text(
+//         //   widget.labelText,
+//         //   style: const TextStyle(
+//         //     fontSize: 16,
+//         //     fontWeight: FontWeight.w600,
+//         //     color: Colors.black,
+//         //   ),
+//         // ),
+//         const SizedBox(height: 5),
+//
+//         // Options with Wrapping Layout
+//         Wrap(
+//           spacing: 10,
+//           runSpacing: 10,
+//           children: widget.options.map((option) {
+//             bool isSelected = _selected.contains(option);
+//
+//             return GestureDetector(
+//               onTap: () {
+//                 setState(() {
+//                   if (isSelected) {
+//                     _selected.remove(option);
+//                   } else {
+//                     _selected.add(option);
+//                   }
+//                 });
+//                 widget.onSelected(_selected);
+//                 _validateSelection();
+//               },
+//               child: Container(
+//                 padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
+//                 decoration: BoxDecoration(
+//                   // color: isSelected ? widget.activeColor : Colors.white,
+//                   color: isSelected ? (widget.activeColor ?? const Color(0xFF464E65)) : Colors.white,
+//                   borderRadius: BorderRadius.circular(20),
+//                   border: Border.all(
+//                     // color: isSelected ? widget.activeColor : widget.inactiveColor,
+//                     color: isSelected ? (widget.activeColor ?? const Color(0xFF464E65)) : (widget.inactiveColor ?? const Color(0xFF464E65)),
+//                     width: 2,
+//                   ),
+//                 ),
+//                 child: Text(
+//                   option,
+//                   textAlign: TextAlign.center,
+//                   style: TextStyle(
+//                     // color: isSelected ? Colors.white : widget.inactiveColor,
+//                     color: isSelected ? Colors.white : (widget.inactiveColor ?? const Color(0xFF464E65)),
+//                     fontSize: 14,
+//                     fontWeight: FontWeight.w400,
+//                     letterSpacing: -0.30,
+//                   ),
+//                 ),
+//               ),
+//             );
+//           }).toList(),
+//         ),
+//
+//         if (_errorMessage != null)
+//           Padding(
+//             padding: const EdgeInsets.only(top: 5),
+//             child: Text(
+//               _errorMessage!,
+//               style: const TextStyle(
+//                 color: Colors.red,
+//                 fontSize: 12,
+//               ),
+//             ),
+//           ),
+//       ],
+//     );
+//   }
+// }
 
 class ConfirmationDialog extends StatelessWidget {
   final String title;

@@ -1,5 +1,7 @@
 import 'package:fix_mate/service_provider/p_EditPromotionPost.dart';
 import 'package:fix_mate/service_provider/p_FilterPromotionPost.dart';
+import 'package:fix_mate/service_provider/p_HomePage.dart';
+import 'package:fix_mate/service_provider/p_ServiceDirectoryModule/p_PromotionPostInfo.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -103,6 +105,22 @@ class _p_PromotionPostListState extends State<p_PromotionPostList> {
     );
   }
 
+  Future<bool> _hasBookingReference(String postId) async {
+    try {
+      QuerySnapshot snapshot = await FirebaseFirestore.instance
+          .collection('bookings')
+          .where('postId', isEqualTo: postId)
+          .limit(1)
+          .get();
+
+      return snapshot.docs.isNotEmpty;
+    } catch (e) {
+      print("Error checking booking reference: $e");
+      return false;
+    }
+  }
+
+
 
   Future<void> _loadPromotionPosts() async {
     print("🔍 Loading Promotion Posts...");
@@ -130,9 +148,12 @@ class _p_PromotionPostListState extends State<p_PromotionPostList> {
           .where('userId', isEqualTo: user.uid);
 
       // ✅ Apply post type filter if selected
-      if (selectedPostType != "Not selected") {
-        query = query.where('status', isEqualTo: selectedPostType);
+      if (selectedPostType == "Active") {
+        query = query.where('isActive', isEqualTo: true);
+      } else if (selectedPostType == "Inactive") {
+        query = query.where('isActive', isEqualTo: false);
       }
+
 
       // ✅ Apply Sorting Based on updatedAt Timestamp
       if (selectedSortOrder != null) {
@@ -213,9 +234,20 @@ class _p_PromotionPostListState extends State<p_PromotionPostList> {
                 _loadPromotionPosts();
               }
             },
+
             onDelete: () {
               _confirmP_Delete(doc.id);
             },
+
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => p_PromotionPostInfo(docId: doc.id),
+                ),
+              );
+            },
+
             onToggleComplete: _loadPromotionPosts,
           ),
         );
@@ -281,37 +313,75 @@ class _p_PromotionPostListState extends State<p_PromotionPostList> {
     }
   }
 
-  void _confirmP_Delete(String docId) {
-    showDialog(
-      context: context,
-      builder: (context) => ConfirmationDialog(
-        title: "Delete Post",
-        message: "Are you sure you want to delete this post?",
-        confirmText: "Delete",
-        cancelText: "Cancel",
-        onConfirm: () async {
-          await _deleteP_Post(docId); // ✅ Call delete function first
+  // void _confirmP_Delete(String docId) {
+  //   showDialog(
+  //     context: context,
+  //     builder: (context) => ConfirmationDialog(
+  //       title: "Delete Post",
+  //       message: "Are you sure you want to delete this post?",
+  //       confirmText: "Delete",
+  //       cancelText: "Cancel",
+  //       onConfirm: () async {
+  //         await _deleteP_Post(docId); // ✅ Call delete function first
+  //
+  //         // ✅ Show success message using ReusableSnackBar
+  //         ReusableSnackBar(
+  //           context,
+  //           "Promotion post successfully deleted!",
+  //           icon: Icons.check_circle,
+  //           iconColor: Colors.green,
+  //         );
+  //
+  //         Navigator.pop(context, true);
+  //       },
+  //       icon: Icons.delete,
+  //       iconColor: Colors.red,
+  //       confirmButtonColor: Colors.red,
+  //       cancelButtonColor: Colors.grey.shade300,
+  //     ),
+  //   );
+  // }
 
-          // ✅ Show success message using ReusableSnackBar
-          ReusableSnackBar(
-            context,
-            "Promotion post successfully deleted!",
-            icon: Icons.check_circle,
-            iconColor: Colors.green,
-          );
+  void _confirmP_Delete(String docId) async {
+    final hasBooking = await _hasBookingReference(docId);
 
-          // ✅ Navigate back to the original screen after deleting
-          Navigator.of(context).maybePop();
+    if (hasBooking) {
+      showFloatingMessage(
+        context,
+        "Deletion blocked!\n This post has a booking record.",
+        icon: Icons.warning_amber_rounded,
+      );
+    } else {
+      showDialog(
+        context: context,
+        builder: (context) =>
+            ConfirmationDialog(
+              title: "Delete Post",
+              message: "Are you sure you want to delete this post?",
+              confirmText: "Delete",
+              cancelText: "Cancel",
+              onConfirm: () async {
+                await _deleteP_Post(docId); // ✅ Call delete function first
 
-        },
+                // ✅ Show success message using ReusableSnackBar
+                ReusableSnackBar(
+                  context,
+                  "Promotion post successfully deleted!",
+                  icon: Icons.check_circle,
+                  iconColor: Colors.green,
+                );
 
-
-        icon: Icons.delete,
-        iconColor: Colors.red,
-        confirmButtonColor: Colors.red,
-        cancelButtonColor: Colors.grey.shade300,
-      ),
-    );
+                Navigator.pop(context, true);
+                // ✅ Navigate back to the original screen after deleting
+                // Navigator.of(context).maybePop();
+              },
+              icon: Icons.delete,
+              iconColor: Colors.red,
+              confirmButtonColor: Colors.red,
+              cancelButtonColor: Colors.grey.shade300,
+            ),
+      );
+    }
   }
 
   Future<void> _deleteP_Post(String docId) async {
@@ -445,8 +515,11 @@ Widget buildPromotionCard({
   required VoidCallback onEdit,
   required VoidCallback onDelete,
   required VoidCallback onToggleComplete,
+  required VoidCallback onTap,
 }) {
-  return Container(
+  return GestureDetector(
+    onTap: onTap,
+    child: Container(
     width: 220, // Adjust width for better spacing in horizontal scroll
     margin: const EdgeInsets.symmetric(horizontal: 8),
     child: Card(
@@ -694,10 +767,9 @@ Widget buildPromotionCard({
               ),
             ),
           ),
-
-
         ],
       ),
     ),
+  ),
   );
 }

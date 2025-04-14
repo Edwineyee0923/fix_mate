@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fix_mate/service_provider/p_BookingModule/p_AInstantBookingDetail.dart';
+import 'package:fix_mate/service_provider/p_BookingModule/p_CCInstantBookingDetail.dart';
+import 'package:fix_mate/service_provider/p_BookingModule/p_CInstantBookingDetail.dart';
 import 'package:fix_mate/service_provider/p_BookingModule/p_PInstantBookingDetail.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -55,9 +57,17 @@ class _p_NotificationState extends State<p_Notification> {
     }
 
     return Scaffold(
+      backgroundColor: const Color(0xFFFFF8F2),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF464E65),
-        title: const Text("Notifications", style: TextStyle(color: Colors.white)),
+        backgroundColor:  const Color(0xFF464E65),
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
+        title: const Text("Notifications", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
+        titleSpacing: 5,
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
@@ -85,73 +95,150 @@ class _p_NotificationState extends State<p_Notification> {
               // final createdAt = doc['createdAt'] as Timestamp?;
               final Timestamp? createdAt = doc['createdAt'];
 
-              return Card(
-                elevation: 2,
-                child: ListTile(
-                  title: Text(doc['title'], style: const TextStyle(fontWeight: FontWeight.bold)),
-                  // subtitle: Column(
-                  //   crossAxisAlignment: CrossAxisAlignment.start,
-                  //   children: [
-                  //     Text(doc['message']),
-                  //     if (createdAt != null)
-                  //       Text(formatTimeAgo(createdAt), style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                  //   ],
-                  // ),
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: () async {
+                    await doc.reference.update({'isRead': true});
 
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(doc['message']),
-                      Text(
-                        formatTimeAgo(createdAt),
-                        style: const TextStyle(fontSize: 12, color: Colors.grey),
-                      ),
-                    ],
-                  ),
-                  trailing: !isRead ? const Icon(Icons.circle, color: Colors.red, size: 10) : null,
-                    onTap: () async {
-                      // ✅ Mark notification as read
-                      await doc.reference.update({'isRead': true});
+                    final bookingSnapshot = await FirebaseFirestore.instance
+                        .collection('bookings')
+                        .where('bookingId', isEqualTo: doc['bookingId'])
+                        .limit(1)
+                        .get();
 
-                      // ✅ Fetch and update related booking
-                      final bookingSnapshot = await FirebaseFirestore.instance
-                          .collection('bookings')
-                          .where('bookingId', isEqualTo: doc['bookingId'])
-                          .limit(1)
-                          .get();
+                    if (bookingSnapshot.docs.isNotEmpty) {
+                      final bookingDoc = bookingSnapshot.docs.first;
+                      final bookingRef = bookingDoc.reference;
+                      final bookingData = bookingDoc.data();
 
-                      if (bookingSnapshot.docs.isNotEmpty) {
-                        final bookingDoc = bookingSnapshot.docs.first;
-                        final bookingRef = bookingDoc.reference;
-                        final bookingData = bookingDoc.data();
+                      // ✅ Mark booking as seen
+                      await bookingRef.update({'providerHasSeen': true});
 
-                        // ✅ Mark booking as seen to hide red dot on card
-                        await bookingRef.update({'providerHasSeen': true});
+                      final status = bookingData['status'] ?? '';
 
-                        // ✅ Navigate based on status
-                        final status = bookingData['status'] ?? '';
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => status == 'Active'
-                                ? p_AInstantBookingDetail(
-                              bookingId: doc['bookingId'],
-                              postId: doc['postId'],
-                              seekerId: doc['seekerId'],
-                            )
-                                : p_PInstantBookingDetail(
-                              bookingId: doc['bookingId'],
-                              postId: doc['postId'],
-                              seekerId: doc['seekerId'],
-                            ),
-                          ),
+                      Widget targetScreen;
+
+                      if (status == 'Active') {
+                        targetScreen = p_AInstantBookingDetail(
+                          bookingId: doc['bookingId'],
+                          postId: doc['postId'],
+                          seekerId: doc['seekerId'],
+                        );
+                      } else if (status == 'Completed') {
+                        targetScreen = p_CInstantBookingDetail(
+                          bookingId: doc['bookingId'],
+                          postId: doc['postId'],
+                          seekerId: doc['seekerId'],
+                        );
+                      } else if (status == 'Cancelled') {
+                        targetScreen = p_CCInstantBookingDetail(
+                          bookingId: doc['bookingId'],
+                          postId: doc['postId'],
+                          seekerId: doc['seekerId'],
                         );
                       } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Booking not found.')),
+                        targetScreen = p_PInstantBookingDetail(
+                          bookingId: doc['bookingId'],
+                          postId: doc['postId'],
+                          seekerId: doc['seekerId'],
                         );
                       }
+
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => targetScreen),
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Booking not found.')),
+                      );
                     }
+                  },
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: isRead ? Colors.white : const Color(0xFFEAEAF2),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // 📢 Icon badge
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF464E65),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.notifications, color: Colors.white, size: 20),
+                        ),
+                        const SizedBox(width: 12),
+
+                        // 🔤 Content
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // 🧾 Title & Booking ID
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    doc['title'],
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF464E65),
+                                    ),
+                                  ),
+                                  // const SizedBox(height: 4),
+                                  // Text(
+                                  //   "Booking ID: ${doc['bookingId']}",
+                                  //   style: const TextStyle(
+                                  //     fontSize: 13,
+                                  //     color: Colors.black54,
+                                  //     fontWeight: FontWeight.w500,
+                                  //   ),
+                                  // ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                doc['message'],
+                                style: const TextStyle(fontSize: 14, color: Colors.black87),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                formatTimeAgo(doc['createdAt']),
+                                style: const TextStyle(fontSize: 12, color: Colors.grey),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        // 🔴 Red unread dot
+                        if (!isRead)
+                          Container(
+                            margin: const EdgeInsets.only(top: 4, left: 8),
+                            width: 10,
+                            height: 10,
+                            decoration: const BoxDecoration(
+                              color: Colors.red,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
                 ),
               );
             },

@@ -178,29 +178,35 @@ class _p_AddPromotionPostState extends State<p_AddPromotionPost> {
 
   Future<void> addPromotionPost() async {
 
-    setState(() {
-      selectedStatesError = selectedStates.isEmpty ? "Please select at least one operation state!" : null;
-      selectedExpertiseError = selectedExpertiseFields.isEmpty ? "Please select at least one expertise field!" : null;
-    });
-
-    if (selectedStates.isEmpty || selectedExpertiseFields.isEmpty) {
-      ReusableSnackBar(
-        context,
-        selectedStates.isEmpty && selectedExpertiseFields.isEmpty
-            ? "Please select at least one operation state and one service category."
-            : selectedStates.isEmpty
-            ? "Please select at least one operation state."
-            : "Please select at least one service category.",
-        icon: Icons.warning,
-        iconColor: Colors.orange,
-      );
-      return;
-    }
-
     if (userId == null) {
       ReusableSnackBar(
           context,
           "User not found. Please log in again.",
+          icon: Icons.warning,
+          iconColor: Colors.orange
+      );
+      return;
+    }
+
+    setState(() {
+      selectedStatesError = selectedStates.isEmpty ? "Please select at least one operation state!" : null;
+       if (selectedExpertiseFields.length > 1) {
+        selectedExpertiseError = "Please select only one service category that best matches your service.";
+      } else {
+        selectedExpertiseError = null;
+      }
+    });
+
+    if (PTitleError != null ||
+        titleController.text.trim().isEmpty ||
+        priceController.text.trim().isEmpty ||
+        APriceController.text.trim().isEmpty ||
+        selectedStates.isEmpty || selectedExpertiseFields.isEmpty ||
+        selectedStatesError != null || selectedExpertiseError != null ||
+        _imageUrls == null || _imageUrls!.isEmpty) {  // ✅ Check for empty image list
+      ReusableSnackBar(
+          context,
+          "Please fill in all fields and upload an image.",
           icon: Icons.warning,
           iconColor: Colors.orange
       );
@@ -225,21 +231,6 @@ class _p_AddPromotionPostState extends State<p_AddPromotionPost> {
     }
 
 
-    if (PTitleError != null ||
-        titleController.text.trim().isEmpty ||
-        priceController.text.trim().isEmpty ||
-        APriceController.text.trim().isEmpty ||
-        selectedStates.isEmpty || selectedExpertiseFields.isEmpty ||
-        selectedStatesError != null || selectedExpertiseError != null ||
-        _imageUrls == null || _imageUrls!.isEmpty) {  // ✅ Check for empty image list
-      ReusableSnackBar(
-          context,
-          "Please fill in all fields and upload an image.",
-          icon: Icons.warning,
-          iconColor: Colors.orange
-      );
-      return;
-    }
 
     // Show loading dialog (blocking UI until post is added)
     showDialog(
@@ -269,6 +260,7 @@ class _p_AddPromotionPostState extends State<p_AddPromotionPost> {
         'ServiceCategory': List.from(selectedExpertiseFields),
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
+        'isActive': true,
       });
 
       // Close loading dialog
@@ -508,6 +500,7 @@ class _p_AddPromotionPostState extends State<p_AddPromotionPost> {
                     });
                   },
                 ),
+
               ],
             ),
             const SizedBox(height: 15),
@@ -520,25 +513,30 @@ class _p_AddPromotionPostState extends State<p_AddPromotionPost> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  "(May select more than one service category.)",
+                  "(Please select the most suitable service category.)",
                   style: const TextStyle(fontSize: 14,fontWeight: FontWeight.w500, fontStyle: FontStyle.italic, color: Colors.black54),
                 ),
                 CustomRadioGroup(
-                  options: expertiseOptions, // ✅ This ensures options are loaded
-                  selectedValues: selectedExpertiseFields, // ✅ Creates a fresh instance
+                  options: expertiseOptions,
+                  selectedValues: selectedExpertiseFields,
+                  isSingleSelect: true, // ✅ Force only 1 selection
                   isRequired: true,
-                  requiredMessage: "Please select at least one service category!",
-                  onSelected: (newSelection) {
-                    setState(() {
-                      selectedExpertiseFields = List.from(newSelection); // ✅ Ensure it's a new instance
-                    });
+                  requiredMessage: "Please select one category",
+                  onSelected: (selection) {
+                    setState(() => selectedExpertiseFields = List.from(selection));
                   },
                   onValidation: (error) {
-                    setState(() {
-                      selectedStatesError = error;
-                    });
+                    setState(() => selectedExpertiseError = error);
                   },
                 ),
+                if (selectedExpertiseError != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Text(
+                      selectedExpertiseError!,
+                      style: TextStyle(color: Colors.red, fontSize: 12),
+                    ),
+                  ),
               ],
             ),
             SizedBox(height: 15),

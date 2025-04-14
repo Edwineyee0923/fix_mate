@@ -9,6 +9,7 @@ class p_FilterInstantPost extends StatefulWidget {
   final List<String> initialStates;
   final RangeValues initialPriceRange;
   final String? initialSortOrder; // ✅ Allow null values
+  final String? initialPostType;
 
   const p_FilterInstantPost({
     Key? key,
@@ -17,6 +18,7 @@ class p_FilterInstantPost extends StatefulWidget {
     required this.initialStates,
     required this.initialPriceRange,
     this.initialSortOrder, // ✅ Now accepts null
+    this.initialPostType,
   }) : super(key: key);
 
   @override
@@ -35,7 +37,7 @@ class _p_FilterInstantPostState extends State<p_FilterInstantPost> {
   List<String> selectedStates = [];
   RangeValues _priceRange = RangeValues(0, 1000);
   String? selectedSortOrder; // Can be null when nothing is selected
-
+  String? selectedPostType = "No selected"; // ✅ Neutral starting stat
 
   // final List<String> categories = [
   //   "Cleaning", "Electrical", "Plumbing", "Painting",
@@ -74,7 +76,7 @@ class _p_FilterInstantPostState extends State<p_FilterInstantPost> {
   }
 
 
-
+  final List<String> postType = ["No selected", "Active", "Inactive"];
   final List<String> sortOptions = [ "Random" ,"Newest", "Oldest"]; // ✅ Sorting options
 
   @override
@@ -86,6 +88,7 @@ class _p_FilterInstantPostState extends State<p_FilterInstantPost> {
     selectedStates = widget.initialStates;
     _priceRange = widget.initialPriceRange;
     selectedSortOrder = widget.initialSortOrder; // ✅ Initialize sorting order
+    selectedPostType = widget.initialPostType ?? "No selected"; // ✅ Fixed line
   }
 
   void _applyFilters() {
@@ -95,6 +98,7 @@ class _p_FilterInstantPostState extends State<p_FilterInstantPost> {
       "selectedStates": selectedStates,
       "priceRange": _priceRange,
       "sortOrder": selectedSortOrder, // ✅ Pass sorting order
+      "postType": selectedPostType,
     });
   }
 
@@ -304,7 +308,56 @@ class _p_FilterInstantPostState extends State<p_FilterInstantPost> {
               onChanged: (value) => setState(() => selectedSortOrder = value ?? "Newest"),
             ),
 
+            const SizedBox(height: 10),
+            /// **Thick Grey Divider**
+            const Divider(
+              color: Colors.grey, // Grey color
+              thickness: 1.0, // Make it thicker
+              height: 10, // Adjust spacing above and below the divider
+            ),
 
+            const SizedBox(height: 10),
+
+            DropdownButtonFormField<String>(
+              value: selectedPostType,
+              decoration: InputDecoration(
+                labelText: "Post Type (Active/Inactive)",
+                labelStyle: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.black87,
+                ),
+                filled: true,
+                fillColor: Colors.white,
+                contentPadding: EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Color(0xFF464E65), width: 1.5),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Color(0xFF464E65), width: 1.5),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Color(0xFF464E65), width: 2),
+                ),
+              ),
+              dropdownColor: Colors.white,
+              icon: Icon(Icons.keyboard_arrow_down, color: Color(0xFF464E65)),
+              style: TextStyle(fontSize: 16, color: Colors.black87),
+              items: postType.map((type) {
+                return DropdownMenuItem(
+                  value: type,
+                  child: Text(type, style: TextStyle(fontSize: 16)),
+                );
+              }).toList(),
+              onChanged: (value) {
+                setState(() {
+                  selectedPostType = value ?? "No selected";
+                });
+              },
+            ),
 
             SizedBox(height: 20),
 

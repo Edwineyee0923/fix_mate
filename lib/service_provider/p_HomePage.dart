@@ -4,11 +4,15 @@ import 'package:fix_mate/service_provider/p_EditInstantPost.dart';
 import 'package:fix_mate/service_provider/p_EditPromotionPost.dart';
 import 'package:fix_mate/service_provider/p_InstantPostsList.dart';
 import 'package:fix_mate/service_provider/p_PromotionPostList.dart';
+import 'package:fix_mate/service_provider/p_ServiceDirectoryModule/p_InstantPostInfo.dart';
+import 'package:fix_mate/service_provider/p_ServiceDirectoryModule/p_PromotionPostInfo.dart';
 import 'package:fix_mate/service_provider/p_layout.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fix_mate/reusable_widget/reusable_widget.dart';
+
+
 class p_HomePage extends StatefulWidget {
   static String routeName = "/service_provider/p_HomePage";
 
@@ -45,6 +49,7 @@ class _p_HomePageState extends State<p_HomePage> {
         displayedInstantPosts = allInstantPosts.where((post) {
           String title = (post.key as ValueKey<String>?)?.value ?? "";
           return title.toLowerCase().contains(query.toLowerCase());
+          return title.toLowerCase().contains(query.toLowerCase());
         }).toList(); // ✅ Show filtered results
       }
     });
@@ -63,6 +68,31 @@ class _p_HomePageState extends State<p_HomePage> {
     });
   }
 
+  // Widget _buildSearchBar() {
+  //   return Container(
+  //     decoration: BoxDecoration(
+  //       color: Colors.white,
+  //       borderRadius: BorderRadius.circular(25),
+  //       boxShadow: [
+  //         BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
+  //       ],
+  //     ),
+  //     child: TextField(
+  //       controller: _searchController,
+  //       onChanged: (query) {
+  //         _filterInstantPosts(query);  // ✅ Updates Instant Booking Section
+  //         _filterPromotionPosts(query);  // ✅ Updates Promotion Section
+  //       },
+  //       decoration: InputDecoration(
+  //         hintText: "Search your post.......",
+  //         border: InputBorder.none,
+  //         prefixIcon: const Icon(Icons.search, color: Color(0xFF464E65)),
+  //         contentPadding: const EdgeInsets.symmetric(vertical: 14),
+  //       ),
+  //     ),
+  //   );
+  // }
+
   Widget _buildSearchBar() {
     return Container(
       decoration: BoxDecoration(
@@ -75,18 +105,46 @@ class _p_HomePageState extends State<p_HomePage> {
       child: TextField(
         controller: _searchController,
         onChanged: (query) {
-          _filterInstantPosts(query);  // ✅ Updates Instant Booking Section
-          _filterPromotionPosts(query);  // ✅ Updates Promotion Section
+          _filterInstantPosts(query);
+          _filterPromotionPosts(query);
         },
         decoration: InputDecoration(
           hintText: "Search your post.......",
           border: InputBorder.none,
           prefixIcon: const Icon(Icons.search, color: Color(0xFF464E65)),
           contentPadding: const EdgeInsets.symmetric(vertical: 14),
+          suffixIcon: _searchController.text.isNotEmpty
+              ? IconButton(
+            icon: const Icon(Icons.clear, color: Colors.grey),
+            onPressed: () {
+              _searchController.clear();
+              _filterInstantPosts("");
+              _filterPromotionPosts("");
+              FocusScope.of(context).unfocus(); // Optional: close keyboard
+            },
+          )
+              : null,
         ),
       ),
     );
   }
+
+
+  Future<bool> _hasBookingReference(String postId) async {
+    try {
+      QuerySnapshot snapshot = await FirebaseFirestore.instance
+          .collection('bookings')
+          .where('postId', isEqualTo: postId)
+          .limit(1)
+          .get();
+
+      return snapshot.docs.isNotEmpty;
+    } catch (e) {
+      print("Error checking booking reference: $e");
+      return false;
+    }
+  }
+
 
   Future<void> _loadInstantPosts() async {
     try {
@@ -152,6 +210,15 @@ class _p_HomePageState extends State<p_HomePage> {
 
           onDelete: () {
             _confirmDelete(doc.id); // ✅ Call delete confirmation
+          },
+
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => p_InstantPostInfo(docId: doc.id),
+              ),
+            );
           },
 
           onToggleComplete: _loadInstantPosts,
@@ -235,9 +302,17 @@ class _p_HomePageState extends State<p_HomePage> {
             }
           },
 
-
           onDelete: () {
             _confirmP_Delete(doc.id); // ✅ Call delete confirmation
+          },
+
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => p_PromotionPostInfo(docId: doc.id),
+              ),
+            );
           },
 
           onToggleComplete: _loadPromotionPosts,
@@ -254,28 +329,75 @@ class _p_HomePageState extends State<p_HomePage> {
     }
   }
 
-  void _confirmDelete(String docId) {
-    showDialog(
-      context: context,
-      builder: (context) => ConfirmationDialog(
-        title: "Delete Post",
-        message: "Are you sure you want to delete this post?",
-        confirmText: "Delete",
-        cancelText: "Cancel",
-        onConfirm: () async {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => p_HomePage()),
-          ); // Close dialog
-          await _deletePost(docId); // ✅ Call delete function
-        },
-        icon: Icons.delete,
-        iconColor: Colors.red,
-        confirmButtonColor: Colors.red,
-        cancelButtonColor: Colors.grey.shade300,
-      ),
-    );
+  // void _confirmDelete(String docId) {
+  //   showDialog(
+  //     context: context,
+  //     builder: (context) => ConfirmationDialog(
+  //       title: "Delete Post",
+  //       message: "Are you sure you want to delete this post?",
+  //       confirmText: "Delete",
+  //       cancelText: "Cancel",
+  //       onConfirm: () async {
+  //         Navigator.push(
+  //           context,
+  //           MaterialPageRoute(builder: (context) => p_HomePage()),
+  //         ); // Close dialog
+  //         await _deletePost(docId); // ✅ Call delete function
+  //       },
+  //       icon: Icons.delete,
+  //       iconColor: Colors.red,
+  //       confirmButtonColor: Colors.red,
+  //       cancelButtonColor: Colors.grey.shade300,
+  //     ),
+  //   );
+  // }
+
+  void _confirmDelete(String docId) async {
+    final hasBooking = await _hasBookingReference(docId);
+
+    if (hasBooking) {
+      showFloatingMessage(
+        context,
+        "Deletion blocked!\n This post has a booking record.",
+        icon: Icons.warning_amber_rounded,
+      );
+    } else {
+      showDialog(
+        context: context,
+        builder: (context) => ConfirmationDialog(
+          title: "Delete Post",
+          message: "Are you sure you want to delete this instant booking post?",
+          confirmText: "Delete",
+          cancelText: "Cancel",
+          onConfirm: () async {
+            await _deletePost(docId);
+
+            // Navigator.push(
+            //   context,
+            //   MaterialPageRoute(builder: (context) => p_HomePage()),
+            // );
+
+            // ✅ Show success message using ReusableSnackBar
+            ReusableSnackBar(
+              context,
+              "Instant booking post successfully deleted!",
+              icon: Icons.check_circle,
+              iconColor: Colors.green,
+            );
+
+            Navigator.of(context).maybePop();
+            // Close dialog
+          },
+          icon: Icons.delete,
+          iconColor: Colors.red,
+          confirmButtonColor: Colors.red,
+          cancelButtonColor: Colors.grey.shade300,
+        ),
+      );
+    }
   }
+
+
 
   Future<void> _deletePost(String docId) async {
     try {
@@ -288,29 +410,68 @@ class _p_HomePageState extends State<p_HomePage> {
     }
   }
 
-  void _confirmP_Delete(String docId) {
-    showDialog(
-      context: context,
-      builder: (context) => ConfirmationDialog(
-        title: "Delete Post",
-        message: "Are you sure you want to delete this post?",
-        confirmText: "Delete",
-        cancelText: "Cancel",
-        onConfirm: () async {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => p_HomePage()),
-          ); // Close dialog
-          await _deleteP_Post(docId); // ✅ Call delete function
-        },
-        icon: Icons.delete,
-        iconColor: Colors.red,
-        confirmButtonColor: Colors.red,
-        cancelButtonColor: Colors.grey.shade300,
-      ),
-    );
-  }
+  // void _confirmP_Delete(String docId) {
+  //   showDialog(
+  //     context: context,
+  //     builder: (context) => ConfirmationDialog(
+  //       title: "Delete Post",
+  //       message: "Are you sure you want to delete this post?",
+  //       confirmText: "Delete",
+  //       cancelText: "Cancel",
+  //       onConfirm: () async {
+  //         Navigator.push(
+  //           context,
+  //           MaterialPageRoute(builder: (context) => p_HomePage()),
+  //         ); // Close dialog
+  //         await _deleteP_Post(docId); // ✅ Call delete function
+  //       },
+  //       icon: Icons.delete,
+  //       iconColor: Colors.red,
+  //       confirmButtonColor: Colors.red,
+  //       cancelButtonColor: Colors.grey.shade300,
+  //     ),
+  //   );
+  // }
 
+  void _confirmP_Delete(String docId) async {
+    final hasBooking = await _hasBookingReference(docId);
+
+    if (hasBooking) {
+      showFloatingMessage(
+        context,
+        "Deletion blocked!\n This post has a booking record.",
+        icon: Icons.warning_amber_rounded,
+      );
+    } else {
+      showDialog(
+        context: context,
+        builder: (context) => ConfirmationDialog(
+          title: "Delete Post",
+          message: "Are you sure you want to delete this promotion post?",
+          confirmText: "Delete",
+          cancelText: "Cancel",
+          onConfirm: () async {
+              await _deleteP_Post(docId);
+
+              // ✅ Show success message using ReusableSnackBar
+              ReusableSnackBar(
+                context,
+                "Promotion post successfully deleted!",
+                icon: Icons.check_circle,
+                iconColor: Colors.green,
+              );
+
+              Navigator.of(context).maybePop();
+              // Close dialog
+            },
+          icon: Icons.delete,
+          iconColor: Colors.red,
+          confirmButtonColor: Colors.red,
+          cancelButtonColor: Colors.grey.shade300,
+        ),
+      );
+    }
+  }
 
   Future<void> _deleteP_Post(String docId) async {
     try {
@@ -344,15 +505,19 @@ class _p_HomePageState extends State<p_HomePage> {
               // ✅ "See More" button with dynamic opacity & interactivity
               GestureDetector(
                 onTap: allInstantPosts.isNotEmpty
-                    ? () {
-                  Navigator.push(
+                    ? () async {
+                  final result = await Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (context) => p_InstantPostList(),
                     ),
                   );
+
+                  if (result == true) {
+                    _loadInstantPosts(); // 🔄 Refresh home page on return
+                  }
                 }
-                    : null, // Disabled if no posts
+                    : null,
                 child: Opacity(
                   opacity: allInstantPosts.isNotEmpty ? 1.0 : 0.5, // Faded if no posts
                   child: Row(
@@ -432,15 +597,20 @@ class _p_HomePageState extends State<p_HomePage> {
               // ✅ "See More" button with dynamic opacity & interactivity
               GestureDetector(
                 onTap: allPromotionPosts.isNotEmpty
-                    ? () {
-                  Navigator.push(
+                    ? () async {
+                  final result = await Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (context) => p_PromotionPostList(),
                     ),
                   );
+
+                  if (result == true) {
+                    _loadPromotionPosts(); // 🔄 Refresh home page on return
+                  }
                 }
-                    : null, // Disabled if no posts
+                    : null,
+
                 child: Opacity(
                   opacity: allPromotionPosts.isNotEmpty ? 1.0 : 0.5, // Faded if no posts
                   child: Row(
@@ -548,9 +718,12 @@ Widget buildInstantBookingCard({
   required VoidCallback onEdit,
   required VoidCallback onDelete,
   required VoidCallback onToggleComplete,
+  required VoidCallback onTap,
 
 }) {
-  return Container(
+  return GestureDetector(
+    onTap: onTap,
+    child: Container(
     width: 220, // Adjust width for better spacing in horizontal scroll
     margin: const EdgeInsets.symmetric(horizontal: 8),
     child: Card(
@@ -764,6 +937,7 @@ Widget buildInstantBookingCard({
         ],
       ),
     ),
+  ),
   );
 }
 
@@ -781,8 +955,11 @@ Widget buildPromotionCard({
   required VoidCallback onEdit,
   required VoidCallback onDelete,
   required VoidCallback onToggleComplete,
+  required VoidCallback onTap,
 }) {
-  return Container(
+  return GestureDetector(
+    onTap: onTap,
+    child: Container(
     width: 220, // Adjust width for better spacing in horizontal scroll
     margin: const EdgeInsets.symmetric(horizontal: 8),
     child: Card(
@@ -1034,5 +1211,6 @@ Widget buildPromotionCard({
         ],
       ),
     ),
+  ),
   );
 }

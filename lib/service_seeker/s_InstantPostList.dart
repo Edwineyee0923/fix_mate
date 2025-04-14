@@ -118,8 +118,13 @@ class _s_InstantPostListState extends State<s_InstantPostList> {
       print("Fetching posts for userId: ${user.uid}");
 
       // ✅ Start with a Query, NOT QuerySnapshot
+      // Query query = _firestore
+      //     .collection('instant_booking');
+
       Query query = _firestore
-          .collection('instant_booking');
+          .collection('instant_booking')
+          .where('isActive', isEqualTo: true); // ✅ Only active
+
 
       // ✅ Apply Sorting Based on updatedAt Timestamp
       if (selectedSortOrder != null) {

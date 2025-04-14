@@ -121,8 +121,13 @@ class _s_PromotionPostListState extends State<s_PromotionPostList> {
       print("Fetching posts for userId: ${user.uid}");
 
       // ✅ Start with a Query, NOT QuerySnapshot
+      // Query query = _firestore
+      //     .collection('promotion');
+
       Query query = _firestore
-          .collection('promotion');
+          .collection('promotion')
+          .where('isActive', isEqualTo: true); // ✅ Only active
+
 
       // ✅ Apply Sorting Based on updatedAt Timestamp
       if (selectedSortOrder != null) {

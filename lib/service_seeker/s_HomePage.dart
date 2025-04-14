@@ -106,6 +106,18 @@ class _s_HomePageState extends State<s_HomePage> {
           border: InputBorder.none,
           prefixIcon: const Icon(Icons.search, color: Color(0xFFfb9798)),
           contentPadding: const EdgeInsets.symmetric(vertical: 14),
+          suffixIcon: _searchController.text.isNotEmpty
+              ? IconButton(
+            icon: const Icon(Icons.clear, color: Colors.grey),
+            onPressed: () {
+              _searchController.clear();
+              _filterInstantPosts("");
+              _filterPromotionPosts("");
+              _filterSPPosts("");
+              FocusScope.of(context).unfocus(); // Optional: close keyboard
+            },
+          )
+              : null,
         ),
       ),
     );
@@ -126,7 +138,12 @@ class _s_HomePageState extends State<s_HomePage> {
       //     .collection('instant_booking')
       //     .get();
 
-      Query query = _firestore.collection('instant_booking').orderBy('updatedAt', descending: true);
+      // Query query = _firestore.collection('instant_booking').orderBy('updatedAt', descending: true);
+      Query query = _firestore
+          .collection('instant_booking')
+          .where('isActive', isEqualTo: true) // ✅ Filter active posts only
+          .orderBy('updatedAt', descending: true);
+
       QuerySnapshot snapshot = await query.get();
 
       if (snapshot.docs.isEmpty) {
@@ -179,7 +196,11 @@ class _s_HomePageState extends State<s_HomePage> {
 
       // print("Fetching posts for userId: ${user.uid}");
 
-      Query query = _firestore.collection('promotion').orderBy('updatedAt', descending: true);
+      Query query = _firestore
+          .collection('promotion')
+          .where('isActive', isEqualTo: true) // ✅ Only active posts
+          .orderBy('updatedAt', descending: true);
+
       QuerySnapshot snapshot = await query.get();
 
       if (snapshot.docs.isEmpty) {
