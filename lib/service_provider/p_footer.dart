@@ -1,5 +1,6 @@
 import 'package:fix_mate/service_provider/p_BookingModule/p_BookingHistory.dart';
 import 'package:fix_mate/service_provider/p_HomePage.dart';
+import 'package:fix_mate/service_provider/p_Rating.dart';
 import 'package:fix_mate/service_provider/p_profile.dart';
 import 'package:flutter/material.dart';
 
@@ -20,6 +21,9 @@ class p_footer extends StatelessWidget {
         route = p_BookingHistory.routeName;
         break;
       case 2:
+        route = p_Rating.routeName;
+        break;
+      case 3:
         route = p_profile.routeName;
         break;
     }
@@ -43,6 +47,8 @@ class p_footer extends StatelessWidget {
       case 1:
         return p_BookingHistory();
       case 2:
+        return p_Rating();
+      case 3:
         return p_profile();
       default:
         return p_HomePage();
@@ -58,6 +64,7 @@ class p_footer extends StatelessWidget {
       items: const [
         BottomNavigationBarItem(icon: Icon(Icons.home, size: 30), label: 'Home'),
         BottomNavigationBarItem(icon: Icon(Icons.history, size: 30), label: 'Booking History'),
+        BottomNavigationBarItem(icon: Icon(Icons.stars, size: 30), label: 'My Reviews'),
         BottomNavigationBarItem(icon: Icon(Icons.person, size: 30), label: 'Profile'),
       ],
       currentIndex: selectedIndex,

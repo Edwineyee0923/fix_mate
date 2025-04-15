@@ -2,6 +2,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:fix_mate/service_provider/p_BookingModule/p_BookingHistory.dart';
 import 'package:fix_mate/service_provider/p_HomePage.dart';
 import 'package:fix_mate/service_seeker/s_HomePage.dart';
+import 'package:fix_mate/service_seeker/s_SPList.dart';
 import 'package:fix_mate/service_seeker/s_profile.dart';
 import 'package:fix_mate/service_seeker/s_register.dart';
 import 'package:flutter_branch_sdk/flutter_branch_sdk.dart';
@@ -11,6 +12,7 @@ import 'package:fix_mate/home_page/HomePage.dart';
 import 'package:fix_mate/service_seeker/s_BookingModule/s_BookingHistory.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'firebase_options.dart';
+import 'package:fix_mate/reusable_widget/reusable_widget.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -43,6 +45,7 @@ class _MyAppState extends State<MyApp> {
     });
   }
 
+  /// Listens to Branch deep links when the app is opened via link
   /// Listens to Branch deep links when the app is opened via link
   void _listenBranchDeepLinks() {
     FlutterBranchSdk.initSession().listen((data) {
@@ -120,6 +123,7 @@ class _MyAppState extends State<MyApp> {
         await snapshot.docs.first.reference.update({
           'status': 'Pending Confirmation',
           'providerHasSeen': false, // 🔔 Add this flag
+          'updatedAt': FieldValue.serverTimestamp(),
         });
 
 
@@ -157,13 +161,19 @@ class _MyAppState extends State<MyApp> {
         await Future.delayed(Duration(milliseconds: 300));
         final postNavContext = navigatorKey.currentContext;
         if (postNavContext != null) {
-          ScaffoldMessenger.of(postNavContext).showSnackBar(
-            SnackBar(
-              content: Text("🎉 Payment successful! Your booking has been confirmed."),
-              backgroundColor: Colors.green,
-              duration: Duration(seconds: 3),
-            ),
+          ReusableSnackBar(
+            context,
+            "Payment successful! Your booking has been confirmed.!",
+            icon: Icons.check_circle,
+            iconColor: Colors.green,
           );
+          // ScaffoldMessenger.of(postNavContext).showSnackBar(
+          //   SnackBar(
+          //     content: Text("🎉 Payment successful! Your booking has been confirmed."),
+          //     backgroundColor: Colors.green,
+          //     duration: Duration(seconds: 3),
+          //   ),
+          // );
         }
       } else {
         print("❌ No matching booking found for bookingId: $bookingId");

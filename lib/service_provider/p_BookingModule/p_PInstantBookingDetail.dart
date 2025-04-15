@@ -1,5 +1,6 @@
 import 'package:fix_mate/service_provider/p_BookingModule/p_BookingHistory.dart';
 import 'package:fix_mate/service_provider/p_EditInstantPost.dart';
+import 'package:fix_mate/service_provider/p_ServiceDirectoryModule/p_InstantPostInfo.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -249,6 +250,7 @@ class _p_PInstantBookingDetailState extends State<p_PInstantBookingDetail> {
           'status': 'Cancelled',
           'refundIssued': false,
           'cancelledAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
         });
 
         await FirebaseFirestore.instance.collection('s_notifications').add({
@@ -279,6 +281,7 @@ class _p_PInstantBookingDetailState extends State<p_PInstantBookingDetail> {
     } else {
       await docRef.update({
         'sCancelled': false,
+        'updatedAt': FieldValue.serverTimestamp(),
       });
 
       await FirebaseFirestore.instance.collection('s_notifications').add({
@@ -294,7 +297,7 @@ class _p_PInstantBookingDetailState extends State<p_PInstantBookingDetail> {
 
       ReusableSnackBar(
         context,
-        "Cancellation request rejected.",
+        "Cancellation request rejected. The booking will be carried out as per scheduled",
         icon: Icons.info_outline,
         iconColor: Colors.orange,
       );
@@ -393,6 +396,7 @@ class _p_PInstantBookingDetailState extends State<p_PInstantBookingDetail> {
           'isRescheduling': true, // Mark that it's a reschedule
           'rescheduleSent': true,
           'status': 'Pending Confirmation', // Keep status if still needs seeker confirmation
+          'updatedAt': FieldValue.serverTimestamp(),
         });
 
         setState(() {
@@ -419,9 +423,17 @@ class _p_PInstantBookingDetailState extends State<p_PInstantBookingDetail> {
           isRescheduling = false;
         });
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Reschedule submitted successfully.")),
+        ReusableSnackBar(
+          context,
+          "Reschedule submitted successfully!",
+          icon: Icons.check_circle,
+          iconColor: Colors.green,
         );
+
+
+        // ScaffoldMessenger.of(context).showSnackBar(
+        //   SnackBar(content: Text("Reschedule submitted successfully.")),
+        // );
 
         Navigator.pushReplacement(
           context,
@@ -544,6 +556,7 @@ class _p_PInstantBookingDetailState extends State<p_PInstantBookingDetail> {
           'finalDate': finalDate,
           'finalTime': finalTime,
           'status': 'Active',
+          'updatedAt': FieldValue.serverTimestamp(),
         });
 
 
@@ -610,7 +623,7 @@ class _p_PInstantBookingDetailState extends State<p_PInstantBookingDetail> {
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => p_EditInstantPost(docId: widget.postId)),
+                  MaterialPageRoute(builder: (_) => p_InstantPostInfo(docId: widget.postId)),
                 );
               },
               child: Column(

@@ -57,104 +57,40 @@ class _s_FavouriteState extends State<s_Favourite> {
             // ),
             // centerTitle: true,
             title: Text(
-              "s_Favourite",
+              "Favourite",
               style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white,),
             ),
             titleSpacing: 25,
             automaticallyImplyLeading: false,
           ),
 
-          body: SingleChildScrollView(
-            child: Center(
-              child: Padding(
-                padding: const EdgeInsets.only(top: 20, left: 20, right: 20),
-                child: Column(
-                  children: [
-                    Container(
-                      width: double.infinity,
-                      child: Text(
-                        "FixMate Application Developer(s):",
-                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
-                        textAlign: TextAlign.left,
-                      ),
+          body: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.construction, size: 80, color: Color(0xFFfb9798)),
+                  const SizedBox(height: 20),
+                  const Text(
+                    "Coming Soon!",
+                    style: TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
                     ),
-                    SizedBox(height: 5),
-                    Text(
-                      "Feel free to contact us if there is any severe issue in regard to the FixMate application.",
-                      textAlign: TextAlign.left,
-                      style: TextStyle(fontSize: 16),
-                    ),
-                    SizedBox(height: 20),
-                    Container(
-                      width: MediaQuery.of(context).size.width * 0.8, // 90% of screen width
-                      child: Card(
-                        elevation: 4,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(20.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Text(
-                                "Main Developer :",
-                                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                              ),
-                              SizedBox(height: 10),
-                              Text(
-                                "Yee Wei En",
-                                style: TextStyle(fontSize: 18),
-                              ),
-                              SizedBox(height: 5),
-                              Text(
-                                "Full Stack Fixmate Developer",
-                                style: TextStyle(fontSize: 16, color: Colors.grey[700]),
-                              ),
-                              SizedBox(height: 20),
-                              // WhatsApp Button inside Card
-                              ElevatedButton.icon(
-                                onPressed: _launchWhatsApp,
-                                icon: FaIcon(FontAwesomeIcons.whatsapp, color: Colors.white),
-                                label: Text(
-                                  "Contact via WhatsApp",
-                                  style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold),
-                                ),
-                                style: ElevatedButton.styleFrom(
-                                  primary: Colors.green,
-                                  padding: EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(30),
-                                  ),
-                                ),
-                              ),
-                              SizedBox(height: 15),
-                              // Email Button inside Card
-                              ElevatedButton.icon(
-                                onPressed: _launchEmail,
-                                icon: Icon(Icons.email, color: Colors.white),
-                                label: Text(
-                                  "Contact via Email",
-                                  style: TextStyle(fontSize: 16, color:Colors.white, fontWeight: FontWeight.bold),
-                                ),
-                                style: ElevatedButton.styleFrom(
-                                  primary: Color(0xFFFF9342),
-                                  padding: EdgeInsets.symmetric(horizontal: 40, vertical: 14),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(30),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    )
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    "We're working hard to bring you this feature. Stay tuned!",
+                    style: TextStyle(fontSize: 16, color: Colors.black54),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
               ),
             ),
           ),
+
         )
     );
   }

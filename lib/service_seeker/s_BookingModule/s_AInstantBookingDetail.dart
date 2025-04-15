@@ -110,6 +110,7 @@ class _s_AInstantBookingDetailState extends State<s_AInstantBookingDetail> {
         : [];
 
     return Scaffold(
+      backgroundColor: Color(0xFFFFF8F2),
       appBar: AppBar(
         backgroundColor: Color(0xFFfb9798),
         leading: IconButton(
@@ -338,13 +339,17 @@ class _s_AInstantBookingDetailState extends State<s_AInstantBookingDetail> {
                                           final docRef = snapshot.docs.first.reference;
 
                                           // Update sCompleted
-                                          await docRef.update({'sCompleted': true});
+                                          await docRef.update({
+                                            'sCompleted': true,
+                                            'updatedAt': FieldValue.serverTimestamp(),
+                                          });
 
                                           // If provider also marked completed, mark the booking as fully completed
                                           if (bookingData!['pCompleted'] == true) {
                                             await docRef.update({
                                               'status': 'Completed',
                                               'completedAt': FieldValue.serverTimestamp(),
+                                              'updatedAt': FieldValue.serverTimestamp(),
                                             });
 
                                             ReusableSnackBar(

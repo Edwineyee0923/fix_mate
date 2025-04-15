@@ -104,6 +104,7 @@ class _RefundEvidenceUploadState extends State<RefundEvidenceUpload> {
           'status': 'Cancelled',
           'refundIssued': true,
           'cancelledAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
         });
 
         await FirebaseFirestore.instance.collection('s_notifications').add({

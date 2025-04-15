@@ -27,8 +27,8 @@ class _login_pageState extends State<login_page> {
   @override
   void initState() {
     super.initState();
-    _emailTextController.addListener(_checkForAdmin);
-    _passwordTextController.addListener(_checkForAdmin);
+    // _emailTextController.addListener(_checkForAdmin);
+    // _passwordTextController.addListener(_checkForAdmin);
   }
 
   @override
@@ -56,46 +56,46 @@ class _login_pageState extends State<login_page> {
 
 
 
-  void _checkForAdmin() async {
-    if (_emailTextController.text == "admin123@gmail.com" &&
-        _passwordTextController.text == "fixmate123456") {
-      if (!_isAdminRedirected) {
-        _isAdminRedirected = true;
-
-        try {
-          UserCredential userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
-            email: _emailTextController.text,
-            password: _passwordTextController.text,
-          );
-
-          // 🔁 Force token refresh to get the latest admin claim
-          await userCredential.user?.getIdToken(true);
-
-          final idTokenResult = await userCredential.user?.getIdTokenResult();
-          final isAdmin = idTokenResult?.claims?['admin'] == true;
-
-          if (isAdmin) {
-            print("✅ Admin authenticated, redirecting...");
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => SP_application()),
-            );
-          } else {
-            print("❌ Logged in, but not an admin.");
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text("You are not authorized as admin.")),
-            );
-          }
-        } catch (e) {
-          print("❌ Admin login failed: $e");
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("Admin login failed. Please try again.")),
-          );
-          _isAdminRedirected = false; // Allow retry
-        }
-      }
-    }
-  }
+  // void _checkForAdmin() async {
+  //   if (_emailTextController.text == "admin123@gmail.com" &&
+  //       _passwordTextController.text == "fixmate123456") {
+  //     if (!_isAdminRedirected) {
+  //       _isAdminRedirected = true;
+  //
+  //       try {
+  //         UserCredential userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+  //           email: _emailTextController.text,
+  //           password: _passwordTextController.text,
+  //         );
+  //
+  //         // 🔁 Force token refresh to get the latest admin claim
+  //         await userCredential.user?.getIdToken(true);
+  //
+  //         final idTokenResult = await userCredential.user?.getIdTokenResult();
+  //         final isAdmin = idTokenResult?.claims?['admin'] == true;
+  //
+  //         if (isAdmin) {
+  //           print("✅ Admin authenticated, redirecting...");
+  //           Navigator.pushReplacement(
+  //             context,
+  //             MaterialPageRoute(builder: (context) => SP_application()),
+  //           );
+  //         } else {
+  //           print("❌ Logged in, but not an admin.");
+  //           ScaffoldMessenger.of(context).showSnackBar(
+  //             SnackBar(content: Text("You are not authorized as admin.")),
+  //           );
+  //         }
+  //       } catch (e) {
+  //         print("❌ Admin login failed: $e");
+  //         ScaffoldMessenger.of(context).showSnackBar(
+  //           SnackBar(content: Text("Admin login failed. Please try again.")),
+  //         );
+  //         _isAdminRedirected = false; // Allow retry
+  //       }
+  //     }
+  //   }
+  // }
 
   Widget build(BuildContext context) {
     return Scaffold(

@@ -233,11 +233,28 @@ class _s_PInstantBookingDetailState extends State<s_PInstantBookingDetail> {
           'alternativeTime': _newAlternativeTime != null
               ? timeFormat12.format(DateTime(0, 1, 1, _newAlternativeTime!.hour, _newAlternativeTime!.minute))
               : null,
+          'updatedAt': FieldValue.serverTimestamp(),
         });
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Schedule updated.")),
+      ReusableSnackBar(
+        context,
+        "Schedule updated!",
+        icon: Icons.check_circle,
+        iconColor: Colors.green,
+      );
+
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      // ✅ Reroute to s_BookingHistory, tab 0 (Pending Confirmation)
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => s_BookingHistory(
+            key: UniqueKey(),
+            initialTabIndex: 0,
+          ),
+        ),
       );
 
       setState(() {
@@ -266,6 +283,7 @@ class _s_PInstantBookingDetailState extends State<s_PInstantBookingDetail> {
         : [];
 
     return Scaffold(
+      backgroundColor: const Color(0xFFFFF8F2),
       appBar: AppBar(
         backgroundColor: const Color(0xFFfb9798),
         leading: IconButton(
@@ -374,6 +392,7 @@ class _s_PInstantBookingDetailState extends State<s_PInstantBookingDetail> {
                           'isRescheduling': true,
                           'rescheduleSent': false,
                           'providerHasSeen': false,
+                          'updatedAt': FieldValue.serverTimestamp(),
                         });
 
                         // 🔔 Notify the service provider
@@ -388,9 +407,15 @@ class _s_PInstantBookingDetailState extends State<s_PInstantBookingDetail> {
                           'createdAt': FieldValue.serverTimestamp(),
                         });
 
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text("You have rejected the reschedule.")),
+                        ReusableSnackBar(
+                          context,
+                          "You have rejected the reschedule!",
+                          icon: Icons.check_circle,
+                          iconColor: Colors.green,
                         );
+                        // ScaffoldMessenger.of(context).showSnackBar(
+                        //   const SnackBar(content: Text("You have rejected the reschedule.")),
+                        // );
 
                         // 🔁 Redirect back to Pending tab
                         Navigator.pushReplacement(
@@ -419,6 +444,7 @@ class _s_PInstantBookingDetailState extends State<s_PInstantBookingDetail> {
                         'isRescheduling': false,
                         'rescheduleSent': false,
                         'providerHasSeen': false,
+                        'updatedAt': FieldValue.serverTimestamp(),
                       });
 
                       await FirebaseFirestore.instance.collection('p_notifications').add({
@@ -1202,6 +1228,7 @@ class _CancelReasonBottomSheetState extends State<CancelReasonBottomSheet> {
                           'cancellationReason': _selectedReason,
                           'status': 'Pending Confirmation',
                           'cancelledRequestedAt': FieldValue.serverTimestamp(),
+                          'updatedAt': FieldValue.serverTimestamp(),
                         });
 
                         await FirebaseFirestore.instance.collection('p_notifications').add({

@@ -25,13 +25,23 @@ class _p_BookingHistoryState extends State<p_BookingHistory> {
   int _selectedIndex = 0;
   final List<String> statuses = ["Pending Confirmation", "Active", "Completed", "Cancelled"];
   final ScrollController _tabScrollController = ScrollController();
-
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+  List<Map<String, dynamic>> _searchMatches = [];
+  int _matchIndex = 0;
+  List<Map<String, dynamic>> _allBookings = [];
 
   @override
   void initState() {
     super.initState();
     final user = FirebaseAuth.instance.currentUser;
     providerId = user?.uid;
+
+
+    if (providerId != null) {
+      _fetchAllBookings();
+    }
+
     _selectedIndex = widget.initialTabIndex;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // Estimate the width of each button + padding (adjust if needed)
@@ -58,6 +68,165 @@ class _p_BookingHistoryState extends State<p_BookingHistory> {
 
     return "${dateTime.day.toString().padLeft(2, '0')} ${monthNames[dateTime.month - 1]} ${dateTime.year}, "
         "$hour:$minute $period";
+  }
+
+  Future<void> _fetchAllBookings() async {
+    final querySnapshot = await FirebaseFirestore.instance
+        .collection('bookings')
+        .where('serviceProviderId', isEqualTo: providerId)
+        .get();
+
+    setState(() {
+      _allBookings = querySnapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        data['docId'] = doc.id;
+        return data;
+      }).toList();
+    });
+  }
+
+  Widget _buildSearchBar() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(30),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black12,
+              blurRadius: 6,
+              offset: Offset(0, 3),
+            ),
+          ],
+        ),
+        child: TextField(
+          controller: _searchController,
+          onChanged: (value) {
+            final query = value.trim().toLowerCase();
+
+            setState(() {
+              _searchQuery = query;
+
+              _searchMatches = _allBookings.where((b) {
+                final title = (b['IPTitle'] ?? '').toString().toLowerCase();
+                final id = (b['bookingId'] ?? '').toString().toLowerCase();
+                return title.contains(query) || id.contains(query);
+              }).toList();
+
+              _matchIndex = 0;
+
+              if (_searchMatches.isNotEmpty) {
+                final tabIndex = statuses.indexOf(_searchMatches[_matchIndex]['status']);
+                if (tabIndex != _selectedIndex && tabIndex != -1) {
+                  _selectedIndex = tabIndex;
+                  final buttonWidth = 120.0;
+                  _tabScrollController.animateTo(
+                    tabIndex * buttonWidth,
+                    duration: const Duration(milliseconds: 400),
+                    curve: Curves.easeOut,
+                  );
+                }
+              }
+            });
+          },
+          style: const TextStyle(fontSize: 15),
+          decoration: InputDecoration(
+            hintText: 'Search post title or booking ID...',
+            hintStyle: TextStyle(color: Colors.grey.shade500),
+            prefixIcon: const Icon(Icons.search, color: Color(0xFF464E65)),
+            suffixIcon: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (_searchMatches.length > 1)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Text(
+                      '${_matchIndex + 1} of ${_searchMatches.length}',
+                      style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+                    ),
+                  ),
+                if (_searchMatches.length > 1)
+                  Tooltip(
+                    message: 'Previous match',
+                    child: IconButton(
+                      icon: Icon(
+                        Icons.arrow_drop_up,
+                        color: _matchIndex > 0 ? Color(0xFF464E65) : Colors.grey,
+                      ),
+                      onPressed: _matchIndex > 0
+                          ? () {
+                        setState(() {
+                          _matchIndex--;
+                          final tabIndex = statuses.indexOf(
+                              _searchMatches[_matchIndex]['status']);
+                          if (tabIndex != _selectedIndex && tabIndex != -1) {
+                            _selectedIndex = tabIndex;
+                            _tabScrollController.animateTo(
+                              tabIndex * 120.0,
+                              duration: const Duration(milliseconds: 400),
+                              curve: Curves.easeOut,
+                            );
+                          }
+                        });
+                      }
+                          : null,
+                    ),
+                  ),
+                if (_searchMatches.length > 1)
+                  Tooltip(
+                    message: 'Next match',
+                    child: IconButton(
+                      icon: Icon(
+                        Icons.arrow_drop_down,
+                        color: _matchIndex < _searchMatches.length - 1
+                            ? Color(0xFF464E65)
+                            : Colors.grey,
+                      ),
+                      onPressed: _matchIndex < _searchMatches.length - 1
+                          ? () {
+                        setState(() {
+                          _matchIndex++;
+                          final tabIndex = statuses.indexOf(
+                              _searchMatches[_matchIndex]['status']);
+                          if (tabIndex != _selectedIndex && tabIndex != -1) {
+                            _selectedIndex = tabIndex;
+                            _tabScrollController.animateTo(
+                              tabIndex * 120.0,
+                              duration: const Duration(milliseconds: 400),
+                              curve: Curves.easeOut,
+                            );
+                          }
+                        });
+                      }
+                          : null,
+                    ),
+                  ),
+                if (_searchController.text.isNotEmpty)
+                  Tooltip(
+                    message: 'Clear search',
+                    child: IconButton(
+                      icon: const Icon(Icons.clear, color: Colors.grey),
+                      onPressed: () {
+                        _searchController.clear();
+                        setState(() {
+                          _searchQuery = '';
+                          _searchMatches.clear();
+                          _matchIndex = 0;
+                        });
+                        FocusScope.of(context).unfocus(); // dismiss keyboard
+                      },
+                    ),
+                  ),
+              ],
+            ),
+            contentPadding:
+            const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+            border: InputBorder.none,
+          ),
+        ),
+      ),
+    );
   }
 
   Color getStatusColor(Map<String, dynamic> data, bool isActive) {
@@ -133,6 +302,7 @@ class _p_BookingHistoryState extends State<p_BookingHistory> {
     }
     return [];
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -211,6 +381,7 @@ class _p_BookingHistoryState extends State<p_BookingHistory> {
         ),
         body: Column(
           children: [
+            _buildSearchBar(),
             SingleChildScrollView(
               controller: _tabScrollController,
               scrollDirection: Axis.horizontal,
@@ -254,6 +425,7 @@ class _p_BookingHistoryState extends State<p_BookingHistory> {
                     .collection('bookings')
                     .where('serviceProviderId', isEqualTo: providerId)
                     .where('status', isEqualTo: statuses[_selectedIndex])
+                    .orderBy('updatedAt', descending: true)
                     .snapshots(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
@@ -265,343 +437,466 @@ class _p_BookingHistoryState extends State<p_BookingHistory> {
 
                   return ListView(
                     padding: const EdgeInsets.all(16),
-                    children: snapshot.data!.docs.map((doc) {
-                      final data = doc.data() as Map<String, dynamic>;
-                      final isActive = data['status'] == 'Active';
-                      final isCompleted = data['status'] == 'Completed';
-                      final isCancelled = data['status'] == 'Cancelled';
-                      final isInstantBooking = data['bookingId'].toString().startsWith('BKIB');
-                      return GestureDetector(
-                        onTap: () async {
-                          final bookingId = doc['bookingId'];
+                    // children: snapshot.data!.docs.map((doc) {
+                    children: snapshot.data!.docs.where((doc) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    final postTitle = (data['IPTitle'] ?? '').toString().toLowerCase();
+                    final bookingId = (data['bookingId'] ?? '').toString().toLowerCase();
 
+                    return postTitle.contains(_searchQuery) || bookingId.contains(_searchQuery);
+                    }).map((doc) {
+                      {
+                        final data = doc.data() as Map<String, dynamic>;
+                        final isActive = data['status'] == 'Active';
+                        final isCompleted = data['status'] == 'Completed';
+                        final isCancelled = data['status'] == 'Cancelled';
+                        final isInstantBooking = data['bookingId']
+                            .toString()
+                            .startsWith('BKIB');
+                        return GestureDetector(
+                            onTap: () async {
+                              final bookingId = doc['bookingId'];
 
-                          // Mark booking as seen
-                          if (!(doc['providerHasSeen'] ?? true)) {
-                            await doc.reference.update({'providerHasSeen': true});
+                              // if (!(doc['providerHasSeen'] ?? true)) {
+                              //   await doc.reference.update({'providerHasSeen': true});
+                              // }
 
-                            // Also mark the related notification as read
-                            final notiSnap = await FirebaseFirestore.instance
-                                .collection('p_notifications')
-                                .where('bookingId', isEqualTo: bookingId)
-                                .limit(1)
-                                .get();
+                              // Mark booking as seen
+                              if (!(doc['providerHasSeen'] ?? true)) {
+                                await doc.reference.update(
+                                    {'providerHasSeen': true});
 
-                            if (notiSnap.docs.isNotEmpty) {
-                              await notiSnap.docs.first.reference.update({'isRead': true});
-                            }
-                          }
+                                // Also mark the related notification as read
+                                final notiSnap = await FirebaseFirestore
+                                    .instance
+                                    .collection('p_notifications')
+                                    .where('bookingId', isEqualTo: bookingId)
+                                    .limit(1)
+                                    .get();
 
-                          if (isInstantBooking) {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                isCompleted
-                                    ? p_CInstantBookingDetail(
-                                  bookingId: data['bookingId'],
-                                  postId: data['postId'],
-                                  seekerId: data['serviceSeekerId'],
-                                )
-                                : isActive
-                                    ? p_AInstantBookingDetail(
-                                  bookingId: data['bookingId'],
-                                  postId: data['postId'],
-                                  seekerId: data['serviceSeekerId'],
-                                )
-                                : isCancelled
-                                    ? p_CCInstantBookingDetail(
-                                  bookingId: data['bookingId'],
-                                  postId: data['postId'],
-                                  seekerId: data['serviceSeekerId'],
-                                )
-                                    : p_PInstantBookingDetail(
-                                  bookingId: data['bookingId'],
-                                  postId: data['postId'],
-                                  seekerId: data['serviceSeekerId'],
-                                ),
-                              ),
-                            );
-                          } else {
-                            // TODO: Add redirect to PromotionBookingDetail if needed
-                          }
+                                if (notiSnap.docs.isNotEmpty) {
+                                  await notiSnap.docs.first.reference.update(
+                                      {'isRead': true});
+                                }
+                              }
 
-                        },
-                        // child: Card(
-                        //   margin: const EdgeInsets.symmetric(vertical: 10),
-                        //   elevation: 3,
-                        //   child: Padding(
-                        //     padding: const EdgeInsets.all(16),
-                        //     child: Column(
-                        //       crossAxisAlignment: CrossAxisAlignment.start,
-                        //       children: [
-                        //         Row(
-                        //           children: [
-                        //             Container(
-                        //               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        //               decoration: BoxDecoration(
-                        //                 color: getStatusColor(data, isActive),
-                        //                 borderRadius: BorderRadius.circular(8),
-                        //               ),
-                        //               child: Text(
-                        //                 getStatusLabel(data, isActive),
-                        //                 style: const TextStyle(
-                        //                   color: Colors.white,
-                        //                   fontWeight: FontWeight.w500,
-                        //                   fontSize: 14,
-                        //                 ),
-                        //               ),
-                        //             ),
-                        //             if (!(doc['providerHasSeen'] ?? true))
-                        //               Container(
-                        //                 margin: const EdgeInsets.only(left: 5),
-                        //                 width: 10,
-                        //                 height: 10,
-                        //                 decoration: const BoxDecoration(
-                        //                   color: Colors.red,
-                        //                   shape: BoxShape.circle,
-                        //                 ),
-                        //               ),
-                        //           ],
-                        //         ),
-                        //
-                        //         const SizedBox(height: 5),
-                        //         Text("Service Title: ${doc['IPTitle']}"),
-                        //         Text("Booking ID: ${doc['bookingId']}"),
-                        //         Text("Status: ${doc['status']}", style: const TextStyle(color: Colors.red)),
-                        //         Text("Service Category: ${data['serviceCategory']}"),
-                        //         Text("Price: RM ${doc['price']}",),
-                        //         Text("Location: ${doc['location']}",),
-                        //         if (data['isRescheduling'] == true && data['rescheduleSent'] == false) ...[
-                        //           Text("Final Schedule (Rescheduled): ${data['finalDate']}, ${data['finalTime']}"),
-                        //           Text("❌ Reschedule rejected by seeker. Please suggest a new schedule based on your WhatsApp discussion.", style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.w500)),
-                        //         ] else if (data['isRescheduling'] == true && data['rescheduleSent'] == true) ...[
-                        //           Text("Final Schedule (Rescheduled): ${data['finalDate']}, ${data['finalTime']}"),
-                        //           Text("⚠ Awaiting confirmation from seeker", style: TextStyle(color: Colors.orange, fontWeight: FontWeight.w500)),
-                        //         ] else if (isActive || data['status'] == "Completed") ...[
-                        //           Text("Final Schedule: ${data['finalDate']}, ${data['finalTime']}"),
-                        //         ] else if (data['status'] == 'Cancelled')...[
-                        //           Text(
-                        //           "Cancelled At: ${formatTimestamp(data['cancelledAt'])}",
-                        //           ),
-                        //         ]
-                        //         else ...[
-                        //           Text("Preferred Schedule: ${data['preferredDate']}, ${data['preferredTime']}"),
-                        //           if (data['alternativeDate'] != null && data['alternativeTime'] != null)
-                        //             Text("Alternative Schedule: ${data['alternativeDate']}, ${data['alternativeTime']}"),
-                        //         ],
-                        //         if (data['status'] == 'Completed' && data['completedAt'] != null)
-                        //           Text(
-                        //             "Completed At: ${formatTimestamp(data['completedAt'])}",
-                        //           ),
-                        //
-                        //
-                        //         Text(
-                        //           "Type: ${isInstantBooking ? "Instant Booking" : "Promotion"}",
-                        //           style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                        //         ),
-                        //
-                        //
-                        //         const SizedBox(height: 8),
-                        //
-                        //         if (data['status'] == 'Active' && data['pCompleted'] != true) ...[
-                        //           Row(
-                        //             crossAxisAlignment: CrossAxisAlignment.center,
-                        //             children: [
-                        //               Icon(Icons.warning_amber_rounded, color: Colors.orange.shade600, size: 18),
-                        //               const SizedBox(width: 6),
-                        //               Expanded(
-                        //                 child: Text(
-                        //                   "Don’t forget to upload at least 3 service photos before clicking “Service Completed” — tap the card to begin!",
-                        //                   style: TextStyle(
-                        //                     color: Colors.orange.shade700,
-                        //                     fontSize: 12.5,
-                        //                     fontWeight: FontWeight.w500,
-                        //                   ),
-                        //                 ),
-                        //               ),
-                        //             ],
-                        //           ),
-                        //
-                        //         ] else if (data['pCompleted'] == true && data['status'] != 'Completed') ...[
-                        //           const Padding(
-                        //             padding: EdgeInsets.only(top: 6),
-                        //             child: Text(
-                        //               "✅ You have marked this service as completed.\nWaiting for seeker confirmation or auto-complete after three days.",
-                        //               style: TextStyle(color: Colors.green, fontStyle: FontStyle.italic),
-                        //             ),
-                        //           ),
-                        //         ],
-                        //       ],
-                        //     ),
-                        //   ),
-                        // ),
-                        child: Card(
-                          margin: const EdgeInsets.symmetric(vertical: 10),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                          elevation: 3,
-                          child: Stack(
-                              children: [
-                              Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                          FutureBuilder<List<String>>(
-                            future: fetchPostImages(data['postId']),
-                            builder: (context, snapshot) {
-                              if (snapshot.connectionState == ConnectionState.waiting) {
-                                return const SizedBox(
-                                  height: 160,
-                                  child: Center(child: CircularProgressIndicator()),
+                              if (isInstantBooking) {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                    isCompleted
+                                        ? p_CInstantBookingDetail(
+                                      bookingId: data['bookingId'],
+                                      postId: data['postId'],
+                                      seekerId: data['serviceSeekerId'],
+                                    )
+                                        : isActive
+                                        ? p_AInstantBookingDetail(
+                                      bookingId: data['bookingId'],
+                                      postId: data['postId'],
+                                      seekerId: data['serviceSeekerId'],
+                                    )
+                                        : isCancelled
+                                        ? p_CCInstantBookingDetail(
+                                      bookingId: data['bookingId'],
+                                      postId: data['postId'],
+                                      seekerId: data['serviceSeekerId'],
+                                    )
+                                        : p_PInstantBookingDetail(
+                                      bookingId: data['bookingId'],
+                                      postId: data['postId'],
+                                      seekerId: data['serviceSeekerId'],
+                                    ),
+                                  ),
                                 );
+                              } else {
+                                // TODO: Add redirect to PromotionBookingDetail if needed
                               }
-
-                              final imageUrls = snapshot.data ?? [];
-
-                              if (imageUrls.isEmpty) {
-                                return const SizedBox(); // No image
-                              }
-
-                              return ClipRRect(
-                                borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
-                                child: Image.network(
-                                  imageUrls.first,
-                                  height: 160,
-                                  width: double.infinity,
-                                  fit: BoxFit.cover,
-                                  loadingBuilder: (context, child, loadingProgress) {
-                                    if (loadingProgress == null) return child;
-                                    return const Center(child: CircularProgressIndicator());
-                                  },
-                                  errorBuilder: (context, error, stackTrace) =>
-                                  const Center(child: Icon(Icons.broken_image)),
-                                ),
-                              );
                             },
-                          ),
-
-
-                          Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                      decoration: BoxDecoration(
-                                        color: getStatusColor(data, isActive),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Text(
-                                        getStatusLabel(data, isActive),
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.w500,
-                                          fontSize: 14,
-                                        ),
-                                      ),
-                                    ),
-                                    if (!(doc['providerHasSeen'] ?? true))
-                                      Container(
-                                        margin: const EdgeInsets.only(left: 5),
-                                        width: 10,
-                                        height: 10,
-                                        decoration: const BoxDecoration(
-                                          color: Colors.red,
-                                          shape: BoxShape.circle,
-                                        ),
-                                      ),
-                                  ],
-                                ),
-
-                                const SizedBox(height: 5),
-                                Text("Service Title: ${doc['IPTitle']}"),
-                                Text("Booking ID: ${doc['bookingId']}"),
-                                Text("Status: ${doc['status']}", style: const TextStyle(color: Colors.red)),
-                                Text("Service Category: ${data['serviceCategory']}"),
-                                Text("Price: RM ${doc['price']}",),
-                                // Text("Location: ${doc['location']}",),
-                                if (data['isRescheduling'] == true && data['rescheduleSent'] == false) ...[
-                                  Text("Final Schedule (Rescheduled): ${data['finalDate']}, ${data['finalTime']}"),
-                                  Text("❌ Reschedule rejected by seeker. Please suggest a new schedule based on your WhatsApp discussion.", style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.w500)),
-                                ] else if (data['isRescheduling'] == true && data['rescheduleSent'] == true) ...[
-                                  Text("Final Schedule (Rescheduled): ${data['finalDate']}, ${data['finalTime']}"),
-                                  Text("⚠ Awaiting confirmation from seeker", style: TextStyle(color: Colors.orange, fontWeight: FontWeight.w500)),
-                                ] else if (isActive || data['status'] == "Completed") ...[
-                                  Text("Final Schedule: ${data['finalDate']}, ${data['finalTime']}"),
-                                ] else if (data['status'] == 'Cancelled')...[
-                                  Text(
-                                    "Cancelled At: ${formatTimestamp(data['cancelledAt'])}",
-                                  ),
-                                ]
-                                else ...[
-                                    Text("Preferred Schedule: ${data['preferredDate']}, ${data['preferredTime']}"),
-                                    if (data['alternativeDate'] != null && data['alternativeTime'] != null)
-                                      Text("Alternative Schedule: ${data['alternativeDate']}, ${data['alternativeTime']}"),
-                                  ],
-                                if (data['status'] == 'Completed' && data['completedAt'] != null)
-                                  Text(
-                                    "Completed At: ${formatTimestamp(data['completedAt'])}",
-                                  ),
-
-
-                                Text(
-                                  "Type: ${isInstantBooking ? "Instant Booking" : "Promotion"}",
-                                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                                ),
-
-                                const SizedBox(height: 8),
-                                if (data['status'] == 'Active' && data['pCompleted'] != true) ...[
-                                  Row(
-                                    crossAxisAlignment: CrossAxisAlignment.center,
+                            // child: Card(
+                            //   margin: const EdgeInsets.symmetric(vertical: 10),
+                            //   elevation: 3,
+                            //   child: Padding(
+                            //     padding: const EdgeInsets.all(16),
+                            //     child: Column(
+                            //       crossAxisAlignment: CrossAxisAlignment.start,
+                            //       children: [
+                            //         Row(
+                            //           children: [
+                            //             Container(
+                            //               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            //               decoration: BoxDecoration(
+                            //                 color: getStatusColor(data, isActive),
+                            //                 borderRadius: BorderRadius.circular(8),
+                            //               ),
+                            //               child: Text(
+                            //                 getStatusLabel(data, isActive),
+                            //                 style: const TextStyle(
+                            //                   color: Colors.white,
+                            //                   fontWeight: FontWeight.w500,
+                            //                   fontSize: 14,
+                            //                 ),
+                            //               ),
+                            //             ),
+                            //             if (!(doc['providerHasSeen'] ?? true))
+                            //               Container(
+                            //                 margin: const EdgeInsets.only(left: 5),
+                            //                 width: 10,
+                            //                 height: 10,
+                            //                 decoration: const BoxDecoration(
+                            //                   color: Colors.red,
+                            //                   shape: BoxShape.circle,
+                            //                 ),
+                            //               ),
+                            //           ],
+                            //         ),
+                            //
+                            //         const SizedBox(height: 5),
+                            //         Text("Service Title: ${doc['IPTitle']}"),
+                            //         Text("Booking ID: ${doc['bookingId']}"),
+                            //         Text("Status: ${doc['status']}", style: const TextStyle(color: Colors.red)),
+                            //         Text("Service Category: ${data['serviceCategory']}"),
+                            //         Text("Price: RM ${doc['price']}",),
+                            //         Text("Location: ${doc['location']}",),
+                            //         if (data['isRescheduling'] == true && data['rescheduleSent'] == false) ...[
+                            //           Text("Final Schedule (Rescheduled): ${data['finalDate']}, ${data['finalTime']}"),
+                            //           Text("❌ Reschedule rejected by seeker. Please suggest a new schedule based on your WhatsApp discussion.", style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.w500)),
+                            //         ] else if (data['isRescheduling'] == true && data['rescheduleSent'] == true) ...[
+                            //           Text("Final Schedule (Rescheduled): ${data['finalDate']}, ${data['finalTime']}"),
+                            //           Text("⚠ Awaiting confirmation from seeker", style: TextStyle(color: Colors.orange, fontWeight: FontWeight.w500)),
+                            //         ] else if (isActive || data['status'] == "Completed") ...[
+                            //           Text("Final Schedule: ${data['finalDate']}, ${data['finalTime']}"),
+                            //         ] else if (data['status'] == 'Cancelled')...[
+                            //           Text(
+                            //           "Cancelled At: ${formatTimestamp(data['cancelledAt'])}",
+                            //           ),
+                            //         ]
+                            //         else ...[
+                            //           Text("Preferred Schedule: ${data['preferredDate']}, ${data['preferredTime']}"),
+                            //           if (data['alternativeDate'] != null && data['alternativeTime'] != null)
+                            //             Text("Alternative Schedule: ${data['alternativeDate']}, ${data['alternativeTime']}"),
+                            //         ],
+                            //         if (data['status'] == 'Completed' && data['completedAt'] != null)
+                            //           Text(
+                            //             "Completed At: ${formatTimestamp(data['completedAt'])}",
+                            //           ),
+                            //
+                            //
+                            //         Text(
+                            //           "Type: ${isInstantBooking ? "Instant Booking" : "Promotion"}",
+                            //           style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            //         ),
+                            //
+                            //
+                            //         const SizedBox(height: 8),
+                            //
+                            //         if (data['status'] == 'Active' && data['pCompleted'] != true) ...[
+                            //           Row(
+                            //             crossAxisAlignment: CrossAxisAlignment.center,
+                            //             children: [
+                            //               Icon(Icons.warning_amber_rounded, color: Colors.orange.shade600, size: 18),
+                            //               const SizedBox(width: 6),
+                            //               Expanded(
+                            //                 child: Text(
+                            //                   "Don’t forget to upload at least 3 service photos before clicking “Service Completed” — tap the card to begin!",
+                            //                   style: TextStyle(
+                            //                     color: Colors.orange.shade700,
+                            //                     fontSize: 12.5,
+                            //                     fontWeight: FontWeight.w500,
+                            //                   ),
+                            //                 ),
+                            //               ),
+                            //             ],
+                            //           ),
+                            //
+                            //         ] else if (data['pCompleted'] == true && data['status'] != 'Completed') ...[
+                            //           const Padding(
+                            //             padding: EdgeInsets.only(top: 6),
+                            //             child: Text(
+                            //               "✅ You have marked this service as completed.\nWaiting for seeker confirmation or auto-complete after three days.",
+                            //               style: TextStyle(color: Colors.green, fontStyle: FontStyle.italic),
+                            //             ),
+                            //           ),
+                            //         ],
+                            //       ],
+                            //     ),
+                            //   ),
+                            // ),
+                            child: Card(
+                              margin: const EdgeInsets.symmetric(vertical: 10),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(15)),
+                              elevation: 3,
+                              child: Stack(
+                                children: [
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment
+                                        .start,
                                     children: [
-                                      Icon(Icons.warning_amber_rounded, color: Colors.orange.shade600, size: 18),
-                                      const SizedBox(width: 6),
-                                      Expanded(
-                                        child: Text(
-                                          "Don’t forget to upload at least 3 service photos before clicking “Service Completed” — tap the card to begin!",
-                                          style: TextStyle(
-                                            color: Colors.orange.shade700,
-                                            fontSize: 12.5,
-                                            fontWeight: FontWeight.w500,
-                                          ),
+                                      FutureBuilder<List<String>>(
+                                        future: fetchPostImages(data['postId']),
+                                        builder: (context, snapshot) {
+                                          if (snapshot.connectionState ==
+                                              ConnectionState.waiting) {
+                                            return const SizedBox(
+                                              height: 160,
+                                              child: Center(
+                                                  child: CircularProgressIndicator()),
+                                            );
+                                          }
+
+                                          final imageUrls = snapshot.data ?? [];
+
+                                          if (imageUrls.isEmpty) {
+                                            return const SizedBox(); // No image
+                                          }
+
+                                          return ClipRRect(
+                                            borderRadius: const BorderRadius
+                                                .vertical(
+                                                top: Radius.circular(15)),
+                                            child: Image.network(
+                                              imageUrls.first,
+                                              height: 160,
+                                              width: double.infinity,
+                                              fit: BoxFit.cover,
+                                              loadingBuilder: (context, child,
+                                                  loadingProgress) {
+                                                if (loadingProgress == null)
+                                                  return child;
+                                                return const Center(
+                                                    child: CircularProgressIndicator());
+                                              },
+                                              errorBuilder: (context, error,
+                                                  stackTrace) =>
+                                              const Center(child: Icon(
+                                                  Icons.broken_image)),
+                                            ),
+                                          );
+                                        },
+                                      ),
+
+
+                                      Padding(
+                                        padding: const EdgeInsets.all(16),
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment
+                                              .start,
+                                          children: [
+                                            Row(
+                                              children: [
+                                                Container(
+                                                  padding: const EdgeInsets
+                                                      .symmetric(horizontal: 8,
+                                                      vertical: 4),
+                                                  decoration: BoxDecoration(
+                                                    color: getStatusColor(
+                                                        data, isActive),
+                                                    borderRadius: BorderRadius
+                                                        .circular(8),
+                                                  ),
+                                                  child: Text(
+                                                    getStatusLabel(
+                                                        data, isActive),
+                                                    style: const TextStyle(
+                                                      color: Colors.white,
+                                                      fontWeight: FontWeight
+                                                          .w500,
+                                                      fontSize: 14,
+                                                    ),
+                                                  ),
+                                                ),
+                                                if (!(doc['providerHasSeen'] ??
+                                                    false))
+                                                  Container(
+                                                    margin: const EdgeInsets
+                                                        .only(left: 5),
+                                                    width: 10,
+                                                    height: 10,
+                                                    decoration: const BoxDecoration(
+                                                      color: Colors.red,
+                                                      shape: BoxShape.circle,
+                                                    ),
+                                                  ),
+                                              ],
+                                            ),
+
+                                            const SizedBox(height: 5),
+                                            Text(
+                                                "Service Title: ${doc['IPTitle']}"),
+                                            Text(
+                                                "Booking ID: ${doc['bookingId']}"),
+                                            Text("Status: ${doc['status']}",
+                                                style: const TextStyle(
+                                                    color: Colors.red)),
+                                            Text(
+                                                "Service Category: ${data['serviceCategory']}"),
+                                            Text("Price: RM ${doc['price']}",),
+                                            // Text("Location: ${doc['location']}",),
+                                            if (data['isRescheduling'] ==
+                                                true &&
+                                                data['rescheduleSent'] ==
+                                                    false) ...[
+                                              Text(
+                                                  "Final Schedule (Rescheduled): ${data['finalDate']}, ${data['finalTime']}"),
+                                              Text(
+                                                  "❌ Reschedule rejected by seeker. Please suggest a new schedule based on your WhatsApp discussion.",
+                                                  style: TextStyle(
+                                                      color: Colors.redAccent,
+                                                      fontWeight: FontWeight
+                                                          .w500)),
+                                            ] else
+                                              if (data['isRescheduling'] ==
+                                                  true &&
+                                                  data['rescheduleSent'] ==
+                                                      true) ...[
+                                                Text(
+                                                    "Final Schedule (Rescheduled): ${data['finalDate']}, ${data['finalTime']}"),
+                                                Text(
+                                                    "⚠ Awaiting confirmation from seeker",
+                                                    style: TextStyle(
+                                                        color: Colors.orange,
+                                                        fontWeight: FontWeight
+                                                            .w500)),
+                                              ] else
+                                                if (isActive ||
+                                                    data['status'] ==
+                                                        "Completed") ...[
+                                                  Text(
+                                                      "Final Schedule: ${data['finalDate']}, ${data['finalTime']}"),
+                                                ] else
+                                                  if (data['status'] ==
+                                                      'Cancelled')...[
+                                                    Text(
+                                                      "Cancelled At: ${formatTimestamp(
+                                                          data['cancelledAt'])}",
+                                                    ),
+                                                  ]
+                                                  else
+                                                    ...[
+                                                      Text(
+                                                          "Preferred Schedule: ${data['preferredDate']}, ${data['preferredTime']}"),
+                                                      if (data['alternativeDate'] !=
+                                                          null &&
+                                                          data['alternativeTime'] !=
+                                                              null)
+                                                        Text(
+                                                            "Alternative Schedule: ${data['alternativeDate']}, ${data['alternativeTime']}"),
+                                                    ],
+                                            if (data['status'] == 'Completed' &&
+                                                data['completedAt'] != null)
+                                              Text(
+                                                "Completed At: ${formatTimestamp(
+                                                    data['completedAt'])}",
+                                              ),
+
+                                            if (data['status'] ==
+                                                'Pending Confirmation' &&
+                                                data['sCancelled'] == true)
+                                              Column(
+                                                crossAxisAlignment: CrossAxisAlignment
+                                                    .start,
+                                                children: [
+                                                  const SizedBox(height: 2),
+                                                  Row(
+                                                    crossAxisAlignment: CrossAxisAlignment
+                                                        .center,
+                                                    children: [
+                                                      const Icon(Icons
+                                                          .warning_amber_rounded,
+                                                          color: Colors.orange,
+                                                          size: 18),
+                                                      const SizedBox(width: 6),
+                                                      const Expanded(
+                                                        child: Text(
+                                                          "Customer requested booking cancellation. Please approve or reject the request.",
+                                                          style: TextStyle(
+                                                            color: Colors
+                                                                .orange,
+                                                            fontSize: 14,
+                                                            fontWeight: FontWeight
+                                                                .w500,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  const SizedBox(height: 2),
+                                                ],
+                                              ),
+
+                                            Text(
+                                              "Type: ${isInstantBooking
+                                                  ? "Instant Booking"
+                                                  : "Promotion"}",
+                                              style: TextStyle(fontSize: 14,
+                                                  fontWeight: FontWeight.bold),
+                                            ),
+
+                                            const SizedBox(height: 8),
+                                            if (data['status'] == 'Active' &&
+                                                data['pCompleted'] != true) ...[
+                                              Row(
+                                                crossAxisAlignment: CrossAxisAlignment
+                                                    .center,
+                                                children: [
+                                                  Icon(Icons
+                                                      .warning_amber_rounded,
+                                                      color: Colors.orange
+                                                          .shade600, size: 18),
+                                                  const SizedBox(width: 6),
+                                                  Expanded(
+                                                    child: Text(
+                                                      "Don’t forget to upload at least 3 service photos before clicking “Service Completed” — tap the card to begin!",
+                                                      style: TextStyle(
+                                                        color: Colors.orange
+                                                            .shade700,
+                                                        fontSize: 12.5,
+                                                        fontWeight: FontWeight
+                                                            .w500,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+
+                                            ] else
+                                              if (data['pCompleted'] == true &&
+                                                  data['status'] !=
+                                                      'Completed') ...[
+                                                Row(
+                                                  crossAxisAlignment: CrossAxisAlignment
+                                                      .center,
+                                                  children: [
+                                                    const Icon(
+                                                        Icons.hourglass_bottom,
+                                                        color: Colors.green,
+                                                        size: 18),
+                                                    const SizedBox(width: 6),
+                                                    const Expanded(
+                                                      child: Text(
+                                                        "You have marked this service as completed.\nWaiting for seeker confirmation or auto-complete after three days.",
+                                                        style: TextStyle(
+                                                            color: Colors.green,
+                                                            fontSize: 12,
+                                                            fontWeight: FontWeight
+                                                                .w500),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ],
+                                          ],
                                         ),
                                       ),
                                     ],
-                                  ),
-
-                                ] else if (data['pCompleted'] == true && data['status'] != 'Completed') ...[
-                                  Row(
-                                    crossAxisAlignment: CrossAxisAlignment.center,
-                                    children: [
-                                      const Icon(Icons.hourglass_bottom, color: Colors.green, size: 18),
-                                      const SizedBox(width: 6),
-                                      const Expanded(
-                                        child: Text(
-                                          "You have marked this service as completed.\nWaiting for seeker confirmation or auto-complete after three days.",
-                                          style: TextStyle(color: Colors.green, fontSize: 12, fontWeight: FontWeight.w500),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const Padding(
-                                    padding: EdgeInsets.only(top: 6),
-                                    child: Text(
-                                      "✅ You have marked this service as completed.\nWaiting for seeker confirmation or auto-complete after three days.",
-                                      style: TextStyle(color: Colors.green, fontStyle: FontStyle.italic),
-                                    ),
                                   ),
                                 ],
-                              ],
-                            ),
-                          ),
-                          ],
-                        ),
-                      ],
-                      ),
-                      )
-                      );
+                              ),
+                            )
+                        );
+                      }
                     }).toList(),
                   );
                 },

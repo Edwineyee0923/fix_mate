@@ -6,6 +6,7 @@ import 'package:fix_mate/service_provider/p_BookingModule/p_CInstantBookingDetai
 import 'package:fix_mate/service_provider/p_BookingModule/p_PInstantBookingDetail.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:fix_mate/reusable_widget/reusable_widget.dart';
 
 class p_Notification extends StatefulWidget {
   const p_Notification({Key? key}) : super(key: key);
@@ -151,8 +152,11 @@ class _p_NotificationState extends State<p_Notification> {
                         MaterialPageRoute(builder: (_) => targetScreen),
                       );
                     } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Booking not found.')),
+                      ReusableSnackBar(
+                          context,
+                          "Booking not found.",
+                          icon: Icons.error,
+                          iconColor: Colors.red // Red icon for error
                       );
                     }
                   },

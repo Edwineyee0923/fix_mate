@@ -202,8 +202,11 @@ class _s_NotificationState extends State<s_Notification> {
                         MaterialPageRoute(builder: (_) => targetScreen),
                       );
                     } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Booking not found.')),
+                      ReusableSnackBar(
+                          context,
+                          "Booking not found.",
+                          icon: Icons.error,
+                          iconColor: Colors.red // Red icon for error
                       );
                     }
                   },

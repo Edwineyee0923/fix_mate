@@ -49,7 +49,7 @@ class _SPDetailScreenState extends State<SPDetailScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFFFFFF2),
       appBar: AppBar(
-        backgroundColor: const Color(0xFFFF9342),
+        backgroundColor: const Color(0xFFfb9798),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
           onPressed: () => Navigator.pop(context),
@@ -98,7 +98,7 @@ class _SPDetailScreenState extends State<SPDetailScreen> {
                     _buildDetailsTable(),
                     _buildTagsRow("Expertise:", spData!["selectedExpertiseFields"]),
                     _buildTagsRow("State:", spData!["selectedStates"]),
-                    _buildCredentialLink(spData!["certificateLink"]),
+                    // _buildCredentialLink(spData!["certificateLink"]),
                     _buildAddressRow(context, spData!["address"]),
                   ],
                 ),
@@ -114,11 +114,11 @@ class _SPDetailScreenState extends State<SPDetailScreen> {
     return Table(
       columnWidths: const {0: FixedColumnWidth(140), 1: FlexColumnWidth()},
       children: [
-        _buildTableRow("Applicant Name:", spData!["name"]),
+        _buildTableRow("Provider Name:", spData!["name"]),
         _buildTableRow("Bio:", spData!["bio"]),
-        _buildTableRow("Contact Number:", spData!["phone"]),
+        // _buildTableRow("Contact Number:", spData!["phone"]),
         _buildTableRow("Email:", spData!["email"]),
-        _buildTableRow("Date of Birth:", spData!["dob"]),
+        // _buildTableRow("Date of Birth:", spData!["dob"]),
         _buildTableRow("Gender:", spData!["gender"]),
       ],
     );
@@ -126,19 +126,68 @@ class _SPDetailScreenState extends State<SPDetailScreen> {
 
   TableRow _buildTableRow(String title, dynamic value) {
     String formattedValue = value ?? "N/A";
+
+    // Format Date of Birth
     if (title == "Date of Birth:" && value is String) {
       try {
         DateTime dob = DateTime.parse(value);
         formattedValue = DateFormat("d MMM yyyy").format(dob);
       } catch (_) {}
     }
+
+    // Make email clickable
+    if (title == "Email:" && value != null && value.toString().isNotEmpty) {
+      return TableRow(
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: GestureDetector(
+              onTap: () async {
+                final email = value.toString();
+                final subject = Uri.encodeComponent("Inquiry about FixMate Services");
+                final body = Uri.encodeComponent("Hi ${spData?['name'] ?? 'there'},\n\nI’d like to know more about your service.");
+                final url = "mailto:$email?subject=$subject&body=$body";
+                if (await canLaunch(url)) {
+                  await launch(url);
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Could not open email app.")),
+                  );
+                }
+              },
+              child: Text(
+                value.toString(),
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFFfb9798),
+                  decoration: TextDecoration.underline,
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    // Default table row
     return TableRow(
       children: [
-        Padding(padding: const EdgeInsets.symmetric(vertical: 6), child: Text(title, style: const TextStyle(fontWeight: FontWeight.bold))),
-        Padding(padding: const EdgeInsets.symmetric(vertical: 6), child: Text(formattedValue, textAlign: TextAlign.left)),
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Text(formattedValue, textAlign: TextAlign.left),
+        ),
       ],
     );
   }
+
 
   Widget _buildTagsRow(String title, dynamic values) {
     if (values == null || values is! List) return const SizedBox();
@@ -152,7 +201,7 @@ class _SPDetailScreenState extends State<SPDetailScreen> {
             child: Wrap(
               spacing: 8,
               runSpacing: 4,
-              children: values.map<Widget>((e) => Chip(label: Text(e, style: const TextStyle(color: Colors.white)), backgroundColor: Colors.orange)).toList(),
+              children: values.map<Widget>((e) => Chip(label: Text(e, style: const TextStyle(color: Colors.white)), backgroundColor: Color(0xFFfb9798))).toList(),
             ),
           ),
         ],
@@ -160,25 +209,25 @@ class _SPDetailScreenState extends State<SPDetailScreen> {
     );
   }
 
-  Widget _buildCredentialLink(String? url) {
-    if (url == null || url.isEmpty) return const SizedBox();
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: GestureDetector(
-        onTap: () async {
-          if (await canLaunchUrl(Uri.parse(url))) {
-            await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-          }
-        },
-        child: Row(
-          children: [
-            const SizedBox(width: 140, child: Text("Credential Doc:", style: TextStyle(fontWeight: FontWeight.bold))),
-            Expanded(child: Text("Open", style: const TextStyle(color: Color(0xFFFF9342), decoration: TextDecoration.underline, fontWeight: FontWeight.w500))),
-          ],
-        ),
-      ),
-    );
-  }
+  // Widget _buildCredentialLink(String? url) {
+  //   if (url == null || url.isEmpty) return const SizedBox();
+  //   return Padding(
+  //     padding: const EdgeInsets.symmetric(vertical: 8),
+  //     child: GestureDetector(
+  //       onTap: () async {
+  //         if (await canLaunchUrl(Uri.parse(url))) {
+  //           await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+  //         }
+  //       },
+  //       child: Row(
+  //         children: [
+  //           const SizedBox(width: 140, child: Text("Credential Doc:", style: TextStyle(fontWeight: FontWeight.bold))),
+  //           Expanded(child: Text("Open", style: const TextStyle(color: Color(0xFFFF9342), decoration: TextDecoration.underline, fontWeight: FontWeight.w500))),
+  //         ],
+  //       ),
+  //     ),
+  //   );
+  // }
 
   Widget _buildAddressRow(BuildContext context, String? address) {
     if (address == null || address.isEmpty) return const SizedBox();
@@ -189,7 +238,7 @@ class _SPDetailScreenState extends State<SPDetailScreen> {
           SizedBox(width: 140, child: Text("Address:", style: const TextStyle(fontWeight: FontWeight.bold))),
           Expanded(child: Text(address)),
           IconButton(
-            icon: const Icon(Icons.copy, color: Color(0xFFFF9342), size: 18),
+            icon: const Icon(Icons.copy, color: Color(0xFFfb9798), size: 18),
             onPressed: () {
               Clipboard.setData(ClipboardData(text: address));
               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Address copied to clipboard!")));

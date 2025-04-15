@@ -233,7 +233,7 @@ class _p_profileState extends State<p_profile> {
   @override
   Widget build(BuildContext context) {
     return ProviderLayout(
-      selectedIndex: 2,
+      selectedIndex: 3,
       child: Scaffold(
       backgroundColor: Color(0xFFFFFFF2),
       appBar: AppBar(

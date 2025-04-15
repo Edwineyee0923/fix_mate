@@ -86,6 +86,14 @@ class _p_AInstantBookingDetailState extends State<p_AInstantBookingDetail> {
           'pCompleted': true,
           'sCompleted': false,
           'evidencePhotos': _imageUrls,
+          'updatedAt': FieldValue.serverTimestamp(),
+          'completedAt': FieldValue.serverTimestamp(), // ✅ timestamp of now
+          // 'autoCompleteAt': Timestamp.fromDate(
+          //   DateTime.now().add(const Duration(days: 7)), // ✅ 7 days from now
+          // ),
+          'autoCompleteAt': Timestamp.fromDate(
+            DateTime.now().subtract(Duration(minutes: 1)),
+          ),
         });
 
         // Step 3: Notify the seeker

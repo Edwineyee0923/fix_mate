@@ -63,7 +63,7 @@ class s_footer extends StatelessWidget {
       showUnselectedLabels: true,
       items: const [
         BottomNavigationBarItem(icon: Icon(Icons.home, size: 30), label: 'Home'),
-        BottomNavigationBarItem(icon: Icon(Icons.history, size: 30), label: 'History'),
+        BottomNavigationBarItem(icon: Icon(Icons.history, size: 30), label: 'Booking History'),
         BottomNavigationBarItem(icon: Icon(Icons.favorite, size: 30), label: 'Favourite'),
         BottomNavigationBarItem(icon: Icon(Icons.person, size: 30), label: 'Profile'),
       ],
