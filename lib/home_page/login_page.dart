@@ -331,8 +331,7 @@ class _login_pageState extends State<login_page> {
                   //           'Sign-in failed. Please check your email and password. If you don’t have an account, click Sign Up.',
                   //         );
                   //       }
-                  //     }
-                  //   }
+                  //     }                  //   }
                   // }),
                     pk_button(context, "Login", () async {
                       if (_emailTextController.text.isEmpty || _passwordTextController.text.isEmpty) {
@@ -402,7 +401,8 @@ class _login_pageState extends State<login_page> {
                                   builder: (_) => ConfirmationDialog(
                                     title: "Resubmit Application?",
                                     message:
-                                    "Your application was rejected. Do you want to resubmit it based on the reason stated in your email? (Attempts left: ${3 - resubmissionCount})",
+                                    "Your application was rejected. Do you want to resubmit it based on the reason stated in your email? "
+                                        "(Attempts left: ${3 - resubmissionCount})",
                                     confirmText: "Resubmit",
                                     cancelText: "Cancel",
                                     icon: Icons.warning_amber_rounded,
@@ -438,7 +438,11 @@ class _login_pageState extends State<login_page> {
                         );
                       } catch (e) {
                         if (e is FirebaseAuthException) {
-                          if (e.code == 'user-not-found') {
+                          print('FirebaseAuthException code: ${e.code}'); // 🔥 Add this line
+
+                          if (e.code == 'invalid-email') {
+                            showValidationMessage(context, 'Invalid email format. Please check and try again.');
+                          } else if (e.code == 'user-not-found') {
                             showValidationMessage(context, 'Email not found. Please register.');
                           } else if (e.code == 'wrong-password') {
                             showValidationMessage(context, 'Incorrect password. Please try again.');

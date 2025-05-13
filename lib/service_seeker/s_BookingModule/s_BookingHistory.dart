@@ -4,6 +4,7 @@ import 'package:fix_mate/service_seeker/s_BookingModule/s_CInstantBookingDetail.
 import 'package:fix_mate/service_seeker/s_BookingModule/s_Notification.dart';
 import 'package:fix_mate/service_seeker/s_BookingModule/s_PInstantBookingDetail.dart';
 import 'package:fix_mate/service_seeker/s_InstantPostInfo.dart';
+import 'package:fix_mate/service_seeker/s_ReviewRating/s_Rating.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fix_mate/service_seeker/s_layout.dart';
@@ -1222,7 +1223,16 @@ class _s_BookingHistoryState extends State<s_BookingHistory> {
                                                     children: [
                                                       ElevatedButton(
                                                         onPressed: () {
-                                                          // TODO: Navigate to rating screen
+                                                            Navigator.push(
+                                                              context,
+                                                              MaterialPageRoute(
+                                                                builder: (context) => s_Rating(
+                                                                  bookingId: bookingId,
+                                                                  postId: data['postId'],
+                                                                  providerId: data['serviceProviderId'],
+                                                                ),
+                                                              ),
+                                                            );
                                                         },
                                                         style: ElevatedButton
                                                             .styleFrom(

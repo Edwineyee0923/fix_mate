@@ -12,6 +12,7 @@ import 'package:fix_mate/home_page/HomePage.dart';
 import 'package:fix_mate/service_seeker/s_BookingModule/s_BookingHistory.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'firebase_options.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fix_mate/reusable_widget/reusable_widget.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -22,6 +23,9 @@ Future<void> main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  // 👉 Add this line here
+  FirebaseAuth.instance.setSettings(appVerificationDisabledForTesting: true);
 
   await initializeDateFormatting('en', null); // Ensures proper date formatting for locale
 
@@ -199,7 +203,7 @@ class _MyAppState extends State<MyApp> {
         primarySwatch: Colors.orange,
         fontFamily: 'Poppins',
       ),
-      home: s_HomePage(),
+      home: s_BookingHistory(),
     );
   }
 }
