@@ -154,7 +154,8 @@ class _s_RatingState extends State<s_Rating> {
       final review = {
         'rating': _rating,
         'comment': _commentController.text.trim(),
-        'timestamp': FieldValue.serverTimestamp(),
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
         'providerId': widget.providerId,
         'postId': widget.postId,
         'bookingId': widget.bookingId,
