@@ -458,6 +458,8 @@ class _s_BookingHistoryState extends State<s_BookingHistory> {
                             "You haven't submitted any reviews yet."));
                       }
 
+
+                      // Review section appear at here
                       final reviews = snapshot.data!.docs;
 
                       return ListView.builder(
@@ -467,10 +469,13 @@ class _s_BookingHistoryState extends State<s_BookingHistory> {
                               String,
                               dynamic>;
 
+
+                          // Review section appear at here
+
                           final postId = review['postId'];
 
                           return Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                             child: Card(
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                               elevation: 4,
@@ -529,51 +534,99 @@ class _s_BookingHistoryState extends State<s_BookingHistory> {
                                           ],
                                         ),
                                       ),
-
                                     const SizedBox(height: 10),
+                                    // Comment + spacing (only shown if comment exists)
+                                    if (review['comment'] != null && review['comment'].toString().trim().isNotEmpty) ...[
+                                      Text(
+                                        review['comment'],
+                                        style: const TextStyle(fontSize: 14),
+                                        textAlign: TextAlign.justify,
+                                      ),
+                                      const SizedBox(height: 8),
+                                    ],
 
-                                    // Comment
-                                    if (review['comment'] != null)
-                                      Text(review['comment'], style: const TextStyle(fontSize: 14), textAlign: TextAlign.justify,),
 
-                                    const SizedBox(height: 8),
-                                    // Review Photo(s)
-                                    if (review['reviewPhotoUrls'] != null && review['reviewPhotoUrls'] is List)
+
+                                    if ((review['reviewVideoUrl'] != null) ||
+                                        (review['reviewPhotoUrls'] != null &&
+                                            review['reviewPhotoUrls'] is List &&
+                                            review['reviewPhotoUrls'].isNotEmpty)) ...[
                                       Wrap(
-                                        spacing: 6,
-                                        runSpacing: 6,
-                                        children: List.generate(
-                                          (review['reviewPhotoUrls'] as List).length,
-                                              (index) {
-                                            final url = review['reviewPhotoUrls'][index];
-                                            return GestureDetector(
-                                              onTap: () {
-                                                showDialog(
-                                                  context: context,
-                                                  builder: (_) => FullScreenImageViewer(
-                                                    imageUrls: List<String>.from(review['reviewPhotoUrls']),
-                                                    initialIndex: index,
+                                        spacing: 8,
+                                        runSpacing: 8,
+                                        children: [
+                                          if (review['reviewVideoUrl'] != null)
+                                            SizedBox(
+                                              width: 90,
+                                              height: 90,
+                                              child: ReviewVideoPreview(videoUrl: review['reviewVideoUrl']),
+                                            ),
+                                          if (review['reviewPhotoUrls'] != null &&
+                                              review['reviewPhotoUrls'] is List)
+                                            ...List.generate(
+                                              (review['reviewPhotoUrls'] as List).length,
+                                                  (index) {
+                                                final url = review['reviewPhotoUrls'][index];
+                                                return SizedBox(
+                                                  width: 90,
+                                                  height: 90,
+                                                  child: GestureDetector(
+                                                    onTap: () {
+                                                      showDialog(
+                                                        context: context,
+                                                        builder: (_) => FullScreenImageViewer(
+                                                          imageUrls: List<String>.from(review['reviewPhotoUrls']),
+                                                          initialIndex: index,
+                                                        ),
+                                                      );
+                                                    },
+                                                    child: ClipRRect(
+                                                      borderRadius: BorderRadius.circular(10),
+                                                      child: Image.network(
+                                                        url,
+                                                        fit: BoxFit.cover,
+                                                        loadingBuilder: (context, child, loadingProgress) {
+                                                          if (loadingProgress == null) return child;
+
+                                                          return Container(
+                                                            width: double.infinity,
+                                                            height: double.infinity,
+                                                            decoration: BoxDecoration(
+                                                              color: Colors.grey[300],
+                                                              borderRadius: BorderRadius.circular(10),
+                                                            ),
+                                                            child: const Center(
+                                                              child: SizedBox(
+                                                                width: 18,
+                                                                height: 18,
+                                                                child: CircularProgressIndicator(strokeWidth: 2),
+                                                              ),
+                                                            ),
+                                                          );
+                                                        },
+                                                        errorBuilder: (context, error, stackTrace) {
+                                                          return Container(
+                                                            width: double.infinity,
+                                                            height: double.infinity,
+                                                            decoration: BoxDecoration(
+                                                              color: Colors.grey[300],
+                                                              borderRadius: BorderRadius.circular(10),
+                                                            ),
+                                                            child: const Icon(Icons.broken_image, color: Colors.grey),
+                                                          );
+                                                        },
+                                                      ),
+                                                    ),
+
                                                   ),
                                                 );
                                               },
-                                              child: ClipRRect(
-                                                borderRadius: BorderRadius.circular(8),
-                                                child: Image.network(url, width: 80, height: 80, fit: BoxFit.cover),
-                                              ),
-                                            );
-                                          },
-                                        ),
+                                            ),
+                                        ],
                                       ),
+                                      const SizedBox(height: 10),
+                                    ],
 
-                                    // Review Video
-                                    // Review Video
-                                    if (review['reviewVideoUrl'] != null)
-                                      Padding(
-                                        padding: const EdgeInsets.only(top: 10),
-                                        child: ReviewVideoPreview(videoUrl: review['reviewVideoUrl']),
-                                      ),
-
-                                    const SizedBox(height: 10),
                                     GestureDetector(
                                       onTap: () {
                                         Navigator.push(
@@ -1116,59 +1169,113 @@ class _s_BookingHistoryState extends State<s_BookingHistory> {
                                                       ),
                                                     ],
 
-
-                                                    if (data['status'] ==
-                                                        'Completed') ...[
-                                                      const SizedBox(
-                                                          height: 12),
+                                                    if (data['status'] == 'Completed') ...[
+                                                      const SizedBox(height: 12),
                                                       Row(
-                                                        mainAxisAlignment: MainAxisAlignment
-                                                            .end,
+                                                        mainAxisAlignment: MainAxisAlignment.end,
                                                         children: [
-                                                          ElevatedButton(
-                                                            onPressed: () {
-                                                              Navigator.push(
-                                                                context,
-                                                                MaterialPageRoute(
-                                                                  builder: (
-                                                                      context) =>
-                                                                      s_Rating(
-                                                                        bookingId: bookingId,
-                                                                        postId: data['postId'],
-                                                                        providerId: data['serviceProviderId'],
-                                                                      ),
+                                                          if (data['reviewed'] == true)
+                                                          // ✅ Show Buy Again button
+                                                            ElevatedButton(
+                                                              onPressed: () async {
+                                                                final postDoc = await FirebaseFirestore.instance
+                                                                    .collection('instant_booking')
+                                                                    .doc(data['postId'])
+                                                                    .get();
+
+                                                                if (!postDoc.exists || postDoc.data()?['isActive'] != true) {
+                                                                  showFloatingMessage(
+                                                                    context,
+                                                                    "This item is not available for now.",
+                                                                    icon: Icons.warning_amber_rounded,
+                                                                  );
+                                                                  return;
+                                                                }
+
+                                                                Navigator.push(
+                                                                  context,
+                                                                  MaterialPageRoute(
+                                                                    builder: (context) => s_InstantPostInfo(docId: data['postId']),
+                                                                  ),
+                                                                );
+                                                              },
+                                                              style: ElevatedButton.styleFrom(
+                                                                backgroundColor: const Color(0xFFfb9798),
+                                                                padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 11),
+                                                                shape: RoundedRectangleBorder(
+                                                                  borderRadius: BorderRadius.circular(30),
                                                                 ),
-                                                              );
-                                                            },
-                                                            style: ElevatedButton
-                                                                .styleFrom(
-                                                              backgroundColor: const Color(
-                                                                  0xFFfb9798),
-                                                              padding: const EdgeInsets
-                                                                  .symmetric(
-                                                                  horizontal: 30,
-                                                                  vertical: 11),
-                                                              shape: RoundedRectangleBorder(
-                                                                borderRadius: BorderRadius
-                                                                    .circular(
-                                                                    30),
+                                                                elevation: 4,
                                                               ),
-                                                              elevation: 4,
-                                                            ),
-                                                            child: const Text(
-                                                              "Rate",
-                                                              style: TextStyle(
-                                                                fontSize: 16,
-                                                                fontWeight: FontWeight
-                                                                    .w700,
-                                                                color: Colors
-                                                                    .white,
+                                                              child: const Text(
+                                                                "Buy Again",
+                                                                style: TextStyle(
+                                                                  fontSize: 16,
+                                                                  fontWeight: FontWeight.w700,
+                                                                  color: Colors.white,
+                                                                ),
+                                                              ),
+                                                            )
+                                                          else
+                                                          // ✅ Show Rate button
+                                                            ElevatedButton(
+                                                              onPressed: () async {
+                                                                final result = await Navigator.push(
+                                                                  context,
+                                                                  MaterialPageRoute(
+                                                                    builder: (context) => s_Rating(
+                                                                      bookingId: bookingId,
+                                                                      postId: data['postId'],
+                                                                      providerId: data['serviceProviderId'],
+                                                                    ),
+                                                                  ),
+                                                                );
+
+                                                                if (result == true) {
+                                                                  // ✅ Fetch updated booking info from Firestore
+                                                                  final refreshed = await FirebaseFirestore.instance
+                                                                      .collection('bookings')
+                                                                      .where('bookingId', isEqualTo: bookingId)
+                                                                      .limit(1)
+                                                                      .get();
+
+                                                                  if (refreshed.docs.isNotEmpty) {
+                                                                    final updated = refreshed.docs.first.data();
+
+                                                                    setState(() {
+                                                                      data['reviewed'] = updated['reviewed']; // ✅ Update value locally
+                                                                    });
+
+                                                                    showFloatingMessage(
+                                                                      context,
+                                                                      "Review submitted successfully!",
+                                                                      icon: Icons.check_circle_outline,
+                                                                    );
+                                                                  }
+                                                                }
+                                                              },
+                                                              style: ElevatedButton.styleFrom(
+                                                                backgroundColor: const Color(0xFFfb9798),
+                                                                padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 11),
+                                                                shape: RoundedRectangleBorder(
+                                                                  borderRadius: BorderRadius.circular(30),
+                                                                ),
+                                                                elevation: 4,
+                                                              ),
+                                                              child: const Text(
+                                                                "Rate",
+                                                                style: TextStyle(
+                                                                  fontSize: 16,
+                                                                  fontWeight: FontWeight.w700,
+                                                                  color: Colors.white,
+                                                                ),
                                                               ),
                                                             ),
-                                                          ),
                                                         ],
                                                       ),
                                                     ],
+
+
 
 
                                                     if (data['status'] ==
@@ -1242,7 +1349,7 @@ class _s_BookingHistoryState extends State<s_BookingHistory> {
                                                               elevation: 4,
                                                             ),
                                                             child: const Text(
-                                                              "Bug Again",
+                                                              "Buy Again",
                                                               style: TextStyle(
                                                                 fontSize: 16,
                                                                 fontWeight: FontWeight

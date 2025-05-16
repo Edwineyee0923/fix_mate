@@ -45,22 +45,52 @@ class _p_AInstantBookingDetailState extends State<p_AInstantBookingDetail> {
     _fetchBookingDetails();
   }
 
+  // Future<void> _pickAndUploadImage() async {
+  //   final List<XFile>? pickedFiles = await _picker.pickMultiImage();
+  //
+  //   if (pickedFiles != null && pickedFiles.isNotEmpty) {
+  //     List<File> selectedImages = pickedFiles.map((file) => File(file.path)).toList();
+  //     setState(() => _images.addAll(selectedImages)); // ✅ Stores images
+  //
+  //     UploadService uploadService = UploadService();
+  //     for (var imageFile in selectedImages) {
+  //       String? uploadedImageUrl = await uploadService.uploadImage(imageFile);
+  //       if (uploadedImageUrl != null) {
+  //         setState(() => _imageUrls.add(uploadedImageUrl));
+  //       }
+  //     }
+  //   }
+  // }
+
   Future<void> _pickAndUploadImage() async {
     final List<XFile>? pickedFiles = await _picker.pickMultiImage();
 
     if (pickedFiles != null && pickedFiles.isNotEmpty) {
       List<File> selectedImages = pickedFiles.map((file) => File(file.path)).toList();
-      setState(() => _images.addAll(selectedImages)); // ✅ Stores images
+
+      setState(() {
+        isUploading = true; // 🔁 Upload started
+        _images.addAll(selectedImages);
+      });
 
       UploadService uploadService = UploadService();
+      List<String> newUrls = [];
+
+      // Upload images one by one to ensure stability
       for (var imageFile in selectedImages) {
-        String? uploadedImageUrl = await uploadService.uploadImage(imageFile);
-        if (uploadedImageUrl != null) {
-          setState(() => _imageUrls.add(uploadedImageUrl));
+        final uploadedUrl = await uploadService.uploadImage(imageFile);
+        if (uploadedUrl != null) {
+          newUrls.add(uploadedUrl);
         }
       }
+
+      setState(() {
+        _imageUrls.addAll(newUrls);
+        isUploading = false; // ✅ Upload completed
+      });
     }
   }
+
 
   void _removeImage(int index) {
     setState(() {
@@ -69,9 +99,94 @@ class _p_AInstantBookingDetailState extends State<p_AInstantBookingDetail> {
     });
   }
 
+  // Future<void> _onServiceCompleted() async {
+  //   try {
+  //     // Step 1: Find the booking doc by field
+  //     final snapshot = await FirebaseFirestore.instance
+  //         .collection('bookings')
+  //         .where('bookingId', isEqualTo: widget.bookingId)
+  //         .limit(1)
+  //         .get();
+  //
+  //     if (snapshot.docs.isNotEmpty) {
+  //       final docRef = snapshot.docs.first.reference;
+  //
+  //       // Step 2: Update the document
+  //       await docRef.update({
+  //         'pCompleted': true,
+  //         'sCompleted': false,
+  //         'evidencePhotos': _imageUrls,
+  //         'updatedAt': FieldValue.serverTimestamp(),
+  //         'completedAt': FieldValue.serverTimestamp(), // ✅ timestamp of now
+  //         // 'autoCompleteAt': Timestamp.fromDate(
+  //         //   DateTime.now().add(const Duration(days: 7)), // ✅ 7 days from now
+  //         // ),
+  //         'autoCompleteAt': Timestamp.fromDate(
+  //           DateTime.now().subtract(Duration(minutes: 1)),
+  //         ),
+  //       });
+  //
+  //       // Step 3: Notify the seeker
+  //       await FirebaseFirestore.instance.collection('s_notifications').add({
+  //         'seekerId': widget.seekerId,
+  //         'providerId': instantPostData!['userId'],
+  //         'bookingId': widget.bookingId,
+  //         'postId': widget.postId,
+  //         'title': 'Service Delivered\n(#${widget.bookingId})',
+  //         'message': 'Provider marked the service as completed. Please check the service evidence uploaded and complete the service.',
+  //         'isRead': false,
+  //         'createdAt': FieldValue.serverTimestamp(),
+  //       });
+  //
+  //       ReusableSnackBar(
+  //         context,
+  //         "Service marked as completed! Waiting for seerker confirmation or auto-complete after three days ",
+  //         icon: Icons.check_circle,
+  //         iconColor: Colors.green,
+  //       );
+  //
+  //       Navigator.pop(context);
+  //     } else {
+  //       ReusableSnackBar(
+  //         context,
+  //         "Booking not found.",
+  //         icon: Icons.error_outline,
+  //         iconColor: Colors.redAccent,
+  //       );
+  //     }
+  //   } catch (e) {
+  //     ReusableSnackBar(
+  //       context,
+  //       "Failed to mark as completed. Please try again.",
+  //       icon: Icons.error_outline,
+  //       iconColor: Colors.redAccent,
+  //     );
+  //   }
+  // }
+
+
   Future<void> _onServiceCompleted() async {
+    if (isUploading) {
+      ReusableSnackBar(
+        context,
+        "Please wait until all images are fully uploaded.",
+        icon: Icons.warning,
+        iconColor: Colors.orange,
+      );
+      return;
+    }
+
+    if (_imageUrls.length < 3) {
+      ReusableSnackBar(
+        context,
+        "Upload at least 3 service evidence photos to complete the service.",
+        icon: Icons.warning,
+        iconColor: Colors.orange,
+      );
+      return;
+    }
+
     try {
-      // Step 1: Find the booking doc by field
       final snapshot = await FirebaseFirestore.instance
           .collection('bookings')
           .where('bookingId', isEqualTo: widget.bookingId)
@@ -81,22 +196,20 @@ class _p_AInstantBookingDetailState extends State<p_AInstantBookingDetail> {
       if (snapshot.docs.isNotEmpty) {
         final docRef = snapshot.docs.first.reference;
 
-        // Step 2: Update the document
         await docRef.update({
           'pCompleted': true,
           'sCompleted': false,
           'evidencePhotos': _imageUrls,
           'updatedAt': FieldValue.serverTimestamp(),
-          'completedAt': FieldValue.serverTimestamp(), // ✅ timestamp of now
+          'completedAt': FieldValue.serverTimestamp(),
           // 'autoCompleteAt': Timestamp.fromDate(
-          //   DateTime.now().add(const Duration(days: 7)), // ✅ 7 days from now
+          //   DateTime.now().add(Duration(days: 7)), // ⏰ Auto-complete in 7 days
           // ),
           'autoCompleteAt': Timestamp.fromDate(
             DateTime.now().subtract(Duration(minutes: 1)),
           ),
         });
 
-        // Step 3: Notify the seeker
         await FirebaseFirestore.instance.collection('s_notifications').add({
           'seekerId': widget.seekerId,
           'providerId': instantPostData!['userId'],
@@ -110,7 +223,7 @@ class _p_AInstantBookingDetailState extends State<p_AInstantBookingDetail> {
 
         ReusableSnackBar(
           context,
-          "Service marked as completed! Waiting for seerker confirmation or auto-complete after three days ",
+          "Service marked as completed! Waiting for seeker confirmation or auto-complete after 7 days.",
           icon: Icons.check_circle,
           iconColor: Colors.green,
         );
@@ -410,19 +523,39 @@ class _p_AInstantBookingDetailState extends State<p_AInstantBookingDetail> {
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                     child: Opacity(
                       opacity: _images.length < 3 ? 0.4 : 1.0,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          if (_images.length < 3) {
-                            ReusableSnackBar(
-                              context,
-                              "Upload at least 3 service evidence photos to complete service.",
-                              icon: Icons.warning_amber_rounded,
-                              iconColor: Colors.orange,
-                            );
-                          } else {
-                            _onServiceCompleted();
-                          }
-                        },
+                      child:
+                      // ElevatedButton(
+                      //   onPressed: () {
+                      //     if (_images.length < 3) {
+                      //       ReusableSnackBar(
+                      //         context,
+                      //         "Upload at least 3 service evidence photos to complete service.",
+                      //         icon: Icons.warning_amber_rounded,
+                      //         iconColor: Colors.orange,
+                      //       );
+                      //     } else {
+                      //       _onServiceCompleted();
+                      //     }
+                      //   },
+                      //   style: ElevatedButton.styleFrom(
+                      //     backgroundColor: const Color(0xFF464E65),
+                      //     shape: RoundedRectangleBorder(
+                      //       borderRadius: BorderRadius.circular(25),
+                      //     ),
+                      //     padding: const EdgeInsets.symmetric(vertical: 14),
+                      //   ),
+                      //   child: const Text(
+                      //     "Service Completed",
+                      //     style: TextStyle(
+                      //       fontSize: 16,
+                      //       fontWeight: FontWeight.w600,
+                      //       color: Colors.white,
+                      //     ),
+                      //   ),
+                      // ),
+
+                      ElevatedButton(
+                        onPressed: isUploading ? null : _onServiceCompleted,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF464E65),
                           shape: RoundedRectangleBorder(
@@ -430,7 +563,16 @@ class _p_AInstantBookingDetailState extends State<p_AInstantBookingDetail> {
                           ),
                           padding: const EdgeInsets.symmetric(vertical: 14),
                         ),
-                        child: const Text(
+                        child: isUploading
+                            ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                            : const Text(
                           "Service Completed",
                           style: TextStyle(
                             fontSize: 16,
@@ -439,6 +581,7 @@ class _p_AInstantBookingDetailState extends State<p_AInstantBookingDetail> {
                           ),
                         ),
                       ),
+
                     ),
                   ),
                 ],

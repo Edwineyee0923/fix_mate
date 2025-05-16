@@ -119,38 +119,104 @@ class _s_RatingState extends State<s_Rating> {
 
 
 
-  Future<void> _submitReview() async {
+  // Future<void> _submitReview() async {
+  //
+  //   final wordCount = _commentController.text.trim().split(RegExp(r"\s+")).length;
+  //
+  //   // Check for uploading state
+  //   if (_isUploadingPhoto || _isUploadingVideo) {
+  //     ReusableSnackBar(
+  //         context,
+  //         "Photo or video is still uploading. Please wait until finish uploading.",
+  //         icon: Icons.warning,
+  //         iconColor: Colors.orange);
+  //     return;
+  //   }
+  //
+  //   // Check comment length
+  //   if (wordCount > 50) {
+  //     ReusableSnackBar(
+  //         context,
+  //         "Your feedback should not exceed 50 words.",
+  //         icon: Icons.warning,
+  //         iconColor: Colors.orange);
+  //     return;
+  //   }
+  //
+  //
+  //   setState(() {
+  //   });
+  //   try {
+  //     final userId = FirebaseAuth.instance.currentUser?.uid;
+  //     final serviceTitle = bookingData?['IPTitle'] ?? 'Service';
+  //     final providerName = providerData?['name'] ?? 'Provider';
+  //
+  //     final review = {
+  //       'rating': _rating,
+  //       'comment': _commentController.text.trim(),
+  //       'createdAt': FieldValue.serverTimestamp(),
+  //       'updatedAt': FieldValue.serverTimestamp(),
+  //       'providerId': widget.providerId,
+  //       'postId': widget.postId,
+  //       'bookingId': widget.bookingId,
+  //       'userId': userId,
+  //       'userName': seekerName,
+  //       'userProfilePic': seekerProfilePic,
+  //       'providerName': providerName,
+  //       'serviceTitle': serviceTitle,
+  //       'reviewPhotoUrls': _uploadedPhotoUrls,
+  //       'reviewVideoUrl': _uploadedVideoUrl,
+  //       'quality': _quality,
+  //       'responsiveness': _responsiveness,
+  //       'punctuality': _punctuality,
+  //     };
+  //
+  //     await FirebaseFirestore.instance
+  //         .collection('reviews')
+  //         .add(review);
+  //
+  //     Navigator.pop(context);
+  //   } catch (e) {
+  //     print("❌ Error submitting review: $e");
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       const SnackBar(content: Text("Failed to submit review.")),
+  //     );
+  //   }
+  // }
 
+  Future<void> _submitReview() async {
     final wordCount = _commentController.text.trim().split(RegExp(r"\s+")).length;
 
-    // Check for uploading state
+    // ⛔ Prevent if still uploading
     if (_isUploadingPhoto || _isUploadingVideo) {
       ReusableSnackBar(
-          context,
-          "Photo or video is still uploading. Please wait until finish uploading.",
-          icon: Icons.warning,
-          iconColor: Colors.orange);
+        context,
+        "Photo or video is still uploading. Please wait until finish uploading.",
+        icon: Icons.warning,
+        iconColor: Colors.orange,
+      );
       return;
     }
 
-    // Check comment length
+    // ⛔ Enforce max 50 words
     if (wordCount > 50) {
       ReusableSnackBar(
-          context,
-          "Your feedback should not exceed 50 words.",
-          icon: Icons.warning,
-          iconColor: Colors.orange);
+        context,
+        "Your feedback should not exceed 50 words.",
+        icon: Icons.warning,
+        iconColor: Colors.orange,
+      );
       return;
     }
 
+    setState(() {}); // Optional loading indicator trigger
 
-    setState(() {
-    });
     try {
       final userId = FirebaseAuth.instance.currentUser?.uid;
       final serviceTitle = bookingData?['IPTitle'] ?? 'Service';
       final providerName = providerData?['name'] ?? 'Provider';
 
+      // ✅ Review object
       final review = {
         'rating': _rating,
         'comment': _commentController.text.trim(),
@@ -171,11 +237,41 @@ class _s_RatingState extends State<s_Rating> {
         'punctuality': _punctuality,
       };
 
-      await FirebaseFirestore.instance
-          .collection('reviews')
-          .add(review);
+      // ✅ Submit review
+      await FirebaseFirestore.instance.collection('reviews').add(review);
 
-      Navigator.pop(context);
+      // ✅ Update the correct booking document via field query
+      final bookingQuery = await FirebaseFirestore.instance
+          .collection('bookings')
+          .where('bookingId', isEqualTo: widget.bookingId)
+          .limit(1)
+          .get();
+
+      if (bookingQuery.docs.isNotEmpty) {
+        final bookingDocId = bookingQuery.docs.first.id;
+
+        await FirebaseFirestore.instance
+            .collection('bookings')
+            .doc(bookingDocId)
+            .update({
+          'reviewed': true ,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      } else {
+        print("❌ Booking with bookingId '${widget.bookingId}' not found.");
+      }
+
+      // // ✅ Show floating message before navigating back
+      // showFloatingMessage(
+      //   context,
+      //   "Thank you for your feedback! Your review have been sucessfully submitted! ",
+      //   icon: Icons.check_circle_outline,
+      // );
+
+      // ✅ Navigate back to s_BookingHistory and trigger refresh
+      Future.delayed(const Duration(milliseconds: 1500), () {
+        Navigator.pop(context, true); // return true to refresh history
+      });
     } catch (e) {
       print("❌ Error submitting review: $e");
       ScaffoldMessenger.of(context).showSnackBar(
@@ -183,6 +279,7 @@ class _s_RatingState extends State<s_Rating> {
       );
     }
   }
+
 
   Widget _buildCriteria(String title, int value, Function(int) onRate) {
     return Column(
