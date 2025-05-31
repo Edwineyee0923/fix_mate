@@ -7,7 +7,6 @@ import 'package:fix_mate/service_seeker/s_SPInfo.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:fix_mate/reusable_widget/reusable_widget.dart';
 
 class s_SPList extends StatefulWidget {
   final String initialSearchQuery;
@@ -42,6 +41,9 @@ class _s_SPListState extends State<s_SPList> {
   List<String> selectedStates = []; // ✅ Declare selectedStates
   // RangeValues selectedPriceRange = RangeValues(0, 1000); // ✅ Store price range
   String? selectedSortOrder; // Can be null when nothing is selected
+  double averageRating = 0.0;
+  int totalReviews = 0;
+
 
   @override
   void initState() {
@@ -100,15 +102,14 @@ class _s_SPListState extends State<s_SPList> {
   }
 
 
+
   Future<void> _loadSPPosts() async {
     print("🔍 Loading Service Provider(s)...");
     print("🔄 Reloading posts with filters:");
     print("Search Query: $searchQuery");
     print("Categories: $selectedCategories");
     print("States: $selectedStates");
-    // print("Price Range: $selectedPriceRange");
     print("Sort Order: $selectedSortOrder");
-
 
     try {
       User? user = _auth.currentUser;
@@ -117,13 +118,12 @@ class _s_SPListState extends State<s_SPList> {
         return;
       }
 
-      print("Fetching posts for userId: ${user.uid}");
-
-      // ✅ Start with a Query, NOT QuerySnapshot
+      // Query query = _firestore.collection('service_providers');
       Query query = _firestore
-          .collection('service_providers');
+          .collection('service_providers')
+          .where('status', isEqualTo: 'Approved');
 
-      // ✅ Apply Sorting Based on updatedAt Timestamp
+      // Apply Sorting
       if (selectedSortOrder != null) {
         if (selectedSortOrder == "Newest") {
           query = query.orderBy('createdAt', descending: true);
@@ -132,65 +132,99 @@ class _s_SPListState extends State<s_SPList> {
         }
       }
 
-
-      // ✅ Execute the query only once
       QuerySnapshot snapshot = await query.get();
-
-// ✅ Shuffle documents for random order if needed
       List<QueryDocumentSnapshot> docs = snapshot.docs.toList();
+
       if (selectedSortOrder == "Random") {
-        docs.shuffle();
+        docs.shuffle(); // still apply random
       }
 
-      if (docs.isEmpty) {
-        print("No service provider(s) found for user: ${user.uid}");
-      } else {
-        print("Fetched ${docs.length} service provider(s)");
-      }
-
-      List<Widget> SPPosts = [];
+      List<Map<String, dynamic>> scoredPosts = [];
 
       for (var doc in docs) {
         Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
 
-        bool matchesCategory = selectedCategories.isEmpty ||
+        int matchScore = 0;
+
+        // Category match scoring
+        if (selectedCategories.isNotEmpty &&
             (data['selectedExpertiseFields'] as List<dynamic>)
-                .any((category) => selectedCategories.contains(category));
-
-        bool matchesState = selectedStates.isEmpty ||
-            (data['selectedStates'] as List<dynamic>)
-                .any((state) => selectedStates.contains(state));
-
-        bool matchesSearch = searchQuery.isEmpty ||
-            (data['name'] as String).toLowerCase().contains(searchQuery.toLowerCase());
-
-        // int postPrice = (data['IPPrice'] as num?)?.toInt() ?? 0;
-        // bool matchesPrice = postPrice >= selectedPriceRange.start && postPrice <= selectedPriceRange.end;
-
-        // ✅ Exclude posts that do NOT match the filters // No !matchesPrice
-        if (!matchesCategory || !matchesState || !matchesSearch ) {
-          continue;
+                .any((category) => selectedCategories.contains(category))) {
+          matchScore += 1;
         }
 
-        SPPosts.add(
-          buildSPCard(
-            name: data['name'] ?? "Unknown",
-            ServiceStates: (data['selectedStates'] as List<dynamic>?)?.join(", ") ?? "Unknown",
-            ServiceCategory: (data['selectedExpertiseFields'] as List<dynamic>?)?.join(", ") ?? "No services listed",
-            imageUrl: data['profilePic'] ?? "", // Default image if null
-            // IPPrice: (data['IPPrice'] as num?)?.toInt() ?? 0,
-            // IPPrice: postPrice,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => ServiceProviderScreen(docId: doc.id),
-                ),
-              );
-            },
-          ),
-        );
+        // State match scoring
+        if (selectedStates.isNotEmpty &&
+            (data['selectedStates'] as List<dynamic>)
+                .any((state) => selectedStates.contains(state))) {
+          matchScore += 1;
+        }
+
+        // Name match scoring
+        if (searchQuery.isNotEmpty &&
+            (data['name'] as String).toLowerCase().contains(searchQuery.toLowerCase())) {
+          matchScore += 1;
+        }
+
+        if (selectedCategories.isEmpty && selectedStates.isEmpty && searchQuery.isEmpty) {
+          // ✅ No filters applied → include all posts with matchScore = 1 (default)
+          matchScore = 1;
+        }
+
+        // ✅ Only skip post if it completely fails to match filters when filters exist
+        if (matchScore > 0) {
+          data['matchScore'] = matchScore;
+          data['docId'] = doc.id;
+          // 👇 Fetch review summary for this provider
+          final reviewSummary = await fetchProviderReviewSummary(doc.id);
+          data['averageRating'] = reviewSummary['avgRating'];
+          data['totalReviews'] = reviewSummary['count'];
+          scoredPosts.add(data);
+        }
+
       }
+
+      // // Sort based on matchScore if no custom sort is applied
+      // if (selectedSortOrder == null || selectedSortOrder == "Random") {
+      //   scoredPosts.sort((a, b) => b['matchScore'].compareTo(a['matchScore']));
+      // }
+
+
+      scoredPosts.sort((a, b) {
+        int scoreCompare = b['matchScore'].compareTo(a['matchScore']);
+        if (scoreCompare != 0) return scoreCompare; // Most relevant first
+
+        // Tie-breaker: sort by createdAt only when matchScore is equal
+        if (selectedSortOrder == "Newest") {
+          return (b['createdAt'] as Timestamp).compareTo(a['createdAt'] as Timestamp);
+        } else if (selectedSortOrder == "Oldest") {
+          return (a['createdAt'] as Timestamp).compareTo(b['createdAt'] as Timestamp);
+        } else {
+          return 0; // Leave order as-is if Random or null
+        }
+      });
+
+
+      // Build widgets
+      List<Widget> SPPosts = scoredPosts.map((data) {
+        return buildSPCard(
+          name: data['name'] ?? "Unknown",
+          ServiceStates: (data['selectedStates'] as List<dynamic>?)?.join(", ") ?? "Unknown",
+          ServiceCategory: (data['selectedExpertiseFields'] as List<dynamic>?)?.join(", ") ?? "No services listed",
+          imageUrl: data['profilePic'] ?? "",
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ServiceProviderScreen(docId: data['docId']),
+              ),
+            );
+          },
+          docId: data['docId'],
+          averageRating: data['averageRating'] ?? 0.0,
+          totalReviews: data['totalReviews'] ?? 0,
+        );
+      }).toList();
 
       setState(() {
         allSPPosts = SPPosts;
@@ -199,6 +233,8 @@ class _s_SPListState extends State<s_SPList> {
       print("Error loading service provider(s): $e");
     }
   }
+
+
 
   void _openFilterScreen() async {
     final result = await Navigator.push(
@@ -295,6 +331,10 @@ class _s_SPListState extends State<s_SPList> {
       backgroundColor: Color(0xFFFFF8F2),
       appBar: AppBar(
         backgroundColor: Color(0xFFfb9798),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
         title: Text(
           "Service Provider List",
           style: TextStyle(
@@ -303,7 +343,7 @@ class _s_SPListState extends State<s_SPList> {
             color: Colors.white,
           ),
         ),
-        titleSpacing: 25,
+        titleSpacing: 2,
         automaticallyImplyLeading: false,
       ),
 
@@ -359,6 +399,9 @@ Widget buildSPCard({
   required String ServiceCategory,
   required String imageUrl,
   required VoidCallback onTap,
+  required String docId,
+  required double averageRating, // ✅ New
+  required int totalReviews,
 }) {
   return GestureDetector(
     onTap: onTap,
@@ -437,20 +480,64 @@ Widget buildSPCard({
                             ],
                           ),
                           const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              const Text(
-                                "0.0",
-                                style: TextStyle(fontSize: 16, color: Colors.redAccent, fontWeight: FontWeight.bold),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [Color(0xFFFFF7EC), Color(0xFFFEE9D7)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
                               ),
-                              const SizedBox(width: 6),
-                              Row(
-                                children: List.generate(5, (index) {
-                                  return const Icon(Icons.star_border, color: Colors.orange, size: 14);
-                                }),
-                              ),
-                            ],
-                          ),
+                              borderRadius: BorderRadius.circular(24),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.orange.withOpacity(0.15),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                              border: Border.all(color: Colors.orange.shade100),
+                            ),
+                            child: FutureBuilder<Map<String, dynamic>>(
+                              future: fetchProviderReviewSummary(docId),
+                              builder: (context, snapshot) {
+                                if (!snapshot.hasData) {
+                                  return const Text("Loading...", style: TextStyle(fontSize: 12));
+                                }
+
+                                final data = snapshot.data!;
+                                final avgRating = data['avgRating'] as double;
+                                final count = data['count'] as int;
+
+                                return Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.star_rounded, color: Colors.amber, size: 18),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      avgRating.toStringAsFixed(1),
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12,
+                                        color: Colors.grey[800],
+                                      ),
+                                    ),
+                                    const SizedBox(width: 3),
+                                    Text(
+                                      "| $count Reviews",
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.grey[600],
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    const Icon(Icons.chevron_right, size: 16, color: Colors.grey),
+                                  ],
+                                );
+                              },
+                            ),
+                          )
                         ],
                       ),
                     ),
@@ -541,4 +628,34 @@ class _FavoriteButton2State extends State<FavoriteButton2> {
       ),
     );
   }
+}
+
+Future<Map<String, dynamic>> fetchProviderReviewSummary(String providerId) async {
+  final querySnapshot = await FirebaseFirestore.instance
+      .collection('reviews')
+      .where('providerId', isEqualTo: providerId)
+      .get();
+
+  final reviews = querySnapshot.docs;
+
+  if (reviews.isEmpty) {
+    return {
+      'avgRating': 0.0,
+      'count': 0,
+    };
+  }
+
+  double totalRating = 0.0;
+
+  for (var doc in reviews) {
+    final data = doc.data() as Map<String, dynamic>;
+    totalRating += (data['rating'] ?? 0).toDouble();
+  }
+
+  final double avgRating = totalRating / reviews.length;
+
+  return {
+    'avgRating': avgRating,
+    'count': reviews.length,
+  };
 }

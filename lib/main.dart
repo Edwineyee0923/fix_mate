@@ -1,8 +1,12 @@
 import 'package:firebase_core/firebase_core.dart';
+import 'package:fix_mate/home_page/login_page.dart';
 import 'package:fix_mate/service_provider/p_BookingModule/p_BookingHistory.dart';
 import 'package:fix_mate/service_provider/p_HomePage.dart';
+import 'package:fix_mate/service_provider/p_Rating.dart';
 import 'package:fix_mate/service_seeker/s_HomePage.dart';
+import 'package:fix_mate/service_seeker/s_ReviewRating/s_Rating.dart';
 import 'package:fix_mate/service_seeker/s_SPList.dart';
+import 'package:fix_mate/service_seeker/s_SPRating.dart';
 import 'package:fix_mate/service_seeker/s_profile.dart';
 import 'package:fix_mate/service_seeker/s_register.dart';
 import 'package:flutter_branch_sdk/flutter_branch_sdk.dart';
@@ -203,7 +207,7 @@ class _MyAppState extends State<MyApp> {
         primarySwatch: Colors.orange,
         fontFamily: 'Poppins',
       ),
-      home: s_BookingHistory(),
+      home: login_page(),
     );
   }
 }

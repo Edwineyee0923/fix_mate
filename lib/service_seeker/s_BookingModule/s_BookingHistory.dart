@@ -471,7 +471,6 @@ class _s_BookingHistoryState extends State<s_BookingHistory> {
 
 
                           // Review section appear at here
-
                           final postId = review['postId'];
 
                           return Padding(

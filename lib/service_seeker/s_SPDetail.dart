@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:timeago/timeago.dart' as timeago;
 import 'package:flutter/services.dart';
 import 'package:fix_mate/services/FullScreenImageViewer.dart';
 
@@ -100,6 +101,7 @@ class _SPDetailScreenState extends State<SPDetailScreen> {
                     _buildTagsRow("State:", spData!["selectedStates"]),
                     // _buildCredentialLink(spData!["certificateLink"]),
                     _buildAddressRow(context, spData!["address"]),
+                    _buildJoinedDateRow(spData!["createdAt"]),
                   ],
                 ),
               ),
@@ -248,4 +250,30 @@ class _SPDetailScreenState extends State<SPDetailScreen> {
       ),
     );
   }
+}
+
+Widget _buildJoinedDateRow(Timestamp? joinedAt) {
+  if (joinedAt == null) return const SizedBox();
+
+  final date = joinedAt.toDate();
+  String ago = timeago.format(date);
+
+  // Capitalize first letter
+  ago = ago.replaceFirst(ago[0], ago[0].toUpperCase());
+
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 8),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(
+          width: 140,
+          child: Text("Joined:", style: TextStyle(fontWeight: FontWeight.bold)),
+        ),
+        Expanded(
+          child: Text(ago), // e.g. "2 days ago"
+        ),
+      ],
+    ),
+  );
 }

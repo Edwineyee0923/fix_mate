@@ -101,6 +101,125 @@ class _s_PromotionPostListState extends State<s_PromotionPostList> {
   }
 
 
+//   Future<void> _loadPromotionPosts() async {
+//     print("🔍 Loading Promotion Posts...");
+//     print("🔄 Reloading posts with filters:");
+//     print("Search Query: $searchQuery");
+//     print("Categories: $selectedCategories");
+//     print("States: $selectedStates");
+//     print("Price Range: $selectedPriceRange");
+//     print("Sort Order: $selectedSortOrder");
+//
+//
+//     try {
+//       User? user = _auth.currentUser;
+//       if (user == null) {
+//         print("User not logged in");
+//         return;
+//       }
+//
+//       print("Fetching posts for userId: ${user.uid}");
+//
+//       // ✅ Start with a Query, NOT QuerySnapshot
+//       // Query query = _firestore
+//       //     .collection('promotion');
+//
+//       Query query = _firestore
+//           .collection('promotion')
+//           .where('isActive', isEqualTo: true); // ✅ Only active
+//
+//
+//       // ✅ Apply Sorting Based on updatedAt Timestamp
+//       if (selectedSortOrder != null) {
+//         if (selectedSortOrder == "Newest") {
+//           query = query.orderBy('updatedAt', descending: true);
+//         } else if (selectedSortOrder == "Oldest") {
+//           query = query.orderBy('updatedAt', descending: false);
+//         }
+//       }
+//
+//
+//       // ✅ Execute the query only once
+//       QuerySnapshot snapshot = await query.get();
+//
+// // ✅ Shuffle documents for random order if needed
+//       List<QueryDocumentSnapshot> docs = snapshot.docs.toList();
+//       if (selectedSortOrder == "Random") {
+//         docs.shuffle();
+//       }
+//
+//       if (docs.isEmpty) {
+//         print("No promotion posts found for user: ${user.uid}");
+//       } else {
+//         print("Fetched ${docs.length} posts");
+//       }
+//
+//       List<Widget> promotionPosts = [];
+//
+//       for (var doc in docs) {
+//         Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+//
+//         bool matchesCategory = selectedCategories.isEmpty ||
+//             (data['ServiceCategory'] as List<dynamic>)
+//                 .any((category) => selectedCategories.contains(category));
+//
+//         bool matchesState = selectedStates.isEmpty ||
+//             (data['ServiceStates'] as List<dynamic>)
+//                 .any((state) => selectedStates.contains(state));
+//
+//         bool matchesSearch = searchQuery.isEmpty ||
+//             (data['PTitle'] as String).toLowerCase().contains(searchQuery.toLowerCase());
+//
+//         int postPrice = (data['PPrice'] as num?)?.toInt() ?? 0;
+//         bool matchesPrice = postPrice >= selectedPriceRange.start && postPrice <= selectedPriceRange.end;
+//
+//         double postDiscount = (data['PDiscountPercentage'] as num?)?.toDouble() ?? 0.0;
+//         bool matchesDiscount = postDiscount >= selectedDiscountRange.start && postDiscount <= selectedDiscountRange.end;
+//
+//         // ✅ Exclude posts that do NOT match the filters
+//         if (!matchesCategory || !matchesState || !matchesSearch || !matchesPrice || !matchesDiscount ) {
+//           continue;
+//         }
+//
+//         promotionPosts.add(
+//           buildPromotionCard(
+//             PTitle: data['PTitle'] ?? "Unknown",
+//             ServiceStates: (data['ServiceStates'] as List<dynamic>?)?.join(", ") ?? "Unknown",
+//             ServiceCategory: (data['ServiceCategory'] as List<dynamic>?)?.join(", ") ?? "No services listed",
+//             // imageUrls: (data['IPImage'] as List<dynamic>?)?.cast<String>() ?? [], // ✅ Convert to List<String>
+//             // imageUrls: (data['IPImage'] is List<dynamic>)
+//             //     ? (data['IPImage'] as List<dynamic>).cast<String>()  // ✅ If it's a list, cast it
+//             //     : (data['IPImage'] is String)
+//             //     ? [data['IPImage'] as String]  // ✅ If it's a string, wrap it in a list
+//             //     : [], // ✅ Default to empty list if null
+//             imageUrls: (data['PImage'] != null && data['PImage'] is List<dynamic>)
+//                 ? List<String>.from(data['PImage'])
+//                 : [],
+//             // IPPrice: (data['IPPrice'] as num?)?.toInt() ?? 0,
+//             PPrice: postPrice,
+//             PAPrice: (data['PAPrice'] as num?)?.toInt() ?? 0,
+//             PDiscountPercentage: postDiscount,
+//             onTap: () {
+//               Navigator.push(
+//                 context,
+//                 MaterialPageRoute(
+//                   builder: (context) => s_PromotionPostInfo(docId: doc.id),
+//                 ),
+//               );
+//             },
+//           ),
+//         );
+//       }
+//
+//       setState(() {
+//         allPromotionPosts = promotionPosts;
+//       });
+//     } catch (e) {
+//       print("Error loading Promotion Posts: $e");
+//     }
+//   }
+
+  // Replace your existing _loadPromotionPosts() with this one
   Future<void> _loadPromotionPosts() async {
     print("🔍 Loading Promotion Posts...");
     print("🔄 Reloading posts with filters:");
@@ -110,7 +229,6 @@ class _s_PromotionPostListState extends State<s_PromotionPostList> {
     print("Price Range: $selectedPriceRange");
     print("Sort Order: $selectedSortOrder");
 
-
     try {
       User? user = _auth.currentUser;
       if (user == null) {
@@ -118,98 +236,120 @@ class _s_PromotionPostListState extends State<s_PromotionPostList> {
         return;
       }
 
-      print("Fetching posts for userId: ${user.uid}");
-
-      // ✅ Start with a Query, NOT QuerySnapshot
-      // Query query = _firestore
-      //     .collection('promotion');
-
       Query query = _firestore
           .collection('promotion')
-          .where('isActive', isEqualTo: true); // ✅ Only active
+          .where('isActive', isEqualTo: true);
 
-
-      // ✅ Apply Sorting Based on updatedAt Timestamp
-      if (selectedSortOrder != null) {
-        if (selectedSortOrder == "Newest") {
-          query = query.orderBy('updatedAt', descending: true);
-        } else if (selectedSortOrder == "Oldest") {
-          query = query.orderBy('updatedAt', descending: false);
-        }
+      if (selectedSortOrder == "Newest") {
+        query = query.orderBy('updatedAt', descending: true);
+      } else if (selectedSortOrder == "Oldest") {
+        query = query.orderBy('updatedAt', descending: false);
       }
 
-
-      // ✅ Execute the query only once
       QuerySnapshot snapshot = await query.get();
-
-// ✅ Shuffle documents for random order if needed
       List<QueryDocumentSnapshot> docs = snapshot.docs.toList();
+
       if (selectedSortOrder == "Random") {
         docs.shuffle();
       }
 
-      if (docs.isEmpty) {
-        print("No promotion posts found for user: ${user.uid}");
-      } else {
-        print("Fetched ${docs.length} posts");
-      }
-
-      List<Widget> promotionPosts = [];
+      List<Map<String, dynamic>> scoredPosts = [];
 
       for (var doc in docs) {
         Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+        int matchScore = 0;
 
-        bool matchesCategory = selectedCategories.isEmpty ||
+        if (selectedCategories.isNotEmpty &&
             (data['ServiceCategory'] as List<dynamic>)
-                .any((category) => selectedCategories.contains(category));
-
-        bool matchesState = selectedStates.isEmpty ||
-            (data['ServiceStates'] as List<dynamic>)
-                .any((state) => selectedStates.contains(state));
-
-        bool matchesSearch = searchQuery.isEmpty ||
-            (data['PTitle'] as String).toLowerCase().contains(searchQuery.toLowerCase());
-
-        int postPrice = (data['PPrice'] as num?)?.toInt() ?? 0;
-        bool matchesPrice = postPrice >= selectedPriceRange.start && postPrice <= selectedPriceRange.end;
-
-        double postDiscount = (data['PDiscountPercentage'] as num?)?.toDouble() ?? 0.0;
-        bool matchesDiscount = postDiscount >= selectedDiscountRange.start && postDiscount <= selectedDiscountRange.end;
-
-        // ✅ Exclude posts that do NOT match the filters
-        if (!matchesCategory || !matchesState || !matchesSearch || !matchesPrice || !matchesDiscount ) {
-          continue;
+                .any((category) => selectedCategories.contains(category))) {
+          matchScore += 1;
         }
 
-        promotionPosts.add(
-          buildPromotionCard(
-            PTitle: data['PTitle'] ?? "Unknown",
-            ServiceStates: (data['ServiceStates'] as List<dynamic>?)?.join(", ") ?? "Unknown",
-            ServiceCategory: (data['ServiceCategory'] as List<dynamic>?)?.join(", ") ?? "No services listed",
-            // imageUrls: (data['IPImage'] as List<dynamic>?)?.cast<String>() ?? [], // ✅ Convert to List<String>
-            // imageUrls: (data['IPImage'] is List<dynamic>)
-            //     ? (data['IPImage'] as List<dynamic>).cast<String>()  // ✅ If it's a list, cast it
-            //     : (data['IPImage'] is String)
-            //     ? [data['IPImage'] as String]  // ✅ If it's a string, wrap it in a list
-            //     : [], // ✅ Default to empty list if null
-            imageUrls: (data['PImage'] != null && data['PImage'] is List<dynamic>)
-                ? List<String>.from(data['PImage'])
-                : [],
-            // IPPrice: (data['IPPrice'] as num?)?.toInt() ?? 0,
-            PPrice: postPrice,
-            PAPrice: (data['PAPrice'] as num?)?.toInt() ?? 0,
-            PDiscountPercentage: postDiscount,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => s_PromotionPostInfo(docId: doc.id),
-                ),
-              );
-            },
-          ),
-        );
+        if (selectedStates.isNotEmpty &&
+            (data['ServiceStates'] as List<dynamic>)
+                .any((state) => selectedStates.contains(state))) {
+          matchScore += 1;
+        }
+
+        if (searchQuery.isNotEmpty &&
+            (data['PTitle'] as String)
+                .toLowerCase()
+                .contains(searchQuery.toLowerCase())) {
+          matchScore += 1;
+        }
+
+        int postPrice = (data['PPrice'] as num?)?.toInt() ?? 0;
+        if (postPrice >= selectedPriceRange.start &&
+            postPrice <= selectedPriceRange.end) {
+          matchScore += 1;
+        }
+
+        double postDiscount =
+            (data['PDiscountPercentage'] as num?)?.toDouble() ?? 0.0;
+        if (postDiscount >= selectedDiscountRange.start &&
+            postDiscount <= selectedDiscountRange.end) {
+          matchScore += 1;
+        }
+
+        if (selectedCategories.isEmpty &&
+            selectedStates.isEmpty &&
+            searchQuery.isEmpty &&
+            selectedPriceRange == RangeValues(0, double.infinity) &&
+            selectedDiscountRange == RangeValues(0, 100)) {
+          matchScore = 1;
+        }
+
+        if (matchScore > 0) {
+          data['matchScore'] = matchScore;
+          data['docId'] = doc.id;
+          scoredPosts.add(data);
+        }
       }
+
+      scoredPosts.sort((a, b) {
+        int scoreCompare = b['matchScore'].compareTo(a['matchScore']);
+        if (scoreCompare != 0) return scoreCompare;
+
+        if (selectedSortOrder == "Newest") {
+          return (b['updatedAt'] as Timestamp)
+              .compareTo(a['updatedAt'] as Timestamp);
+        } else if (selectedSortOrder == "Oldest") {
+          return (a['updatedAt'] as Timestamp)
+              .compareTo(b['updatedAt'] as Timestamp);
+        } else {
+          return 0;
+        }
+      });
+
+      List<Widget> promotionPosts = scoredPosts.map((data) {
+        int postPrice = (data['PPrice'] as num?)?.toInt() ?? 0;
+        double postDiscount =
+            (data['PDiscountPercentage'] as num?)?.toDouble() ?? 0.0;
+
+        return buildPromotionCard(
+          PTitle: data['PTitle'] ?? "Unknown",
+          ServiceStates:
+          (data['ServiceStates'] as List<dynamic>?)?.join(", ") ?? "Unknown",
+          ServiceCategory: (data['ServiceCategory'] as List<dynamic>?)
+              ?.join(", ") ??
+              "No services listed",
+          imageUrls: (data['PImage'] != null && data['PImage'] is List<dynamic>)
+              ? List<String>.from(data['PImage'])
+              : [],
+          PPrice: postPrice,
+          PAPrice: (data['PAPrice'] as num?)?.toInt() ?? 0,
+          PDiscountPercentage: postDiscount,
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) =>
+                    s_PromotionPostInfo(docId: data['docId']),
+              ),
+            );
+          },
+        );
+      }).toList();
 
       setState(() {
         allPromotionPosts = promotionPosts;
@@ -218,6 +358,8 @@ class _s_PromotionPostListState extends State<s_PromotionPostList> {
       print("Error loading Promotion Posts: $e");
     }
   }
+
+
 
   void _openFilterScreen() async {
     final result = await Navigator.push(
@@ -300,7 +442,7 @@ class _s_PromotionPostListState extends State<s_PromotionPostList> {
               crossAxisCount: 2, // ✅ Ensures exactly 2 columns
               crossAxisSpacing: 0, // ✅ Space between columns
               mainAxisSpacing: 10, // ✅ Space between rows
-              childAspectRatio: 0.72, // ✅ Adjust aspect ratio to fit better
+              childAspectRatio: 0.70, // ✅ Adjust aspect ratio to fit better
             ),
             itemCount: allPromotionPosts.length,
             itemBuilder: (context, index) {
@@ -399,7 +541,7 @@ Widget buildPromotionCard({
   return GestureDetector(
     onTap: onTap, // ✅ Calls the navigation function
     child: Container(
-      width: 220, // Adjust width for better spacing in horizontal scroll
+      width: 240, // Adjust width for better spacing in horizontal scroll
       margin: const EdgeInsets.symmetric(horizontal: 8),
       child: Card(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -415,7 +557,7 @@ Widget buildPromotionCard({
                   child: Image.network(
                     (imageUrls.isNotEmpty) ? imageUrls.first : "https://via.placeholder.com/150",
                     width: double.infinity,
-                    height: 130, // Adjust height for better fit
+                    height: 120, // Adjust height for better fit
                     fit: BoxFit.cover,
                   ),
                 ),

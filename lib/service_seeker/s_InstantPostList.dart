@@ -107,7 +107,6 @@ class _s_InstantPostListState extends State<s_InstantPostList> {
     print("Price Range: $selectedPriceRange");
     print("Sort Order: $selectedSortOrder");
 
-
     try {
       User? user = _auth.currentUser;
       if (user == null) {
@@ -115,87 +114,99 @@ class _s_InstantPostListState extends State<s_InstantPostList> {
         return;
       }
 
-      print("Fetching posts for userId: ${user.uid}");
-
-      // ✅ Start with a Query, NOT QuerySnapshot
-      // Query query = _firestore
-      //     .collection('instant_booking');
-
       Query query = _firestore
           .collection('instant_booking')
-          .where('isActive', isEqualTo: true); // ✅ Only active
+          .where('isActive', isEqualTo: true);
 
-
-      // ✅ Apply Sorting Based on updatedAt Timestamp
-      if (selectedSortOrder != null) {
-        if (selectedSortOrder == "Newest") {
-          query = query.orderBy('updatedAt', descending: true);
-        } else if (selectedSortOrder == "Oldest") {
-          query = query.orderBy('updatedAt', descending: false);
-        }
+      if (selectedSortOrder == "Newest") {
+        query = query.orderBy('updatedAt', descending: true);
+      } else if (selectedSortOrder == "Oldest") {
+        query = query.orderBy('updatedAt', descending: false);
       }
 
-
-      // ✅ Execute the query only once
       QuerySnapshot snapshot = await query.get();
-
-// ✅ Shuffle documents for random order if needed
       List<QueryDocumentSnapshot> docs = snapshot.docs.toList();
+
       if (selectedSortOrder == "Random") {
         docs.shuffle();
       }
 
-      if (docs.isEmpty) {
-        print("No instant booking posts found for user: ${user.uid}");
-      } else {
-        print("Fetched ${docs.length} posts");
-      }
-
-      List<Widget> instantPosts = [];
+      List<Map<String, dynamic>> scoredPosts = [];
 
       for (var doc in docs) {
         Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+        int matchScore = 0;
 
-        bool matchesCategory = selectedCategories.isEmpty ||
+        if (selectedCategories.isNotEmpty &&
             (data['ServiceCategory'] as List<dynamic>)
-                .any((category) => selectedCategories.contains(category));
-
-        bool matchesState = selectedStates.isEmpty ||
-            (data['ServiceStates'] as List<dynamic>)
-                .any((state) => selectedStates.contains(state));
-
-        bool matchesSearch = searchQuery.isEmpty ||
-            (data['IPTitle'] as String).toLowerCase().contains(searchQuery.toLowerCase());
-
-        int postPrice = (data['IPPrice'] as num?)?.toInt() ?? 0;
-        bool matchesPrice = postPrice >= selectedPriceRange.start && postPrice <= selectedPriceRange.end;
-
-        // ✅ Exclude posts that do NOT match the filters
-        if (!matchesCategory || !matchesState || !matchesSearch || !matchesPrice) {
-          continue;
+                .any((category) => selectedCategories.contains(category))) {
+          matchScore += 1;
         }
 
-        instantPosts.add(
-          buildInstantBookingCard(
-            IPTitle: data['IPTitle'] ?? "Unknown",
-            ServiceStates: (data['ServiceStates'] as List<dynamic>?)?.join(", ") ?? "Unknown",
-            ServiceCategory: (data['ServiceCategory'] as List<dynamic>?)?.join(", ") ?? "No services listed",
-            imageUrls: (data['IPImage'] != null && data['IPImage'] is List<dynamic>)
-                ? List<String>.from(data['IPImage'])
-                : [],
-            // IPPrice: (data['IPPrice'] as num?)?.toInt() ?? 0,
-            IPPrice: postPrice,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => s_InstantPostInfo(docId: doc.id),
-                ),
-              );
-            },
-          ),
-        );
+        if (selectedStates.isNotEmpty &&
+            (data['ServiceStates'] as List<dynamic>)
+                .any((state) => selectedStates.contains(state))) {
+          matchScore += 1;
+        }
+
+        if (searchQuery.isNotEmpty &&
+            (data['IPTitle'] as String).toLowerCase().contains(searchQuery.toLowerCase())) {
+          matchScore += 1;
+        }
+
+        int postPrice = (data['IPPrice'] as num?)?.toInt() ?? 0;
+        if (postPrice >= selectedPriceRange.start && postPrice <= selectedPriceRange.end) {
+          matchScore += 1;
+        }
+
+        if (selectedCategories.isEmpty &&
+            selectedStates.isEmpty &&
+            searchQuery.isEmpty &&
+            selectedPriceRange == RangeValues(0, double.infinity)) {
+          matchScore = 1;
+        }
+
+        if (matchScore > 0) {
+          data['matchScore'] = matchScore;
+          data['docId'] = doc.id;
+          scoredPosts.add(data);
+        }
       }
+
+      scoredPosts.sort((a, b) {
+        int scoreCompare = b['matchScore'].compareTo(a['matchScore']);
+        if (scoreCompare != 0) return scoreCompare;
+
+        if (selectedSortOrder == "Newest") {
+          return (b['updatedAt'] as Timestamp).compareTo(a['updatedAt'] as Timestamp);
+        } else if (selectedSortOrder == "Oldest") {
+          return (a['updatedAt'] as Timestamp).compareTo(b['updatedAt'] as Timestamp);
+        } else {
+          return 0;
+        }
+      });
+
+      List<Widget> instantPosts = scoredPosts.map((data) {
+        int postPrice = (data['IPPrice'] as num?)?.toInt() ?? 0;
+
+        return buildInstantBookingCard(
+          IPTitle: data['IPTitle'] ?? "Unknown",
+          ServiceStates: (data['ServiceStates'] as List<dynamic>?)?.join(", ") ?? "Unknown",
+          ServiceCategory: (data['ServiceCategory'] as List<dynamic>?)?.join(", ") ?? "No services listed",
+          imageUrls: (data['IPImage'] != null && data['IPImage'] is List<dynamic>)
+              ? List<String>.from(data['IPImage'])
+              : [],
+          IPPrice: postPrice,
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => s_InstantPostInfo(docId: data['docId']),
+              ),
+            );
+          },
+        );
+      }).toList();
 
       setState(() {
         allInstantPosts = instantPosts;
@@ -204,6 +215,7 @@ class _s_InstantPostListState extends State<s_InstantPostList> {
       print("Error loading Instant Booking Posts: $e");
     }
   }
+
 
   void _openFilterScreen() async {
     final result = await Navigator.push(
@@ -283,7 +295,7 @@ class _s_InstantPostListState extends State<s_InstantPostList> {
               crossAxisCount: 2, // ✅ Ensures exactly 2 columns
               crossAxisSpacing: 0, // ✅ Space between columns
               mainAxisSpacing: 10, // ✅ Space between rows
-              childAspectRatio: 0.72, // ✅ Adjust aspect ratio to fit better
+              childAspectRatio: 0.70, // ✅ Adjust aspect ratio to fit better
             ),
             itemCount: allInstantPosts.length,
             itemBuilder: (context, index) {
@@ -371,7 +383,7 @@ Widget buildInstantBookingCard({
   return GestureDetector(
     onTap: onTap, // ✅ Calls the navigation function
     child: Container(
-      width: 220, // Adjust width for better spacing in horizontal scroll
+      width: 240, // Adjust width for better spacing in horizontal scroll
       margin: const EdgeInsets.symmetric(horizontal: 8),
       child: Card(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -387,7 +399,7 @@ Widget buildInstantBookingCard({
                   child: Image.network(
                     (imageUrls.isNotEmpty) ? imageUrls.first : "https://via.placeholder.com/150",
                     width: double.infinity,
-                    height: 130, // Adjust height for better fit
+                    height: 120, // Adjust height for better fit
                     fit: BoxFit.cover,
                   ),
                 ),

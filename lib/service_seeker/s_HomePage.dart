@@ -254,9 +254,10 @@ class _s_HomePageState extends State<s_HomePage> {
         return;
       }
 
-      // print("Fetching posts for userId: ${user.uid}");
-
-      Query query = _firestore.collection('service_providers').orderBy('createdAt', descending: true);
+      Query query = _firestore
+                    .collection('service_providers')
+                    .where('status', isEqualTo: 'Approved')
+                    .orderBy('createdAt', descending: true);
       QuerySnapshot snapshot = await query.get();
 
       print("Fetched ${snapshot.docs.length} service providers"); // ✅ Check how many docs are retrieved

@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fix_mate/service_seeker/s_BookingModule/s_SetBookingDetails.dart';
+import 'package:fix_mate/service_seeker/s_SPInfo.dart';
 import 'package:flutter/material.dart';
 import 'package:fix_mate/reusable_widget/reusable_widget.dart';
 import 'package:fix_mate/services/FullScreenImageViewer.dart';
@@ -83,6 +84,14 @@ class _s_InstantPostInfoState extends State<s_InstantPostInfo> with TickerProvid
   PageController _pageController = PageController();
   int _currentPage = 0;
   bool _isFavorite = false; // Track favorite state
+  List<DocumentSnapshot> reviews = [];
+  double avgRating = 0.0;
+  double avgQuality = 0.0;
+  double avgResponsiveness = 0.0;
+  double avgPunctuality = 0.0;
+  List<DocumentSnapshot> postReviews = [];
+  double avgPostRating = 0.0;
+
 
 
   @override
@@ -97,396 +106,350 @@ class _s_InstantPostInfoState extends State<s_InstantPostInfo> with TickerProvid
 
   }
 
+
   Future<void> fetchPost() async {
     DocumentSnapshot doc = await FirebaseFirestore.instance
         .collection('instant_booking')
         .doc(widget.docId)
         .get();
+
+    InstantPost fetchedPost = InstantPost.fromFirestore(doc);
+    await fetchSPRatings(fetchedPost.spId); // ✅ fetch ratings after post loaded
+    await fetchPostRatings(fetchedPost.docId);
+
     setState(() {
-      post = InstantPost.fromFirestore(doc);
+      post = fetchedPost;
     });
   }
+
+
+  Future<void> fetchSPRatings(String providerId) async {
+    final snapshot = await FirebaseFirestore.instance
+        .collection('reviews')
+        .where('providerId', isEqualTo: providerId)
+        .orderBy('updatedAt', descending: true)
+        .get();
+
+    double totalRating = 0;
+    double totalQuality = 0;
+    double totalResponsiveness = 0;
+    double totalPunctuality = 0;
+
+    for (var doc in snapshot.docs) {
+      final data = doc.data() as Map<String, dynamic>;
+      totalRating += (data['rating'] ?? 0).toDouble();
+      totalQuality += (data['quality'] ?? 0).toDouble();
+      totalResponsiveness += (data['responsiveness'] ?? 0).toDouble();
+      totalPunctuality += (data['punctuality'] ?? 0).toDouble();
+    }
+
+    if (!mounted) return; // 🔒 ADD THIS
+
+    setState(() {
+      reviews = snapshot.docs;
+      avgRating = reviews.isNotEmpty ? totalRating / reviews.length : 0;
+      avgQuality = reviews.isNotEmpty ? totalQuality / reviews.length : 0;
+      avgResponsiveness = reviews.isNotEmpty ? totalResponsiveness / reviews.length : 0;
+      avgPunctuality = reviews.isNotEmpty ? totalPunctuality / reviews.length : 0;
+    });
+  }
+
+  Future<void> fetchPostRatings(String postId) async {
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('reviews')
+          .where('postId', isEqualTo: postId)
+          .orderBy('updatedAt', descending: true)
+          .get();
+
+      double total = 0.0;
+
+      for (var doc in snapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        total += (data['rating'] ?? 0).toDouble();
+      }
+      if (!mounted) return;
+      setState(() {
+        postReviews = snapshot.docs;
+        avgPostRating = postReviews.isNotEmpty ? total / postReviews.length : 0;
+      });
+    } catch (e) {
+      print("❌ Error in fetchPostRatings: $e");
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: post == null
           ? const Center(child: CircularProgressIndicator())
-        : Stack(
-        children: <Widget>[
-          /// **Image Carousel with Page Indicator**
-          Column(
-            children: <Widget>[
-              AspectRatio(
-                aspectRatio: 1.2,
-                child: Stack(
-                  children: [
-                    /// **Scrollable Image List**
-                    PageView.builder(
-                      controller: _pageController,
-                      itemCount: post!.imageUrls.isNotEmpty ? post!.imageUrls.length : 1,
-                      onPageChanged: (index) {
-                        setState(() {
-                          _currentPage = index;
-                        });
-                      },
-                      itemBuilder: (context, index) {
-                        return GestureDetector(
-                          onTap: () {
-                            showDialog(
+          : Stack(
+        children: [
+          /// Scrollable Content
+          CustomScrollView(
+            slivers: [
+              /// 📸 Image Carousel
+              SliverAppBar(
+                backgroundColor: Colors.transparent,
+                automaticallyImplyLeading: false,
+                expandedHeight: MediaQuery.of(context).size.width * 0.70,
+                pinned: false,
+                flexibleSpace: FlexibleSpaceBar(
+                  background: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      PageView.builder(
+                        controller: _pageController,
+                        itemCount: post!.imageUrls.isNotEmpty ? post!.imageUrls.length : 1,
+                        onPageChanged: (index) => setState(() => _currentPage = index),
+                        itemBuilder: (context, index) {
+                          return GestureDetector(
+                            onTap: () => showDialog(
                               context: context,
                               builder: (_) => FullScreenImageViewer(
                                 imageUrls: post!.imageUrls,
                                 initialIndex: index,
                               ),
-                            );
-                          },
-                          child: Image.network(
-                            post!.imageUrls[index],
-                            fit: BoxFit.cover,
+                            ),
+                            child: Image.network(
+                              post!.imageUrls[index],
+                              fit: BoxFit.cover,
+                            ),
+                          );
+                        },
+                      ),
+                      Positioned(
+                        bottom: 20,
+                        left: 16,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4)],
                           ),
-                        );
-                      },
-
-                    ),
-
-                    /// **Page Indicator (e.g., 1/3)**
-                    Positioned(
-                      bottom: 60,
-                      left: 16,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 10),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          "${_currentPage + 1}/${post!.imageUrls.isNotEmpty ? post!.imageUrls.length : 1}",
-                          style: const TextStyle(color: Colors.black, fontSize: 14),
+                          child: Text(
+                            "${_currentPage + 1}/${post!.imageUrls.length}",
+                            style: const TextStyle(color: Colors.black),
+                          ),
                         ),
                       ),
+                    ],
+                  ),
+                ),
+              ),
+
+              /// 📄 Description Container with Rounded Transition
+              SliverToBoxAdapter(
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(32),
+                    topRight: Radius.circular(32),
+                  ),
+                  child: Container(
+                    color: Colors.white,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 20, 16, 100),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Center(
+                            child: Container(
+                              width: 40,
+                              height: 4,
+                              margin: const EdgeInsets.only(bottom: 10),
+                              decoration: BoxDecoration(
+                                color: Colors.grey[300],
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                            ),
+                          ),
+                          Text(
+                            post!.title,
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w600, fontSize: 20),
+                          ),
+                          const SizedBox(height: 5),
+                          Row(children: [
+                            const Icon(Icons.location_on, size: 16, color: Colors.black45),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                post!.serviceStates,
+                                style: const TextStyle(
+                                    fontSize: 16, color: Colors.black45, fontWeight: FontWeight.w500),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
+                              ),
+                            ),
+                          ]),
+                          const SizedBox(height: 5),
+                          Row(children: [
+                            const Icon(Icons.build, size: 16, color: Colors.black45),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                post!.serviceCategory,
+                                style: const TextStyle(
+                                    fontSize: 16, color: Colors.black45, fontWeight: FontWeight.w500),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
+                              ),
+                            ),
+                          ]),
+                          const SizedBox(height: 8),
+                          Text(
+                            "RM ${post!.price}",
+                            style: const TextStyle(
+                                fontSize: 22, fontWeight: FontWeight.w600, color: Color(0xFFfb9798)),
+                          ),
+                          const Divider(thickness: 1.5, height: 30),
+                          ...post!.descriptions.map((desc) => Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(desc.title,
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 18,
+                                      color: Colors.black87)),
+                              const SizedBox(height: 4),
+                              ...desc.descriptions.map((point) => Padding(
+                                padding: const EdgeInsets.only(left: 8.0, bottom: 6),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text("• ", style: TextStyle(fontSize: 16)),
+                                    Expanded(
+                                      child: Text(point,
+                                          style: const TextStyle(
+                                              fontSize: 14, color: Colors.black54)),
+                                    ),
+                                  ],
+                                ),
+                              )),
+                              const SizedBox(height: 12),
+                            ],
+                          )),
+                          Text("Product Ratings", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 8),
+
+                          Row(
+                            children: [
+                              Icon(Icons.star, color: Colors.amber, size: 20),
+                              SizedBox(width: 4),
+                              Text(avgPostRating.toStringAsFixed(1), style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                              SizedBox(width: 6),
+                              Text("(${postReviews.length} Reviews)", style: TextStyle(color: Colors.black54, fontSize: 14)),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+
+                          Column(
+                            children: [
+                              ...postReviews.take(2).map((doc) {
+                                final data = doc.data() as Map<String, dynamic>;
+
+                                return Container(
+                                  padding: const EdgeInsets.all(12),
+                                  margin: const EdgeInsets.only(bottom: 10),
+                                  decoration: BoxDecoration(
+                                    color: Color(0xFFF9F9F9),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: Colors.grey.shade300),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      /// Reviewer info
+                                      Row(
+                                        children: [
+                                          CircleAvatar(
+                                            radius: 14,
+                                            backgroundImage: NetworkImage(data['userProfilePic'] ?? ''),
+                                          ),
+                                          SizedBox(width: 8),
+                                          Text(data['userName'] ?? "Anonymous", style: TextStyle(fontWeight: FontWeight.bold)),
+                                        ],
+                                      ),
+                                      SizedBox(height: 6),
+
+                                      /// Rating stars
+                                      Row(
+                                        children: List.generate((data['rating'] ?? 0), (index) =>
+                                            Icon(Icons.star, size: 16, color: Colors.amber)),
+                                      ),
+                                      SizedBox(height: 6),
+
+                                      /// Comment
+                                      if ((data['comment'] ?? '').toString().trim().isNotEmpty)
+                                        Text(data['comment'], style: TextStyle(fontSize: 14, color: Colors.black87)),
+
+                                      /// Images
+                                      if ((data['reviewPhotoUrls'] ?? []).isNotEmpty)
+                                        SizedBox(
+                                          height: 90,
+                                          child: ListView.builder(
+                                            scrollDirection: Axis.horizontal,
+                                            itemCount: (data['reviewPhotoUrls'] as List).length,
+                                            itemBuilder: (_, i) {
+                                              final img = data['reviewPhotoUrls'][i];
+                                              return Padding(
+                                                padding: const EdgeInsets.only(right: 8),
+                                                child: ClipRRect(
+                                                  borderRadius: BorderRadius.circular(8),
+                                                  child: Image.network(img, width: 90, height: 90, fit: BoxFit.cover),
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                );
+                              }).toList(),
+
+                              if (postReviews.length > 2)
+                                TextButton(
+                                  onPressed: () {
+                                    // Navigate to full screen review
+                                  },
+                                  child: Text("View All Reviews"),
+                                ),
+                            ],
+                          ),
+
+
+
+
+
+                          // Service Provider's Rating
+                          _buildProviderRatingCard(),
+
+                        ],
+                      ),
                     ),
-                  ],
+                  ),
                 ),
               ),
             ],
           ),
 
-          /// **Main Content Container**
+          /// 🧭 Back Button
           Positioned(
-            top: MediaQuery.of(context).size.width / 1.3 - 24.0,
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(32.0),
-                  topRight: Radius.circular(32.0),
-                ),
-                boxShadow: <BoxShadow>[
-                  BoxShadow(
-                    color: Colors.grey.withOpacity(0.2),
-                    offset: const Offset(1.1, 1.1),
-                    blurRadius: 10.0,
-                  ),
-                ],
-              ),
-
-              child: Column(
-                children: [
-                  /// **Scrollable Description Section**
-                  Expanded(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 2.0, horizontal: 2.0),
-                            child: Row(
-                              children: [
-                                /// **Circular Profile Image**
-                                CircleAvatar(
-                                  radius: 28,
-                                  backgroundImage: (post!.spImageURL != null && post!.spImageURL!.isNotEmpty)
-                                      ? NetworkImage(post!.spImageURL!)
-                                      : const AssetImage('assets/default_profile.png') as ImageProvider,
-                                ),
-                                const SizedBox(width: 12),
-
-                                /// **SP Name & Rating**
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      /// **SP Name**
-                                      Text(
-                                        post!.spName ?? 'Unknown Service Provider',
-                                        style: const TextStyle(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-
-                                      // /// **Rating in 5 stars**
-                                      // Row(
-                                      //   children: List.generate(5, (index) {
-                                      //     double rating = post!.rating ?? 0; // Ensure rating is not null
-                                      //     return Icon(
-                                      //       index < rating ? Icons.star : Icons.star_border,
-                                      //       color: Colors.orange,
-                                      //       size: 18,
-                                      //     );
-                                      //   }),
-                                      // ),
-
-                                      /// **Static Rating UI (Placeholder)**
-                                      Row(
-                                        children: [
-                                          /// **Placeholder Rating Text**
-                                          const Text(
-                                            "0.0",
-                                            style: TextStyle(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.black,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 6), // Add spacing between rating text and stars
-                                          /// **Stars**
-                                          Row(
-                                            children: List.generate(5, (index) {
-                                              return const Icon(
-                                                Icons.star_border, // Empty stars for now
-                                                color: Colors.orange,
-                                                size: 18,
-                                              );
-                                            }),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-
-                          /// **Thick Grey Divider**
-                          const Divider(
-                            color: Colors.grey, // Grey color
-                            thickness: 1.5, // Make it thicker
-                            height: 10, // Adjust spacing above and below the divider
-                          ),
-                          const SizedBox(height: 5),
-                          Text(
-                            post!.title,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 20,
-                              letterSpacing: 0.27,
-                            ),
-                          ),
-
-                          const SizedBox(height: 5),
-                          // 📌 Location with Icon
-                          Row(
-                            children: [
-                              const Icon(Icons.location_on, size: 16, color: Colors.black45),
-                              const SizedBox(width: 4), // Spacing
-                              Expanded( // ✅ Ensures text truncates within available space
-                                child: Text(
-                                  post!.serviceStates,
-                                  style: const TextStyle(fontSize: 16, color: Colors.black45, fontWeight: FontWeight.w500),
-                                  overflow: TextOverflow.ellipsis,
-                                  maxLines: 1,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 5),
-                          // 📌 Service Category with Icon
-                          Row(
-                            children: [
-                              const Icon(Icons.build, size: 16, color: Colors.black45),
-                              const SizedBox(width: 4), // Spacing
-                              Expanded( // ✅ Ensures text truncates properly
-                                child: Text(
-                                  post!.serviceCategory,
-                                  style: const TextStyle(fontSize: 16, color: Colors.black45, fontWeight: FontWeight.w500),
-                                  overflow: TextOverflow.ellipsis,
-                                  maxLines: 1,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: <Widget>[
-                              Text(
-                                "RM ${post!.price}",
-                                style: const TextStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.w600,
-                                  color: Color(0xFFfb9798),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 5),
-
-                          /// **Thick Grey Divider**
-                          const Divider(
-                            color: Colors.grey, // Grey color
-                            thickness: 1.5, // Make it thicker
-                            height: 10, // Adjust spacing above and below the divider
-                          ),
-
-                          const SizedBox(height: 5),
-                          /// **Bullet Point Descriptions**
-                          if (post!.descriptions.isNotEmpty)
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: post!.descriptions.map((desc) {
-                                return Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      desc.title,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.black54,
-                                        fontSize: 20,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: desc.descriptions.map((point) {
-                                        return Padding(
-                                          padding: const EdgeInsets.only(left: 8.0, bottom: 4),
-                                          child: Row(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              const Text(
-                                                "• ",
-                                                style: TextStyle(
-                                                    fontSize: 16
-                                                ),
-                                              ),
-                                              Expanded(
-                                                child: Text(
-                                                  point,
-                                                  style: const TextStyle(
-                                                    fontSize: 14,
-                                                    color: Colors.black54,
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        );
-                                      }).toList(),
-                                    ),
-                                    const SizedBox(height: 12),
-                                  ],
-                                );
-                              }).toList(),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  pk_button(
-                    context,
-                    "Next",
-                        () {
-                      if (post != null) {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => s_SetBookingDetails(
-                              spId: post!.spId,  // ✅ Provide a default value
-                              spName: post!.spName ?? 'Unknown Service Provider',
-                              spImageURL: post!.spImageURL ?? '',
-                              IBpostId: post!.docId, // ✅ Use `docId` instead of `IBpostId`
-                              IBPrice: post!.price,
-                              IPTitle: post!.title,
-                              serviceCategory: post!.serviceCategory,
-                            ),
-                          ),
-                        );
-                      } else {
-                        print("Error: No post data available.");
-                      }
-                    },
-                  ),
-
-
-                ],
-              ),
-            ),
-          ),
-
-          /// **🔹 Animated Floating Favorite Button**
-          Positioned(
-            top: MediaQuery.of(context).size.width / 1.3 - 24.0 - 45,
-            right: 35,
-            child: GestureDetector(
-              onTap: () {
-                setState(() {
-                  _isFavorite = !_isFavorite; // Toggle favorite state
-                });
-              },
-              child: ScaleTransition(
-                alignment: Alignment.center,
-                scale: CurvedAnimation(
-                  parent: animationController!,
-                  curve: Curves.fastOutSlowIn,
-                ),
-                child: Card(
-                  color: _isFavorite ? Colors.white : Colors.grey, // Background changes
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(50.0),
-                    side: _isFavorite ? const BorderSide(color: Color(0xFFF06275), width: 2) : BorderSide.none, // Border when favorited
-                  ),
-                  elevation: 10.0,
-                  child: Container(
-                    width: 60,
-                    height: 60,
-                    child: Center(
-                      child: Icon(
-                        _isFavorite ? Icons.favorite : Icons.favorite, // Always filled heart
-                        color: _isFavorite ? const Color(0xFFF06275) : Colors.white, // White heart before click, red after
-                        size: 30,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-
-          /// **🔹 Styled Back Button**
-          Padding(
-            padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top, left: 10), // Move button slightly right
+            top: MediaQuery.of(context).padding.top + 10,
+            left: 10,
             child: Material(
               color: Colors.transparent,
               child: InkWell(
-                borderRadius: BorderRadius.circular(20), // Ensure smooth tap effect
-                onTap: () {
-                  Navigator.pop(context);
-                },
+                borderRadius: BorderRadius.circular(20),
+                onTap: () => Navigator.pop(context),
                 child: Container(
-                  width: 34, // Small circular background
+                  width: 34,
                   height: 34,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFfb9798), // Background color
-                    shape: BoxShape.circle, // Makes it circular
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFfb9798),
+                    shape: BoxShape.circle,
                   ),
                   child: Align( // Adjust the icon position inside the circle
                     alignment: Alignment.centerRight, // Move the icon slightly to the right
@@ -503,13 +466,194 @@ class _s_InstantPostInfoState extends State<s_InstantPostInfo> with TickerProvid
               ),
             ),
           ),
+
+          /// ❤️ + 🧭 Bottom Buttons
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              color: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+              child: Row(
+                children: [
+                  GestureDetector(
+                    onTap: () => setState(() => _isFavorite = !_isFavorite),
+                    child: Container(
+                      width: 55,
+                      height: 55,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: _isFavorite ? Colors.white : Colors.grey,
+                        border: _isFavorite
+                            ? Border.all(color: const Color(0xFFF06275), width: 2)
+                            : null,
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Colors.black26,
+                            blurRadius: 6,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Icon(Icons.favorite,
+                          color: _isFavorite ? const Color(0xFFF06275) : Colors.white,
+                          size: 30),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: pk_button(
+                      context,
+                      "Next",
+                          () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => s_SetBookingDetails(
+                              spId: post!.spId,
+                              spName: post!.spName ?? 'Unknown Service Provider',
+                              spImageURL: post!.spImageURL ?? '',
+                              IBpostId: post!.docId,
+                              IBPrice: post!.price,
+                              IPTitle: post!.title,
+                              serviceCategory: post!.serviceCategory,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+  }
+  /// 🔶 Combined Service Provider Rating Card
+  Widget _buildProviderRatingCard() {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ServiceProviderScreen(docId: post!.spId), // Use `spId` as docId
+          ),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        margin: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black38,
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            /// 🔹 Row for Image + Name/Rating
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                /// Profile Image
+                CircleAvatar(
+                  radius: 32,
+                  backgroundImage: (post!.spImageURL != null && post!.spImageURL!.isNotEmpty)
+                      ? NetworkImage(post!.spImageURL!)
+                      : const AssetImage('assets/default_profile.png') as ImageProvider,
+                ),
+                const SizedBox(width: 16),
+
+                /// Name + Rating
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        post!.spName ?? 'Unknown Service Provider',
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          const Icon(Icons.star, color: Colors.amber, size: 20),
+                          const SizedBox(width: 4),
+                          Text(
+                            avgRating.toStringAsFixed(1),
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            "(${reviews.length} Reviews)",
+                            style: const TextStyle(color: Colors.black54, fontSize: 14),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 16),
+
+            /// 🔸 Second Row for Criteria Ratings
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(child: _buildAspectRating("Service Quality", avgQuality)),
+                _verticalDivider(),
+                Expanded(child: _buildAspectRating("Responsiveness", avgResponsiveness)),
+                _verticalDivider(),
+                Expanded(child: _buildAspectRating("Punctuality", avgPunctuality)),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+
+  /// 🔸 Vertical divider between criteria
+  Widget _verticalDivider() {
+    return Container(
+      height: 36,
+      width: 1,
+      color: Colors.grey[600],
+      margin: const EdgeInsets.symmetric(horizontal: 8),
+    );
+  }
+
+  /// 🔹 Reusable criteria rating block
+  Widget _buildAspectRating(String title, double value) {
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Text(
+            value.toStringAsFixed(1),
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 12, color: Colors.black54),
+          ),
         ],
       ),
     );
   }
-  }
 
-
-
-
-
+}
