@@ -1,9 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fix_mate/service_seeker/s_BookingModule/s_SetBookingDetails.dart';
+import 'package:fix_mate/service_seeker/s_ReviewRating/s_ServiceRating.dart';
 import 'package:fix_mate/service_seeker/s_SPInfo.dart';
 import 'package:flutter/material.dart';
 import 'package:fix_mate/reusable_widget/reusable_widget.dart';
 import 'package:fix_mate/services/FullScreenImageViewer.dart';
+import 'package:fix_mate/services/ReviewVideoViewer.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 
 class InstantPost {
@@ -17,6 +20,7 @@ class InstantPost {
   final String spId; // Service Provider ID
   String? spName;
   String? spImageURL;
+  final String? source;
 
   InstantPost({
     required this.title,
@@ -29,6 +33,7 @@ class InstantPost {
     required this.spId,
     required this.spName,
     required this.spImageURL,
+    this.source,
   });
 
   factory InstantPost.fromFirestore(DocumentSnapshot doc) {
@@ -108,18 +113,34 @@ class _s_InstantPostInfoState extends State<s_InstantPostInfo> with TickerProvid
 
 
   Future<void> fetchPost() async {
-    DocumentSnapshot doc = await FirebaseFirestore.instance
-        .collection('instant_booking')
-        .doc(widget.docId)
-        .get();
+    try {
+      DocumentSnapshot doc = await FirebaseFirestore.instance
+          .collection('instant_booking')
+          .doc(widget.docId)
+          .get();
 
-    InstantPost fetchedPost = InstantPost.fromFirestore(doc);
-    await fetchSPRatings(fetchedPost.spId); // ✅ fetch ratings after post loaded
-    await fetchPostRatings(fetchedPost.docId);
+      InstantPost fetchedPost = InstantPost.fromFirestore(doc);
 
-    setState(() {
-      post = fetchedPost;
-    });
+      await fetchSPRatings(fetchedPost.spId);
+      await fetchPostRatings(fetchedPost.docId);
+
+      if (!mounted) return;
+      if (post == null || post!.docId != fetchedPost.docId) {
+        setState(() {
+          post = fetchedPost;
+        });
+      }
+
+    } catch (e) {
+      print("❌ Error in fetchPost: $e");
+    }
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose(); // ✅ Avoid memory leak
+    animationController.dispose();
+    super.dispose();
   }
 
 
@@ -178,6 +199,20 @@ class _s_InstantPostInfoState extends State<s_InstantPostInfo> with TickerProvid
     }
   }
 
+  // Function to format timestamps
+  String formatTimestamp(Timestamp? timestamp) {
+    if (timestamp == null) return "N/A";
+    // DateTime dateTime = timestamp.toDate().add(const Duration(hours: 8));
+    DateTime dateTime = timestamp.toDate();
+    List<String> monthNames = ["Jan", "Feb", "Mac", "Apr", "Mei", "Jun", "Jul", "Ogo", "Sep", "Okt", "Nov", "Dis"];
+
+    String hour = (dateTime.hour % 12 == 0 ? 12 : dateTime.hour % 12).toString(); // No padLeft here
+    String minute = dateTime.minute.toString().padLeft(2, '0');
+    String period = dateTime.hour >= 12 ? 'PM' : 'AM';
+
+    return "${dateTime.day.toString().padLeft(2, '0')} ${monthNames[dateTime.month - 1]} ${dateTime.year}, "
+        "$hour:$minute $period";
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -302,7 +337,7 @@ class _s_InstantPostInfoState extends State<s_InstantPostInfo> with TickerProvid
                           Text(
                             "RM ${post!.price}",
                             style: const TextStyle(
-                                fontSize: 22, fontWeight: FontWeight.w600, color: Color(0xFFfb9798)),
+                                fontSize: 26, fontWeight: FontWeight.w600, color: Color(0xFFfb9798)),
                           ),
                           const Divider(thickness: 1.5, height: 30),
                           ...post!.descriptions.map((desc) => Column(
@@ -331,98 +366,206 @@ class _s_InstantPostInfoState extends State<s_InstantPostInfo> with TickerProvid
                               const SizedBox(height: 12),
                             ],
                           )),
-                          Text("Product Ratings", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                          const SizedBox(height: 8),
 
-                          Row(
-                            children: [
-                              Icon(Icons.star, color: Colors.amber, size: 20),
-                              SizedBox(width: 4),
-                              Text(avgPostRating.toStringAsFixed(1), style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                              SizedBox(width: 6),
-                              Text("(${postReviews.length} Reviews)", style: TextStyle(color: Colors.black54, fontSize: 14)),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-
-                          Column(
-                            children: [
-                              ...postReviews.take(2).map((doc) {
-                                final data = doc.data() as Map<String, dynamic>;
-
-                                return Container(
-                                  padding: const EdgeInsets.all(12),
-                                  margin: const EdgeInsets.only(bottom: 10),
-                                  decoration: BoxDecoration(
-                                    color: Color(0xFFF9F9F9),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: Colors.grey.shade300),
+                          // Service Post Ratings
+                          Container(
+                            width: double.infinity,
+                            margin: const EdgeInsets.symmetric(vertical: 6),
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black26,
+                                  blurRadius: 6,
+                                  offset: Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                /// --- Ratings Summary with Arrow ---
+                                GestureDetector(
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => s_ServiceRating(postId: widget.docId),
+                                      ),
+                                    );
+                                  },
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Text(avgPostRating.toStringAsFixed(1),
+                                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                                          SizedBox(width: 6),
+                                          Icon(Icons.star_rounded, color: Colors.amber, size: 22),
+                                          SizedBox(width: 6),
+                                          Text("Service Ratings", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                                          SizedBox(width: 6),
+                                          Text("(${postReviews.length} Ratings)",
+                                              style: TextStyle(color: Colors.black54, fontSize: 14)),
+                                        ],
+                                      ),
+                                      Icon(Icons.chevron_right, color: Colors.black54),
+                                    ],
                                   ),
-                                  child: Column(
+                                ),
+
+                                const SizedBox(height: 6),
+                                Divider(color: Colors.grey.shade400, thickness: 1.2),
+                                const SizedBox(height: 6),
+
+                                /// --- Review List ---
+                                ...postReviews.take(2).map((doc) {
+                                  final data = doc.data() as Map<String, dynamic>;
+                                  final images = (data['reviewPhotoUrls'] ?? []) as List;
+                                  final video = data['reviewVideoUrl'] as String?;
+
+                                  return Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      /// Reviewer info
+                                      /// Reviewer Info
                                       Row(
                                         children: [
                                           CircleAvatar(
-                                            radius: 14,
+                                            radius: 16,
                                             backgroundImage: NetworkImage(data['userProfilePic'] ?? ''),
                                           ),
-                                          SizedBox(width: 8),
-                                          Text(data['userName'] ?? "Anonymous", style: TextStyle(fontWeight: FontWeight.bold)),
+                                          SizedBox(width: 10),
+                                          Text(data['userName'] ?? "Anonymous",
+                                              style: TextStyle(fontWeight: FontWeight.w600)),
                                         ],
                                       ),
-                                      SizedBox(height: 6),
+                                      const SizedBox(height: 3),
+                                      Text(
+                                          "${formatTimestamp(
+                                              data['updatedAt'])}",
+                                          style: const TextStyle(
+                                            fontSize: 13,
+                                            color: Colors.black54,)),
+                                      const SizedBox(height: 3),
 
-                                      /// Rating stars
+                                      /// Rating Stars
                                       Row(
-                                        children: List.generate((data['rating'] ?? 0), (index) =>
-                                            Icon(Icons.star, size: 16, color: Colors.amber)),
+                                        children: List.generate(
+                                          (data['rating'] ?? 0),
+                                              (index) => Icon(Icons.star_rounded, size: 18, color: Colors.amber),
+                                        ),
                                       ),
-                                      SizedBox(height: 6),
 
                                       /// Comment
-                                      if ((data['comment'] ?? '').toString().trim().isNotEmpty)
-                                        Text(data['comment'], style: TextStyle(fontSize: 14, color: Colors.black87)),
+                                      if ((data['comment'] ?? '').toString().trim().isNotEmpty) ...[
+                                        SizedBox(height: 6),
+                                        Text(data['comment'], style: TextStyle(fontSize: 14)),
+                                      ],
 
-                                      /// Images
-                                      if ((data['reviewPhotoUrls'] ?? []).isNotEmpty)
-                                        SizedBox(
-                                          height: 90,
-                                          child: ListView.builder(
-                                            scrollDirection: Axis.horizontal,
-                                            itemCount: (data['reviewPhotoUrls'] as List).length,
-                                            itemBuilder: (_, i) {
-                                              final img = data['reviewPhotoUrls'][i];
-                                              return Padding(
-                                                padding: const EdgeInsets.only(right: 8),
-                                                child: ClipRRect(
-                                                  borderRadius: BorderRadius.circular(8),
-                                                  child: Image.network(img, width: 90, height: 90, fit: BoxFit.cover),
-                                                ),
-                                              );
-                                            },
+                                      // Optional Criteria Tags (modern pill-style boxes)
+                                      if (data['quality'] != null || data['responsiveness'] != null || data['punctuality'] != null)
+                                        Padding(
+                                          padding: const EdgeInsets.only(top: 10),
+                                          child: Wrap(
+                                            spacing: 8,
+                                            runSpacing: 6,
+                                            children: [
+                                              if (data['quality'] != null)
+                                                _buildCriteriaTag("Service Quality", data['quality']),
+                                              if (data['responsiveness'] != null)
+                                                _buildCriteriaTag("Responsiveness", data['responsiveness']),
+                                              if (data['punctuality'] != null)
+                                                _buildCriteriaTag("Punctuality", data['punctuality']),
+                                            ],
                                           ),
                                         ),
+                                      const SizedBox(height: 10),
+
+
+
+                                      /// Media (Photo & Video)
+                                      if ((video != null && video.isNotEmpty) || (images.isNotEmpty)) ...[
+                                        SizedBox(height: 8),
+                                        Wrap(
+                                          spacing: 8,
+                                          runSpacing: 8,
+                                          children: [
+                                            if (video != null && video.isNotEmpty)
+                                              SizedBox(
+                                                width: 90,
+                                                height: 90,
+                                                child: ReviewVideoPreview(videoUrl: video),
+                                              ),
+                                            ...List.generate(images.length, (index) {
+                                              final url = images[index];
+                                              return SizedBox(
+                                                width: 90,
+                                                height: 90,
+                                                child: GestureDetector(
+                                                  onTap: () {
+                                                    showDialog(
+                                                      context: context,
+                                                      builder: (_) => FullScreenImageViewer(
+                                                        imageUrls: List<String>.from(images),
+                                                        initialIndex: index,
+                                                      ),
+                                                    );
+                                                  },
+                                                  child: ClipRRect(
+                                                    borderRadius: BorderRadius.circular(10),
+                                                    child: Image.network(
+                                                      url,
+                                                      fit: BoxFit.cover,
+                                                      loadingBuilder: (context, child, loadingProgress) {
+                                                        if (loadingProgress == null) return child;
+                                                        return Container(
+                                                          decoration: BoxDecoration(
+                                                            color: Colors.grey[300],
+                                                            borderRadius: BorderRadius.circular(10),
+                                                          ),
+                                                          child: const Center(
+                                                            child: SizedBox(
+                                                              width: 18,
+                                                              height: 18,
+                                                              child: CircularProgressIndicator(strokeWidth: 2),
+                                                            ),
+                                                          ),
+                                                        );
+                                                      },
+                                                      errorBuilder: (context, error, stackTrace) {
+                                                        return Container(
+                                                          decoration: BoxDecoration(
+                                                            color: Colors.grey[300],
+                                                            borderRadius: BorderRadius.circular(10),
+                                                          ),
+                                                          child: const Icon(Icons.broken_image, color: Colors.grey),
+                                                        );
+                                                      },
+                                                    ),
+                                                  ),
+                                                ),
+                                              );
+                                            }),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 10),
+                                      ],
+
+                                      /// Divider between reviews (only if not last)
+                                      if (postReviews.indexOf(doc) < postReviews.take(2).length - 1)
+                                        Divider(color: Colors.grey.shade400, thickness: 1.2),
+                                      const SizedBox(height: 6),
                                     ],
-                                  ),
-                                );
-                              }).toList(),
+                                  );
+                                }).toList(),
 
-                              if (postReviews.length > 2)
-                                TextButton(
-                                  onPressed: () {
-                                    // Navigate to full screen review
-                                  },
-                                  child: Text("View All Reviews"),
-                                ),
-                            ],
+                              ],
+                            ),
                           ),
-
-
-
-
-
+                          const SizedBox(height: 10),
                           // Service Provider's Rating
                           _buildProviderRatingCard(),
 
@@ -443,8 +586,7 @@ class _s_InstantPostInfoState extends State<s_InstantPostInfo> with TickerProvid
               color: Colors.transparent,
               child: InkWell(
                 borderRadius: BorderRadius.circular(20),
-                onTap: () => Navigator.pop(context),
-                child: Container(
+                onTap: () => Navigator.pop(context, true),                child: Container(
                   width: 34,
                   height: 34,
                   decoration: const BoxDecoration(
@@ -467,67 +609,55 @@ class _s_InstantPostInfoState extends State<s_InstantPostInfo> with TickerProvid
             ),
           ),
 
-          /// ❤️ + 🧭 Bottom Buttons
+
+          /// ❤️ + 🧭 Bottom Buttons - FIXED
           Positioned(
             bottom: 0,
             left: 0,
             right: 0,
-            child: Container(
-              color: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
-              child: Row(
-                children: [
-                  GestureDetector(
-                    onTap: () => setState(() => _isFavorite = !_isFavorite),
-                    child: Container(
-                      width: 55,
-                      height: 55,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: _isFavorite ? Colors.white : Colors.grey,
-                        border: _isFavorite
-                            ? Border.all(color: const Color(0xFFF06275), width: 2)
-                            : null,
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Colors.black26,
-                            blurRadius: 6,
-                            offset: Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Icon(Icons.favorite,
-                          color: _isFavorite ? const Color(0xFFF06275) : Colors.white,
-                          size: 30),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: pk_button(
-                      context,
-                      "Next",
-                          () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => s_SetBookingDetails(
-                              spId: post!.spId,
-                              spName: post!.spName ?? 'Unknown Service Provider',
-                              spImageURL: post!.spImageURL ?? '',
-                              IBpostId: post!.docId,
-                              IBPrice: post!.price,
-                              IPTitle: post!.title,
-                              serviceCategory: post!.serviceCategory,
-                            ),
-                          ),
-                        );
+            child: SafeArea( // ✅ Put SafeArea at the outer level
+              top: false,
+              child: Container(
+                color: Colors.white,
+                padding: const EdgeInsets.fromLTRB(16, 6, 16, 6), // Keep padding tight
+                child: Row(
+                  children: [
+                    // Favorite Button
+                    FavoriteButtonStyled(
+                      instantBookingId: post!.docId, // or your relevant ID
+                      onUnfavourite: () {
+                        // Optional: update UI or list
                       },
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: pk_button(
+                        context,
+                        "Next",
+                            () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => s_SetBookingDetails(
+                                spId: post!.spId,
+                                spName: post!.spName ?? 'Unknown Service Provider',
+                                spImageURL: post!.spImageURL ?? '',
+                                IBpostId: post!.docId,
+                                IBPrice: post!.price,
+                                IPTitle: post!.title,
+                                serviceCategory: post!.serviceCategory,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
+
         ],
       ),
     );
@@ -594,7 +724,7 @@ class _s_InstantPostInfoState extends State<s_InstantPostInfo> with TickerProvid
                           ),
                           const SizedBox(width: 6),
                           Text(
-                            "(${reviews.length} Reviews)",
+                            "(${reviews.length} Ratings)",
                             style: const TextStyle(color: Colors.black54, fontSize: 14),
                           ),
                         ],
@@ -635,21 +765,40 @@ class _s_InstantPostInfoState extends State<s_InstantPostInfo> with TickerProvid
     );
   }
 
-  /// 🔹 Reusable criteria rating block
+
   Widget _buildAspectRating(String title, double value) {
-    return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Text(
+          value.toStringAsFixed(1),
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          title,
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 12, color: Colors.black54),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCriteriaTag(String title, dynamic value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color(0x1Aff6f61), // light tinted background
+        borderRadius: BorderRadius.circular(30),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
+          const Icon(Icons.star, size: 16, color: Colors.amber),
+          const SizedBox(width: 4),
           Text(
-            value.toStringAsFixed(1),
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            title,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 12, color: Colors.black54),
+            "$title: $value",
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
           ),
         ],
       ),
@@ -657,3 +806,126 @@ class _s_InstantPostInfoState extends State<s_InstantPostInfo> with TickerProvid
   }
 
 }
+
+
+
+
+class FavoriteButtonStyled extends StatefulWidget {
+  final String instantBookingId;
+  final VoidCallback? onUnfavourite;
+
+  const FavoriteButtonStyled({
+    Key? key,
+    required this.instantBookingId,
+    this.onUnfavourite,
+  }) : super(key: key);
+
+  @override
+  _FavoriteButtonStyledState createState() => _FavoriteButtonStyledState();
+}
+
+class _FavoriteButtonStyledState extends State<FavoriteButtonStyled> {
+  bool _isFavorite = false;
+  final user = FirebaseAuth.instance.currentUser;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkIfFavorited();
+  }
+
+  Future<void> _checkIfFavorited() async {
+    if (user == null) return;
+
+    final doc = await FirebaseFirestore.instance
+        .collection('service_seekers')
+        .doc(user!.uid)
+        .collection('favourites_instant')
+        .doc(widget.instantBookingId)
+        .get();
+
+    if (mounted) {
+      setState(() {
+        _isFavorite = doc.exists;
+      });
+    }
+  }
+
+  Future<void> _toggleFavorite() async {
+    if (user == null) return;
+
+    final favRef = FirebaseFirestore.instance
+        .collection('service_seekers')
+        .doc(user!.uid)
+        .collection('favourites_instant')
+        .doc(widget.instantBookingId);
+
+    try {
+      if (_isFavorite) {
+        await favRef.delete();
+        widget.onUnfavourite?.call();
+        ReusableSnackBar(
+          context,
+          "Removed from favourites",
+          icon: Icons.favorite_border,
+          iconColor: Colors.grey,
+        );
+      } else {
+        await favRef.set({
+          'instantBookingId': widget.instantBookingId,
+          'favoritedAt': FieldValue.serverTimestamp(),
+        });
+        ReusableSnackBar(
+          context,
+          "Added to favourites",
+          icon: Icons.favorite,
+          iconColor: const Color(0xFFF06275),
+        );
+      }
+
+      if (mounted) {
+        setState(() {
+          _isFavorite = !_isFavorite;
+        });
+      }
+    } catch (e) {
+      ReusableSnackBar(context, "Failed to update favourite", icon: Icons.error, iconColor: Colors.red);
+      print("❌ Error toggling favorite: $e");
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(27.5),
+        onTap: _toggleFavorite,
+        child: Container(
+          width: 55,
+          height: 55,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: _isFavorite ? Colors.white : Colors.grey,
+            border: _isFavorite
+                ? Border.all(color: const Color(0xFFF06275), width: 2)
+                : null,
+            boxShadow: const [
+              BoxShadow(
+                color: Colors.black26,
+                blurRadius: 6,
+                offset: Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Icon(
+            Icons.favorite,
+            color: _isFavorite ? const Color(0xFFF06275) : Colors.white,
+            size: 30,
+          ),
+        ),
+      ),
+    );
+  }
+}
+

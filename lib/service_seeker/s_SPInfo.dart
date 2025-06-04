@@ -1,5 +1,5 @@
 import 'package:fix_mate/service_seeker/s_SPDetail.dart';
-import 'package:fix_mate/service_seeker/s_SPRating.dart';
+import 'package:fix_mate/service_seeker/s_ReviewRating/s_SPRating.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -349,7 +349,7 @@ class _ServiceProviderScreenState extends State<ServiceProviderScreen> {
           crossAxisCount: 2,
           crossAxisSpacing: 2,
           mainAxisSpacing: 12,
-          childAspectRatio: 0.70, // Adjust this to control card height
+          childAspectRatio: 0.65, // Adjust this to control card height
           children: snapshot.data!.docs.map((doc) {
             final data = doc.data() as Map<String, dynamic>;
             final postPrice = (data['PPrice'] as num?)?.toInt() ?? 0;

@@ -7,6 +7,8 @@ class s_FilterInstantPost extends StatefulWidget {
   final List<String> initialStates;
   final RangeValues initialPriceRange;
   final String? initialSortOrder; // ✅ Allow null values
+  final double? initialProviderRating;
+  final double? initialServiceRating;
 
   const s_FilterInstantPost({
     Key? key,
@@ -15,6 +17,8 @@ class s_FilterInstantPost extends StatefulWidget {
     required this.initialStates,
     required this.initialPriceRange,
     this.initialSortOrder, // ✅ Now accepts null
+    this.initialProviderRating,
+    this.initialServiceRating,
   }) : super(key: key);
 
   @override
@@ -27,7 +31,8 @@ class _s_FilterInstantPostState extends State<s_FilterInstantPost> {
   List<String> selectedStates = [];
   RangeValues _priceRange = RangeValues(0, 1000);
   String? selectedSortOrder; // Can be null when nothing is selected
-
+  double? selectedProviderRating;
+  double? selectedServiceRating;
 
   final List<String> categories = [
     "Cleaning", "Electrical", "Plumbing", "Painting",
@@ -41,6 +46,9 @@ class _s_FilterInstantPostState extends State<s_FilterInstantPost> {
     "Terengganu", "Kelantan", "Pahang", "Sabah", "Sarawak"
   ];
 
+  final List<double> providerRating = [5.0, 4.0, 3.0, 2.0, 1.0];
+  final List<double> serviceRating = [5.0, 4.0, 3.0, 2.0, 1.0];
+
   final List<String> sortOptions = [ "Random" ,"Newest", "Oldest"]; // ✅ Sorting options
 
   @override
@@ -51,7 +59,8 @@ class _s_FilterInstantPostState extends State<s_FilterInstantPost> {
     selectedStates = widget.initialStates;
     _priceRange = widget.initialPriceRange;
     selectedSortOrder = widget.initialSortOrder; // ✅ Initialize sorting order
-
+    selectedProviderRating = widget.initialProviderRating;
+    selectedServiceRating = widget.initialServiceRating;
   }
 
   void _applyFilters() {
@@ -61,6 +70,8 @@ class _s_FilterInstantPostState extends State<s_FilterInstantPost> {
       "selectedStates": selectedStates,
       "priceRange": _priceRange,
       "sortOrder": selectedSortOrder, // ✅ Pass sorting order
+      "providerRating": selectedProviderRating,
+      "serviceRating": selectedServiceRating,
     });
   }
 
@@ -142,7 +153,7 @@ class _s_FilterInstantPostState extends State<s_FilterInstantPost> {
           "Filter Instant Posts",
           style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
         ),
-        titleSpacing: 25,
+        titleSpacing: 2,
       ),
       body: SingleChildScrollView(
         padding: EdgeInsets.all(16),
@@ -239,10 +250,149 @@ class _s_FilterInstantPostState extends State<s_FilterInstantPost> {
 
             const SizedBox(height: 10),
 
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Provider's Rating",
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black),
+                ),
+                const SizedBox(height: 6),
+                DropdownButtonFormField<double>(
+                  value: selectedProviderRating,
+                  decoration: InputDecoration(
+                    labelText: "Minimum Rating",
+                    labelStyle: TextStyle(
+                      fontSize: 16,
+                      color: Colors.black87,
+                    ),
+                    filled: true,
+                    fillColor: Colors.white,
+                    contentPadding: EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Color(0xFFfb9798), width: 1.5),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Color(0xFFfb9798), width: 1.5),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Color(0xFFfb9798), width: 2),
+                    ),
+                  ),
+                  dropdownColor: Colors.white,
+                  icon: Icon(Icons.keyboard_arrow_down, color: Color(0xFFfb9798)),
+                  style: TextStyle(fontSize: 16, color: Colors.black87),
+                  items: providerRating.map((rating) {
+                    return DropdownMenuItem(
+                      value: rating,
+                      child: Row(
+                        children: [
+                          Icon(Icons.star_rounded, color: Colors.amber, size: 20),
+                          SizedBox(width: 6),
+                          Text(
+                            rating == 5.0 ? "$rating " : "$rating & up",
+                            style: TextStyle(fontSize: 16),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (value) => setState(() => selectedProviderRating = value),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 10),
+            /// **Thick Grey Divider**
+            const Divider(
+              color: Colors.grey, // Grey color
+              thickness: 1.0, // Make it thicker
+              height: 10, // Adjust spacing above and below the divider
+            ),
+
+            const SizedBox(height: 10),
+
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Service Post Rating",
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black),
+                ),
+                const SizedBox(height: 6),
+                DropdownButtonFormField<double>(
+                  value: selectedServiceRating,
+                  decoration: InputDecoration(
+                    labelText: "Minimum Rating",
+                    labelStyle: TextStyle(
+                      fontSize: 16,
+                      color: Colors.black87,
+                    ),
+                    filled: true,
+                    fillColor: Colors.white,
+                    contentPadding: EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Color(0xFFfb9798), width: 1.5),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Color(0xFFfb9798), width: 1.5),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Color(0xFFfb9798), width: 2),
+                    ),
+                  ),
+                  dropdownColor: Colors.white,
+                  icon: Icon(Icons.keyboard_arrow_down, color: Color(0xFFfb9798)),
+                  style: TextStyle(fontSize: 16, color: Colors.black87),
+                  items: serviceRating.map((rating) {
+                    return DropdownMenuItem(
+                      value: rating,
+                      child: Row(
+                        children: [
+                          Icon(Icons.star_rounded, color: Colors.amber, size: 20),
+                          SizedBox(width: 6),
+                          Text(
+                            rating == 5.0 ? "$rating " : "$rating & up",
+                            style: TextStyle(fontSize: 16),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (value) => setState(() => selectedServiceRating = value),
+                ),
+              ],
+            ),
+
+
+            const SizedBox(height: 10),
+            /// **Thick Grey Divider**
+            const Divider(
+              color: Colors.grey, // Grey color
+              thickness: 1.0, // Make it thicker
+              height: 10, // Adjust spacing above and below the divider
+            ),
+
+            const SizedBox(height: 10),
+
+
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "Post Order",
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black),
+            ),
+            const SizedBox(height: 6),
             DropdownButtonFormField<String>(
               value: selectedSortOrder,
               decoration: InputDecoration(
-                labelText: "Post Order (Random/Newest/Oldest)",
                 labelStyle: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
@@ -275,7 +425,8 @@ class _s_FilterInstantPostState extends State<s_FilterInstantPost> {
                   .toList(),
               onChanged: (value) => setState(() => selectedSortOrder = value ?? "Random"),
             ),
-
+          ],
+        ),
 
 
             SizedBox(height: 20),

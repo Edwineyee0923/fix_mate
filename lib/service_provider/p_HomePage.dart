@@ -11,6 +11,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fix_mate/reusable_widget/reusable_widget.dart';
+import 'package:fix_mate/services/showBookingNotification.dart';
+import 'package:fix_mate/services/booking_reminder.dart';
 
 
 class p_HomePage extends StatefulWidget {
@@ -35,11 +37,65 @@ class _p_HomePageState extends State<p_HomePage> {
   TextEditingController _searchController = TextEditingController();
 
   @override
+  // void initState() {
+  //   super.initState();
+  //   _loadInstantPosts(); // Load posts when the page initializes
+  //   _loadPromotionPosts(); // Load posts when the page initializes
+  // }
+
+  @override
   void initState() {
     super.initState();
-    _loadInstantPosts(); // Load posts when the page initializes
-    _loadPromotionPosts(); // Load posts when the page initializes
+
+    // 📦 Load content posts
+    _loadInstantPosts();
+    _loadPromotionPosts();
+
+    // 🔔 Schedule booking reminders if user is logged in
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser != null) {
+      scheduleReminders(currentUser.uid);
+    }
+
+    // Optional: listenToProviderNotifications(); // if you want to re-enable this later
   }
+
+
+  // Future<void> listenToProviderNotifications() async {
+  //   final currentUser = FirebaseAuth.instance.currentUser;
+  //   if (currentUser == null) return;
+  //
+  //   // 👇 Confirm the user is a service provider
+  //   final spDoc = await FirebaseFirestore.instance
+  //       .collection('service_providers')
+  //       .doc(currentUser.uid)
+  //       .get();
+  //
+  //   if (!spDoc.exists) return; // ❌ Not a provider
+  //
+  //   // ✅ Listen to real-time booking notifications
+  //   FirebaseFirestore.instance
+  //       .collection('p_notifications')
+  //       .where('providerId', isEqualTo: currentUser.uid)
+  //       .where('isRead', isEqualTo: false)
+  //       .snapshots()
+  //       .listen((snapshot) {
+  //     for (var docChange in snapshot.docChanges) {
+  //       if (docChange.type == DocumentChangeType.added) {
+  //         final data = docChange.doc.data();
+  //         if (data != null) {
+  //           showBookingNotification(
+  //             title: data['title'],
+  //             message: data['message'],
+  //             bookingId: data['bookingId'],
+  //             postId: data['postId'],
+  //             seekerId: data['seekerId'],
+  //           );
+  //         }
+  //       }
+  //     }
+  //   });
+  // }
 
   void _filterInstantPosts(String query) {
     setState(() {
@@ -68,30 +124,7 @@ class _p_HomePageState extends State<p_HomePage> {
     });
   }
 
-  // Widget _buildSearchBar() {
-  //   return Container(
-  //     decoration: BoxDecoration(
-  //       color: Colors.white,
-  //       borderRadius: BorderRadius.circular(25),
-  //       boxShadow: [
-  //         BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
-  //       ],
-  //     ),
-  //     child: TextField(
-  //       controller: _searchController,
-  //       onChanged: (query) {
-  //         _filterInstantPosts(query);  // ✅ Updates Instant Booking Section
-  //         _filterPromotionPosts(query);  // ✅ Updates Promotion Section
-  //       },
-  //       decoration: InputDecoration(
-  //         hintText: "Search your post.......",
-  //         border: InputBorder.none,
-  //         prefixIcon: const Icon(Icons.search, color: Color(0xFF464E65)),
-  //         contentPadding: const EdgeInsets.symmetric(vertical: 14),
-  //       ),
-  //     ),
-  //   );
-  // }
+
 
   Widget _buildSearchBar() {
     return Container(

@@ -8,6 +8,7 @@ import 'package:fix_mate/service_seeker/s_layout.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:fix_mate/reusable_widget/reusable_widget.dart';
 
 
 class s_HomePage extends StatefulWidget {
@@ -35,7 +36,7 @@ class _s_HomePageState extends State<s_HomePage> {
   List<Widget> allSPPosts = [];
   List<Widget> filteredSPPosts = []; // Stores filtered promotion posts
   List<Widget> displayedSPPosts = []; // ✅ Stores 4 newest posts or filtered results
-
+  List<Widget> providerFavourites = [];
 
   @override
   void initState() {
@@ -124,6 +125,7 @@ class _s_HomePageState extends State<s_HomePage> {
   }
 
 
+
   Future<void> _loadInstantPosts() async {
     try {
       User? user = _auth.currentUser;
@@ -131,12 +133,6 @@ class _s_HomePageState extends State<s_HomePage> {
         print("User not logged in");
         return;
       }
-
-      // print("Fetching posts for userId: ${user.uid}");
-
-      // QuerySnapshot snapshot = await _firestore
-      //     .collection('instant_booking')
-      //     .get();
 
       // Query query = _firestore.collection('instant_booking').orderBy('updatedAt', descending: true);
       Query query = _firestore
@@ -152,12 +148,25 @@ class _s_HomePageState extends State<s_HomePage> {
         print("Fetched ${snapshot.docs.length} instant booking posts");
       }
 
-      List<Widget> instantPosts = snapshot.docs.map((doc) {
+
+      // List<Widget> instantPosts = snapshot.docs.map((doc) {
+      //   Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+
+      // 👇 Use Future.wait to handle async inside the loop
+      List<Widget> instantPosts = await Future.wait(snapshot.docs.map((doc) async {
         Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+
+        // 👇 Fetch review summary
+        final reviewSummary = await fetchPostReviewSummary(doc.id);
+        final double avgRating = reviewSummary['avgRating'] ?? 0.0;
+        final int reviewCount = reviewSummary['count'] ?? 0;
 
         return KeyedSubtree(
           key: ValueKey<String>(data['IPTitle'] ?? "Unknown"),
           child: buildInstantBookingCard(
+            docId: doc.id,
+            avgRating: avgRating,
+            reviewCount: reviewCount,
             IPTitle: data['IPTitle'] ?? "Unknown",
             ServiceStates: (data['ServiceStates'] as List<dynamic>?)?.join(", ") ?? "Unknown",
             ServiceCategory: (data['ServiceCategory'] as List<dynamic>?)?.join(", ") ?? "No services listed",
@@ -175,7 +184,7 @@ class _s_HomePageState extends State<s_HomePage> {
             },
           ),
         );
-      }).toList();
+      }).toList());
 
       setState(() {
         allInstantPosts = instantPosts;
@@ -185,6 +194,8 @@ class _s_HomePageState extends State<s_HomePage> {
       print("Error loading Instant Booking Posts: $e");
     }
   }
+
+
 
   Future<void> _loadPromotionPosts() async {
     try {
@@ -209,12 +220,24 @@ class _s_HomePageState extends State<s_HomePage> {
         print("Fetched ${snapshot.docs.length} promotion posts");
       }
 
-      List<Widget> promotionPosts = snapshot.docs.map((doc) {
+      // List<Widget> promotionPosts = snapshot.docs.map((doc) {
+      //   Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+
+      // 👇 Use Future.wait to handle async inside the loop
+      List<Widget> promotionPosts = await Future.wait(snapshot.docs.map((doc) async {
         Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+
+        // 👇 Fetch review summary
+        final reviewSummary = await fetchPostReviewSummary(doc.id);
+        final double avgRating = reviewSummary['avgRating'] ?? 0.0;
+        final int reviewCount = reviewSummary['count'] ?? 0;
 
         return KeyedSubtree(
           key: ValueKey<String>(data['PTitle'] ?? "Unknown"),
           child: buildPromotionCard(
+            docId: doc.id,
+            avgRating: avgRating,
+            reviewCount: reviewCount,
             PTitle: data['PTitle'] ?? "Unknown",
             ServiceStates: (data['ServiceStates'] as List<dynamic>?)?.join(", ") ?? "Unknown",
             ServiceCategory: (data['ServiceCategory'] as List<dynamic>?)?.join(", ") ?? "No services listed",
@@ -234,7 +257,7 @@ class _s_HomePageState extends State<s_HomePage> {
             },
           ),
         );
-      }).toList();
+      }).toList());
 
 
       setState(() {
@@ -268,14 +291,19 @@ class _s_HomePageState extends State<s_HomePage> {
         print("Fetched ${snapshot.docs.length} service providers");
       }
 
-      List<Widget> SPPosts = snapshot.docs.map((doc) {
+      // 👇 Use Future.wait to handle async inside the loop
+      List<Widget> SPPosts = await Future.wait(snapshot.docs.map((doc) async {
         Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
 
-        print("Service Provider Name: ${data['name']}"); // ✅ Print fetched data
+        // 👇 Fetch review summary
+        final reviewSummary = await fetchProviderReviewSummary(doc.id);
+        data['averageRating'] = reviewSummary['avgRating'];
+        data['totalReviews'] = reviewSummary['count'];
 
         return KeyedSubtree(
           key: ValueKey<String>(data['name'] ?? "Unknown"),
           child: buildSPCard(
+            docId: doc.id,
             name: data['name'] ?? "Unknown",
             location: (data['selectedStates'] as List<dynamic>?)?.join(", ") ?? "Unknown",
             services: (data['selectedExpertiseFields'] as List<dynamic>?)?.join(", ") ?? "No services listed",
@@ -288,9 +316,15 @@ class _s_HomePageState extends State<s_HomePage> {
                 ),
               );
             },
+            onUnfavourite: () {
+              setState(() {
+                providerFavourites.removeWhere((w) => w.key == ValueKey(doc.id));
+              });
+            },
+
           ),
         );
-      }).toList();
+      }).toList());
       print("Total SPPosts created: ${SPPosts.length}"); // ✅ Check if the list is populated
 
 
@@ -554,12 +588,15 @@ Widget buildInstantBookingCard({
   required String ServiceCategory,
   required List<String> imageUrls,
   required int IPPrice,
-  required VoidCallback onTap, // ✅ Added onTap
+  required String docId,
+  required double avgRating,
+  required int reviewCount,
+  required VoidCallback onTap,
 }) {
   return GestureDetector(
-    onTap: onTap, // ✅ Calls the navigation function
+    onTap: onTap,
     child: Container(
-      width: 220, // Adjust width for better spacing in horizontal scroll
+      width: 220,
       margin: const EdgeInsets.symmetric(horizontal: 8),
       child: Card(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -569,13 +606,12 @@ Widget buildInstantBookingCard({
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 📌 Image with rounded corners
                 ClipRRect(
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
                   child: Image.network(
                     (imageUrls.isNotEmpty) ? imageUrls.first : "https://via.placeholder.com/150",
                     width: double.infinity,
-                    height: 130, // Adjust height for better fit
+                    height: 130,
                     fit: BoxFit.cover,
                   ),
                 ),
@@ -591,13 +627,11 @@ Widget buildInstantBookingCard({
                         maxLines: 2,
                       ),
                       const SizedBox(height: 4),
-
-                      // 📌 Location with Icon
                       Row(
                         children: [
                           const Icon(Icons.location_on, size: 14, color: Colors.grey),
-                          const SizedBox(width: 4), // Spacing
-                          Expanded( // ✅ Ensures text truncates within available space
+                          const SizedBox(width: 4),
+                          Expanded(
                             child: Text(
                               ServiceStates,
                               style: const TextStyle(fontSize: 14, color: Colors.grey, fontWeight: FontWeight.w400),
@@ -608,13 +642,11 @@ Widget buildInstantBookingCard({
                         ],
                       ),
                       const SizedBox(height: 2),
-
-                      // 📌 Service Category with Icon
                       Row(
                         children: [
                           const Icon(Icons.build, size: 14, color: Colors.grey),
-                          const SizedBox(width: 4), // Spacing
-                          Expanded( // ✅ Ensures text truncates properly
+                          const SizedBox(width: 4),
+                          Expanded(
                             child: Text(
                               ServiceCategory,
                               style: const TextStyle(fontSize: 14, color: Colors.grey, fontWeight: FontWeight.w400),
@@ -629,33 +661,74 @@ Widget buildInstantBookingCard({
                 ),
               ],
             ),
+
+            // ⭐ Favorite Button
             Positioned(
               top: 6,
               right: 6,
               child: Builder(
                 builder: (BuildContext context) {
                   return ClipRRect(
-                    borderRadius: BorderRadius.circular(6), // ✅ Smaller rounding
+                    borderRadius: BorderRadius.circular(6),
                     child: Material(
-                      color: Colors.white, // ✅ Button background
+                      color: Colors.white,
                       child: StatefulBuilder(
                         builder: (context, setState) {
-                          return FavoriteButton(setState: setState);
+                          return FavoriteButton(instantBookingId: docId);
                         },
                       ),
                     ),
-
                   );
                 },
               ),
             ),
 
-            // 📌 Price (Bottom-right of the card)
+            // ⭐ Rating (Bottom-left)
             Positioned(
               bottom: 15,
-              right: 20,
+              left: 14,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFFFF7EC), Color(0xFFFEE9D7)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: Colors.orange.shade100),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.orange.withOpacity(0.15),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.star_rounded, color: Colors.amber, size: 16),
+                    const SizedBox(width: 3),
+                    Text(
+                      avgRating.toStringAsFixed(1),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                        color: Colors.grey[800],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // 💸 Price (Bottom-right)
+            Positioned(
+              bottom: 12,
+              right: 14,
               child: Text(
-                "RM $IPPrice", // Directly use the stored integer
+                "RM $IPPrice",
                 style: const TextStyle(
                   color: Color(0xFFfb9798),
                   fontSize: 26,
@@ -671,6 +744,7 @@ Widget buildInstantBookingCard({
 }
 
 
+
 Widget buildPromotionCard({
   required String PTitle,
   required String ServiceStates,
@@ -679,12 +753,15 @@ Widget buildPromotionCard({
   required int PPrice,
   required int PAPrice,
   required double PDiscountPercentage,
-  required VoidCallback onTap, // ✅ Added onTap
+  required String docId,
+  required double avgRating, // ⭐️ New
+  required int reviewCount,  // ⭐️ New
+  required VoidCallback onTap,
 }) {
   return GestureDetector(
-    onTap: onTap, // ✅ Calls the navigation function
+    onTap: onTap,
     child: Container(
-      width: 220, // Adjust width for better spacing in horizontal scroll
+      width: 220,
       margin: const EdgeInsets.symmetric(horizontal: 8),
       child: Card(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -694,13 +771,12 @@ Widget buildPromotionCard({
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 📌 Image with rounded corners
                 ClipRRect(
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
                   child: Image.network(
                     (imageUrls.isNotEmpty) ? imageUrls.first : "https://via.placeholder.com/150",
                     width: double.infinity,
-                    height: 130, // Adjust height for better fit
+                    height: 130,
                     fit: BoxFit.cover,
                   ),
                 ),
@@ -716,13 +792,11 @@ Widget buildPromotionCard({
                         maxLines: 2,
                       ),
                       const SizedBox(height: 4),
-
-                      // 📌 Location with Icon
                       Row(
                         children: [
                           const Icon(Icons.location_on, size: 14, color: Colors.grey),
-                          const SizedBox(width: 4), // Spacing
-                          Expanded( // ✅ Ensures text truncates within available space
+                          const SizedBox(width: 4),
+                          Expanded(
                             child: Text(
                               ServiceStates,
                               style: const TextStyle(fontSize: 14, color: Colors.grey, fontWeight: FontWeight.w400),
@@ -733,13 +807,11 @@ Widget buildPromotionCard({
                         ],
                       ),
                       const SizedBox(height: 2),
-
-                      // 📌 Service Category with Icon
                       Row(
                         children: [
                           const Icon(Icons.build, size: 14, color: Colors.grey),
-                          const SizedBox(width: 4), // Spacing
-                          Expanded( // ✅ Ensures text truncates properly
+                          const SizedBox(width: 4),
+                          Expanded(
                             child: Text(
                               ServiceCategory,
                               style: const TextStyle(fontSize: 14, color: Colors.grey, fontWeight: FontWeight.w400),
@@ -754,28 +826,29 @@ Widget buildPromotionCard({
                 ),
               ],
             ),
+
+            // Favorite button
             Positioned(
               top: 6,
               right: 6,
               child: Builder(
                 builder: (BuildContext context) {
                   return ClipRRect(
-                    borderRadius: BorderRadius.circular(6), // ✅ Smaller rounding
+                    borderRadius: BorderRadius.circular(6),
                     child: Material(
-                      color: Colors.white, // ✅ Button background
+                      color: Colors.white,
                       child: StatefulBuilder(
                         builder: (context, setState) {
-                          return FavoriteButton(setState: setState);
+                          return FavoriteButton3(promotionId: docId);
                         },
                       ),
                     ),
-
                   );
                 },
               ),
             ),
 
-            // 📌 Discount Badge (Top-left of the image)
+            // Discount Badge
             Positioned(
               top: 10,
               left: 10,
@@ -796,25 +869,61 @@ Widget buildPromotionCard({
               ),
             ),
 
-            // 📌 Price Display (Bottom-right)
+            // ⭐️ Rating badge (bottom-left)
             Positioned(
               bottom: 15,
-              right: 15,
+              left: 14,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFFFF7EC), Color(0xFFFEE9D7)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: Colors.orange.shade100),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.orange.withOpacity(0.15),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.star_rounded, color: Colors.amber, size: 16),
+                    const SizedBox(width: 3),
+                    Text(
+                      avgRating.toStringAsFixed(1),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                        color: Colors.grey[800],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // Price
+            Positioned(
+              bottom: 12,
+              right: 14,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  // Original Price (Strikethrough)
                   Text(
                     "RM $PAPrice",
                     style: const TextStyle(
                       color: Colors.redAccent,
                       fontSize: 14,
-                      decoration: TextDecoration.lineThrough, // Strikethrough effect
+                      decoration: TextDecoration.lineThrough,
                     ),
                   ),
-                  const SizedBox(height: 4), // Spacing
-
-                  // Discounted Price (Larger & Bold)
+                  const SizedBox(height: 2),
                   Text(
                     "RM $PPrice",
                     style: const TextStyle(
@@ -833,12 +942,16 @@ Widget buildPromotionCard({
   );
 }
 
+
 Widget buildSPCard({
+  required String docId,
   required String name,
   required String location,
   required String services,
   required String imageUrl,
   required VoidCallback onTap,
+  required VoidCallback onUnfavourite, // ✅ Add this
+
 }) {
   return GestureDetector(
     onTap: onTap,
@@ -917,20 +1030,64 @@ Widget buildSPCard({
                             ],
                           ),
                           const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              const Text(
-                                "0.0",
-                                style: TextStyle(fontSize: 16, color: Colors.redAccent, fontWeight: FontWeight.bold),
+
+                          // Star Rating
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [Color(0xFFFFF7EC), Color(0xFFFEE9D7)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
                               ),
-                              const SizedBox(width: 6),
-                              Row(
-                                children: List.generate(5, (index) {
-                                  return const Icon(Icons.star_border, color: Colors.orange, size: 16);
-                                }),
-                              ),
-                            ],
-                          ),
+                              borderRadius: BorderRadius.circular(24),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.orange.withOpacity(0.15),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                              border: Border.all(color: Colors.orange.shade100),
+                            ),
+                            child: FutureBuilder<Map<String, dynamic>>(
+                              future: fetchProviderReviewSummary(docId),
+                              builder: (context, snapshot) {
+                                if (!snapshot.hasData) {
+                                  return const Text("Loading...", style: TextStyle(fontSize: 12));
+                                }
+
+                                final data = snapshot.data!;
+                                final avgRating = data['avgRating'] as double;
+                                final count = data['count'] as int;
+
+                                return Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.star_rounded, color: Colors.amber, size: 18),
+                                    const SizedBox(width: 3),
+                                    Text(
+                                      avgRating.toStringAsFixed(1),
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12,
+                                        color: Colors.grey[800],
+                                      ),
+                                    ),
+                                    const SizedBox(width: 3),
+                                    Text(
+                                      "| $count Reviews",
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.grey[600],
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              },
+                            ),
+                          )
                         ],
                       ),
                     ),
@@ -955,7 +1112,10 @@ Widget buildSPCard({
                     ),
                   ],
                 ),
-                child: FavoriteButton2(),
+                child: FavoriteButton2(
+                  providerId: docId,
+                  onUnfavourite: onUnfavourite, // ✅ Pass callback to button
+                  ), // or data['providerId'],
               ),
             ),
           ],
@@ -967,9 +1127,16 @@ Widget buildSPCard({
 
 
 
-
+// Service Provider Favourite
 class FavoriteButton2 extends StatefulWidget {
-  const FavoriteButton2({Key? key}) : super(key: key);
+  final String providerId;
+  final VoidCallback? onUnfavourite; // ✅ Add this
+
+  const FavoriteButton2({
+    Key? key,
+    required this.providerId,
+    this.onUnfavourite, // ✅ Add this
+  }) : super(key: key);
 
   @override
   _FavoriteButton2State createState() => _FavoriteButton2State();
@@ -977,11 +1144,67 @@ class FavoriteButton2 extends StatefulWidget {
 
 class _FavoriteButton2State extends State<FavoriteButton2> {
   bool isFavorite = false;
+  final user = FirebaseAuth.instance.currentUser;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkIfFavorited();
+  }
+
+  Future<void> _checkIfFavorited() async {
+    if (user == null) return;
+
+    final doc = await FirebaseFirestore.instance
+        .collection('service_seekers')
+        .doc(user!.uid)
+        .collection('favourites_provider')
+        .doc(widget.providerId)
+        .get();
+
+    setState(() {
+      isFavorite = doc.exists;
+    });
+  }
+
+  Future<void> _toggleFavorite() async {
+    if (user == null) return;
+
+    final favRef = FirebaseFirestore.instance
+        .collection('service_seekers')
+        .doc(user!.uid)
+        .collection('favourites_provider')
+        .doc(widget.providerId);
+
+    try {
+      if (isFavorite) {
+        await favRef.delete();
+        widget.onUnfavourite?.call(); // ✅ Trigger removal callback
+        ReusableSnackBar(context, "Removed provider from favourites",
+            icon: Icons.favorite_border, iconColor: Colors.grey);
+      } else {
+        await favRef.set({
+          'providerId': widget.providerId,
+          'favoritedAt': FieldValue.serverTimestamp(),
+        });
+        ReusableSnackBar(context, "Added provider to favourites",
+            icon: Icons.favorite, iconColor: Color(0xFFF06275));
+      }
+
+      setState(() {
+        isFavorite = !isFavorite;
+      });
+    } catch (e) {
+      ReusableSnackBar(context, "Failed to update provider favourite",
+          icon: Icons.error, iconColor: Colors.red);
+      print("❌ Error toggling provider favorite: $e");
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 300), // Smooth transition effect
+      duration: const Duration(milliseconds: 300),
       width: 35,
       height: 35,
       decoration: BoxDecoration(
@@ -989,30 +1212,28 @@ class _FavoriteButton2State extends State<FavoriteButton2> {
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: isFavorite ? Color(0xFFF06275).withOpacity(0.5) : Colors.grey.withOpacity(0.0), // Change shadow color
+            color: isFavorite
+                ? const Color(0xFFF06275).withOpacity(0.5)
+                : Colors.grey.withOpacity(0.0),
             spreadRadius: 2,
             blurRadius: 4,
           ),
         ],
       ),
       child: Stack(
-        alignment: Alignment.center, // Ensures the icon is perfectly centered
+        alignment: Alignment.center,
         children: [
           Icon(
             isFavorite ? Icons.favorite : Icons.favorite_border,
-            size: 22, // ✅ Ensures the icon is 25 in size
-            color: isFavorite ? Color(0xFFF06275) : Colors.black,
+            size: 22,
+            color: isFavorite ? const Color(0xFFF06275) : Colors.black,
           ),
           Positioned.fill(
             child: Material(
               color: Colors.transparent,
               shape: const CircleBorder(),
               child: InkWell(
-                onTap: () {
-                  setState(() {
-                    isFavorite = !isFavorite;
-                  });
-                },
+                onTap: _toggleFavorite,
                 borderRadius: BorderRadius.circular(50),
               ),
             ),
@@ -1023,27 +1244,89 @@ class _FavoriteButton2State extends State<FavoriteButton2> {
   }
 }
 
+
+
+// Instant Booking Favourite
 class FavoriteButton extends StatefulWidget {
-  final void Function(void Function()) setState;
-  const FavoriteButton({Key? key, required this.setState}) : super(key: key);
+  final String instantBookingId;
+  final VoidCallback? onUnfavourite;
+
+  const FavoriteButton({
+    Key? key,
+    required this.instantBookingId,
+    this.onUnfavourite,
+  }) : super(key: key);
 
   @override
   _FavoriteButtonState createState() => _FavoriteButtonState();
 }
 
 class _FavoriteButtonState extends State<FavoriteButton> {
-  bool isFavorite = false; // ✅ Persistent state for toggle effect
+  bool isFavorite = false;
+  final user = FirebaseAuth.instance.currentUser;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkIfFavorited();
+  }
+
+  Future<void> _checkIfFavorited() async {
+    if (user == null) return;
+
+    final doc = await FirebaseFirestore.instance
+        .collection('service_seekers')
+        .doc(user!.uid)
+        .collection('favourites_instant')
+        .doc(widget.instantBookingId)
+        .get();
+
+    setState(() {
+      isFavorite = doc.exists;
+    });
+  }
+
+  Future<void> _toggleFavorite() async {
+    if (user == null) return;
+
+    final favRef = FirebaseFirestore.instance
+        .collection('service_seekers')
+        .doc(user!.uid)
+        .collection('favourites_instant')
+        .doc(widget.instantBookingId);
+
+    try {
+      if (isFavorite) {
+        await favRef.delete();
+        widget.onUnfavourite?.call(); // ✅ Call the callback
+        ReusableSnackBar(context, "Removed from favourites", icon: Icons.favorite_border, iconColor: Colors.grey);
+      } else {
+        await favRef.set({
+          'instantBookingId': widget.instantBookingId,
+          'favoritedAt': FieldValue.serverTimestamp(),
+        });
+        ReusableSnackBar(context, "Added to favourites", icon: Icons.favorite, iconColor: Color(0xFFF06275));
+      }
+
+      setState(() {
+        isFavorite = !isFavorite;
+      });
+    } catch (e) {
+      ReusableSnackBar(context, "Failed to update favourite", icon: Icons.error, iconColor: Colors.red);
+      print("❌ Error toggling favorite: $e");
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 40, // ✅ Bigger container
-      height: 40, // ✅ Bigger container
+      width: 40,
+      height: 40,
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.2), // ✅ Soft shadow
+            color: Colors.grey.withOpacity(0.2),
             spreadRadius: 2,
             blurRadius: 5,
           ),
@@ -1051,17 +1334,177 @@ class _FavoriteButtonState extends State<FavoriteButton> {
       ),
       child: IconButton(
         icon: Icon(
-          isFavorite ? Icons.favorite : Icons.favorite_border, // ✅ Toggle between filled & outlined heart
-          size: 25, // ✅ Bigger icon
-          color: isFavorite ? const Color(0xFFF06275) : Colors.black, // ✅ Toggle color
+          isFavorite ? Icons.favorite : Icons.favorite_border,
+          size: 25,
+          color: isFavorite ? const Color(0xFFF06275) : Colors.black,
         ),
-        onPressed: () {
-          setState(() {
-            isFavorite = !isFavorite; // 🔄 Toggle favorite state
-          });
-        },
+        onPressed: _toggleFavorite,
       ),
     );
   }
+}
 
+
+
+
+// Promotion Favourite
+class FavoriteButton3 extends StatefulWidget {
+  final String promotionId;
+  final VoidCallback? onUnfavourite; // ✅ Add optional callback
+
+  const FavoriteButton3({
+    Key? key,
+    required this.promotionId,
+    this.onUnfavourite,
+  }) : super(key: key);
+
+  @override
+  _FavoriteButton3State createState() => _FavoriteButton3State();
+}
+
+class _FavoriteButton3State extends State<FavoriteButton3> {
+  bool isFavorite = false;
+  final user = FirebaseAuth.instance.currentUser;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkIfFavorited();
+  }
+
+  Future<void> _checkIfFavorited() async {
+    if (user == null) return;
+
+    final doc = await FirebaseFirestore.instance
+        .collection('service_seekers')
+        .doc(user!.uid)
+        .collection('favourites_promotion')
+        .doc(widget.promotionId)
+        .get();
+
+    setState(() {
+      isFavorite = doc.exists;
+    });
+  }
+
+  Future<void> _toggleFavorite() async {
+    if (user == null) return;
+
+    final favRef = FirebaseFirestore.instance
+        .collection('service_seekers')
+        .doc(user!.uid)
+        .collection('favourites_promotion')
+        .doc(widget.promotionId);
+
+    try {
+      if (isFavorite) {
+        await favRef.delete();
+        widget.onUnfavourite?.call(); // ✅ Call the callback if exists
+        ReusableSnackBar(context, "Removed from favourites", icon: Icons.favorite_border, iconColor: Colors.grey);
+      } else {
+        await favRef.set({
+          'promotionId': widget.promotionId,
+          'favoritedAt': FieldValue.serverTimestamp(),
+        });
+        ReusableSnackBar(context, "Added to favourites", icon: Icons.favorite, iconColor: Color(0xFFF06275));
+      }
+
+      setState(() {
+        isFavorite = !isFavorite;
+      });
+    } catch (e) {
+      ReusableSnackBar(context, "Failed to update favourite", icon: Icons.error, iconColor: Colors.red);
+      print("❌ Error toggling favorite: $e");
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.2),
+            spreadRadius: 2,
+            blurRadius: 5,
+          ),
+        ],
+      ),
+      child: IconButton(
+        icon: Icon(
+          isFavorite ? Icons.favorite : Icons.favorite_border,
+          size: 25,
+          color: isFavorite ? const Color(0xFFF06275) : Colors.black,
+        ),
+        onPressed: _toggleFavorite,
+      ),
+    );
+  }
+}
+
+
+
+
+Future<Map<String, dynamic>> fetchProviderReviewSummary(String providerId) async {
+  final querySnapshot = await FirebaseFirestore.instance
+      .collection('reviews')
+      .where('providerId', isEqualTo: providerId)
+      .get();
+
+  final reviews = querySnapshot.docs;
+
+  if (reviews.isEmpty) {
+    return {
+      'avgRating': 0.0,
+      'count': 0,
+    };
+  }
+
+  double totalRating = 0.0;
+
+  for (var doc in reviews) {
+    final data = doc.data() as Map<String, dynamic>;
+    totalRating += (data['rating'] ?? 0).toDouble();
+  }
+
+  final double avgRating = totalRating / reviews.length;
+
+  return {
+    'avgRating': avgRating,
+    'count': reviews.length,
+  };
+}
+
+
+Future<Map<String, dynamic>> fetchPostReviewSummary(String postId) async {
+  final snapshot = await FirebaseFirestore.instance
+      .collection('reviews')
+      .where('postId', isEqualTo: postId)
+      .get();
+
+  final reviews = snapshot.docs;
+
+  if (reviews.isEmpty) {
+    return {
+      'avgRating': 0.0,
+      'count': 0,
+    };
+  }
+
+  double totalRating = 0.0;
+
+  for (var doc in reviews) {
+    final data = doc.data() as Map<String, dynamic>;
+    totalRating += (data['rating'] ?? 0).toDouble();
+  }
+
+  final double avgRating = totalRating / reviews.length;
+
+  return {
+    'avgRating': avgRating,
+    'count': reviews.length,
+  };
 }

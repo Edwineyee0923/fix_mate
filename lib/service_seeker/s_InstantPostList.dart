@@ -1,6 +1,5 @@
-import 'package:fix_mate/service_provider/p_EditInstantPost.dart';
-import 'package:fix_mate/service_provider/p_FilterInstantPost.dart';
 import 'package:fix_mate/service_seeker/s_FilterInstantPost.dart';
+import 'package:fix_mate/service_seeker/s_HomePage.dart';
 import 'package:fix_mate/service_seeker/s_InstantPostInfo.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -13,6 +12,8 @@ class s_InstantPostList extends StatefulWidget {
   final List<String> initialStates; // ✅ Ensure it's a List<String>
   final RangeValues initialPriceRange; // ✅ Add price range parameter
   final String initialSortOrder; // ✅ Sorting order
+  final double? initialProviderRating;
+  final double? initialServiceRating;
 
   const s_InstantPostList({
     Key? key,
@@ -21,6 +22,8 @@ class s_InstantPostList extends StatefulWidget {
     this.initialStates = const [], // ✅ Default to empty list
     this.initialPriceRange = const RangeValues(0, 1000), // ✅ Default price range
     this.initialSortOrder = "Random", // ✅ Default sorting order
+    this.initialProviderRating,
+    this.initialServiceRating,
   }) : super(key: key);
 
   @override
@@ -40,6 +43,9 @@ class _s_InstantPostListState extends State<s_InstantPostList> {
   List<String> selectedStates = []; // ✅ Declare selectedStates
   RangeValues selectedPriceRange = RangeValues(0, 1000); // ✅ Store price range
   String? selectedSortOrder; // Can be null when nothing is selected
+  double? selectedProviderRating;
+  double? selectedServiceRating;
+
 
   @override
   void initState() {
@@ -49,6 +55,8 @@ class _s_InstantPostListState extends State<s_InstantPostList> {
     selectedStates = List<String>.from(widget.initialStates); // ✅ Ensure list format
     selectedPriceRange = widget.initialPriceRange; // ✅ Initialize price range
     selectedSortOrder = widget.initialSortOrder; // ✅ Initialize sorting
+    selectedProviderRating = widget.initialProviderRating;
+    selectedServiceRating = widget.initialServiceRating;
 
     _searchController.text = searchQuery; // ✅ Set initial text
     _searchController.addListener(() {
@@ -106,6 +114,8 @@ class _s_InstantPostListState extends State<s_InstantPostList> {
     print("States: $selectedStates");
     print("Price Range: $selectedPriceRange");
     print("Sort Order: $selectedSortOrder");
+    print("Selected Provider Rating: $selectedProviderRating");
+    print("Selected Post Rating: $selectedServiceRating");
 
     try {
       User? user = _auth.currentUser;
@@ -149,6 +159,46 @@ class _s_InstantPostListState extends State<s_InstantPostList> {
           matchScore += 1;
         }
 
+        // Fetch provider review summary
+        final providerId = data['userId'] ?? "";
+
+        if (providerId.isEmpty) {
+          print("⚠️ Skipping post due to missing userId (providerId)");
+          continue;
+        }
+
+        print("🧪 providerId used for filtering: $providerId");
+
+        final providerReviewSummary = await fetchProviderReviewSummary(providerId); // ✅ Now correct
+        final averagePRating = providerReviewSummary['avgRating'] ?? 0.0;
+        final providerReviewCount = providerReviewSummary['count'] ?? 0;
+
+        // if (selectedProviderRating != null && averagePRating >= selectedProviderRating!) {
+        //   matchScore += 1;
+        // }
+        if (selectedProviderRating != null && averagePRating >= selectedProviderRating!) {
+          print("✅ Matched Provider Rating: $averagePRating");
+          matchScore += 1;
+        } else {
+          print("❌ Skipped due to low provider rating: $averagePRating");
+        }
+
+
+        data['averagePRating'] = averagePRating;
+        data['providerReviewCount'] = providerReviewCount;
+
+        // Fetch post review summary
+        final postReviewSummary = await fetchPostReviewSummary(doc.id);
+        final averageRating = postReviewSummary['avgRating'] ?? 0.0;
+        final reviewCount = postReviewSummary['count'] ?? 0;
+
+        if (selectedServiceRating != null && averageRating >= selectedServiceRating!) {
+          matchScore += 1;
+        }
+
+        data['averageRating'] = averageRating;
+        data['reviewCount'] = reviewCount;
+
         if (searchQuery.isNotEmpty &&
             (data['IPTitle'] as String).toLowerCase().contains(searchQuery.toLowerCase())) {
           matchScore += 1;
@@ -162,7 +212,9 @@ class _s_InstantPostListState extends State<s_InstantPostList> {
         if (selectedCategories.isEmpty &&
             selectedStates.isEmpty &&
             searchQuery.isEmpty &&
-            selectedPriceRange == RangeValues(0, double.infinity)) {
+            selectedPriceRange == RangeValues(0, double.infinity) &&
+            selectedProviderRating == null &&
+            selectedServiceRating == null) {
           matchScore = 1;
         }
 
@@ -190,6 +242,9 @@ class _s_InstantPostListState extends State<s_InstantPostList> {
         int postPrice = (data['IPPrice'] as num?)?.toInt() ?? 0;
 
         return buildInstantBookingCard(
+          docId: data['docId'],
+          avgRating: data['averageRating'] ?? 0.0,
+          reviewCount: data['reviewCount'] ?? 0,
           IPTitle: data['IPTitle'] ?? "Unknown",
           ServiceStates: (data['ServiceStates'] as List<dynamic>?)?.join(", ") ?? "Unknown",
           ServiceCategory: (data['ServiceCategory'] as List<dynamic>?)?.join(", ") ?? "No services listed",
@@ -217,6 +272,8 @@ class _s_InstantPostListState extends State<s_InstantPostList> {
   }
 
 
+
+
   void _openFilterScreen() async {
     final result = await Navigator.push(
       context,
@@ -227,6 +284,8 @@ class _s_InstantPostListState extends State<s_InstantPostList> {
           initialStates: selectedStates,
           initialPriceRange: selectedPriceRange,
           initialSortOrder: selectedSortOrder,
+          initialProviderRating: selectedProviderRating,
+          initialServiceRating: selectedServiceRating,
         ),
       ),
     );
@@ -238,6 +297,8 @@ class _s_InstantPostListState extends State<s_InstantPostList> {
         selectedStates = List<String>.from(result['selectedStates'] ?? []);
         selectedPriceRange = result["priceRange"];
         selectedSortOrder = result["sortOrder"];
+        selectedProviderRating = result["providerRating"];
+        selectedServiceRating = result["serviceRating"];
 
         // ✅ Mark filters as applied
         hasFiltered = true;
@@ -247,6 +308,8 @@ class _s_InstantPostListState extends State<s_InstantPostList> {
             selectedCategories.isNotEmpty ||
             selectedStates.isNotEmpty ||
             selectedSortOrder != null ||
+            selectedProviderRating != null ||
+            selectedServiceRating != null ||
             (selectedPriceRange.start > 0 || selectedPriceRange.end < 1000);
 
         if (isFiltered) {
@@ -295,7 +358,7 @@ class _s_InstantPostListState extends State<s_InstantPostList> {
               crossAxisCount: 2, // ✅ Ensures exactly 2 columns
               crossAxisSpacing: 0, // ✅ Space between columns
               mainAxisSpacing: 10, // ✅ Space between rows
-              childAspectRatio: 0.70, // ✅ Adjust aspect ratio to fit better
+              childAspectRatio: 0.66, // ✅ Adjust aspect ratio to fit better
             ),
             itemCount: allInstantPosts.length,
             itemBuilder: (context, index) {
@@ -314,6 +377,19 @@ class _s_InstantPostListState extends State<s_InstantPostList> {
       backgroundColor: Color(0xFFFFF8F2),
       appBar: AppBar(
         backgroundColor: Color(0xFFfb9798),
+        leading: IconButton(
+          icon: Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: Colors.white,
+          ),
+          onPressed: () =>
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => s_HomePage(),
+                ),
+              ), // return true = change,
+        ),
         title: Text(
           "Instant Booking Post List",
           style: TextStyle(
@@ -322,7 +398,7 @@ class _s_InstantPostListState extends State<s_InstantPostList> {
             color: Colors.white,
           ),
         ),
-        titleSpacing: 25,
+        titleSpacing: 2,
         automaticallyImplyLeading: false,
       ),
 
@@ -371,19 +447,21 @@ class _s_InstantPostListState extends State<s_InstantPostList> {
   }
 }
 
-
 Widget buildInstantBookingCard({
   required String IPTitle,
   required String ServiceStates,
   required String ServiceCategory,
   required List<String> imageUrls,
   required int IPPrice,
-  required VoidCallback onTap, // ✅ Added onTap
+  required String docId,
+  required double avgRating,
+  required int reviewCount,
+  required VoidCallback onTap,
 }) {
   return GestureDetector(
-    onTap: onTap, // ✅ Calls the navigation function
+    onTap: onTap,
     child: Container(
-      width: 240, // Adjust width for better spacing in horizontal scroll
+      width: 220,
       margin: const EdgeInsets.symmetric(horizontal: 8),
       child: Card(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -393,13 +471,12 @@ Widget buildInstantBookingCard({
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 📌 Image with rounded corners
                 ClipRRect(
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
                   child: Image.network(
                     (imageUrls.isNotEmpty) ? imageUrls.first : "https://via.placeholder.com/150",
                     width: double.infinity,
-                    height: 120, // Adjust height for better fit
+                    height: 120,
                     fit: BoxFit.cover,
                   ),
                 ),
@@ -415,16 +492,14 @@ Widget buildInstantBookingCard({
                         maxLines: 2,
                       ),
                       const SizedBox(height: 4),
-
-                      // 📌 Location with Icon
                       Row(
                         children: [
                           const Icon(Icons.location_on, size: 14, color: Colors.grey),
-                          const SizedBox(width: 4), // Spacing
-                          Expanded( // ✅ Ensures text truncates within available space
+                          const SizedBox(width: 4),
+                          Expanded(
                             child: Text(
                               ServiceStates,
-                              style: const TextStyle(fontSize: 14, color: Colors.grey, fontWeight: FontWeight.w400),
+                              style: const TextStyle(fontSize: 14, color: Colors.grey),
                               overflow: TextOverflow.ellipsis,
                               maxLines: 1,
                             ),
@@ -432,57 +507,97 @@ Widget buildInstantBookingCard({
                         ],
                       ),
                       const SizedBox(height: 2),
-
-                      // 📌 Service Category with Icon
                       Row(
                         children: [
                           const Icon(Icons.build, size: 14, color: Colors.grey),
-                          const SizedBox(width: 4), // Spacing
-                          Expanded( // ✅ Ensures text truncates properly
+                          const SizedBox(width: 4),
+                          Expanded(
                             child: Text(
                               ServiceCategory,
-                              style: const TextStyle(fontSize: 14, color: Colors.grey, fontWeight: FontWeight.w400),
+                              style: const TextStyle(fontSize: 14, color: Colors.grey),
                               overflow: TextOverflow.ellipsis,
                               maxLines: 1,
                             ),
                           ),
                         ],
                       ),
+                      const SizedBox(height: 24), // Reserve vertical space for rating
                     ],
                   ),
                 ),
               ],
             ),
+
+            // ❤️ Favorite Button
             Positioned(
               top: 6,
               right: 6,
               child: Builder(
                 builder: (BuildContext context) {
                   return ClipRRect(
-                    borderRadius: BorderRadius.circular(6), // ✅ Smaller rounding
+                    borderRadius: BorderRadius.circular(6),
                     child: Material(
-                      color: Colors.white, // ✅ Button background
+                      color: Colors.white,
                       child: StatefulBuilder(
                         builder: (context, setState) {
-                          return FavoriteButton(setState: setState);
+                          return FavoriteButton(instantBookingId: docId);
                         },
                       ),
                     ),
-
                   );
                 },
               ),
             ),
 
-            // 📌 Price (Bottom-right of the card)
+            // ⭐ Rating Badge (Bottom-left)
+            Positioned(
+              bottom: 12,
+              left: 10,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFFFF7EC), Color(0xFFFEE9D7)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: Colors.orange.shade100),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.orange.withOpacity(0.15),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.star_rounded, color: Colors.amber, size: 16),
+                    const SizedBox(width: 3),
+                    Text(
+                      avgRating.toStringAsFixed(1),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 11,
+                        color: Colors.grey[800],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // 💰 Price (Bottom-right)
             Positioned(
               bottom: 8,
-              right: 10,
+              right: 8,
               child: Text(
-                "RM $IPPrice", // Directly use the stored integer
+                "RM$IPPrice",
                 style: const TextStyle(
                   color: Color(0xFFfb9798),
-                  fontSize: 26,
+                  fontSize: 22,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -493,27 +608,88 @@ Widget buildInstantBookingCard({
     ),
   );
 }
+
+// Instant Booking Favourite
 class FavoriteButton extends StatefulWidget {
-  final void Function(void Function()) setState;
-  const FavoriteButton({Key? key, required this.setState}) : super(key: key);
+  final String instantBookingId;
+  final VoidCallback? onUnfavourite;
+
+  const FavoriteButton({
+    Key? key,
+    required this.instantBookingId,
+    this.onUnfavourite,
+  }) : super(key: key);
 
   @override
   _FavoriteButtonState createState() => _FavoriteButtonState();
 }
 
 class _FavoriteButtonState extends State<FavoriteButton> {
-  bool isFavorite = false; // ✅ Persistent state for toggle effect
+  bool isFavorite = false;
+  final user = FirebaseAuth.instance.currentUser;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkIfFavorited();
+  }
+
+  Future<void> _checkIfFavorited() async {
+    if (user == null) return;
+
+    final doc = await FirebaseFirestore.instance
+        .collection('service_seekers')
+        .doc(user!.uid)
+        .collection('favourites_instant')
+        .doc(widget.instantBookingId)
+        .get();
+
+    setState(() {
+      isFavorite = doc.exists;
+    });
+  }
+
+  Future<void> _toggleFavorite() async {
+    if (user == null) return;
+
+    final favRef = FirebaseFirestore.instance
+        .collection('service_seekers')
+        .doc(user!.uid)
+        .collection('favourites_instant')
+        .doc(widget.instantBookingId);
+
+    try {
+      if (isFavorite) {
+        await favRef.delete();
+        widget.onUnfavourite?.call(); // ✅ Call the callback
+        ReusableSnackBar(context, "Removed from favourites", icon: Icons.favorite_border, iconColor: Colors.grey);
+      } else {
+        await favRef.set({
+          'instantBookingId': widget.instantBookingId,
+          'favoritedAt': FieldValue.serverTimestamp(),
+        });
+        ReusableSnackBar(context, "Added to favourites", icon: Icons.favorite, iconColor: Color(0xFFF06275));
+      }
+
+      setState(() {
+        isFavorite = !isFavorite;
+      });
+    } catch (e) {
+      ReusableSnackBar(context, "Failed to update favourite", icon: Icons.error, iconColor: Colors.red);
+      print("❌ Error toggling favorite: $e");
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 40, // ✅ Bigger container
-      height: 40, // ✅ Bigger container
+      width: 40,
+      height: 40,
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.2), // ✅ Soft shadow
+            color: Colors.grey.withOpacity(0.2),
             spreadRadius: 2,
             blurRadius: 5,
           ),
@@ -521,16 +697,63 @@ class _FavoriteButtonState extends State<FavoriteButton> {
       ),
       child: IconButton(
         icon: Icon(
-          isFavorite ? Icons.favorite : Icons.favorite_border, // ✅ Toggle between filled & outlined heart
-          size: 25, // ✅ Bigger icon
-          color: isFavorite ? const Color(0xFFF06275) : Colors.black, // ✅ Toggle color
+          isFavorite ? Icons.favorite : Icons.favorite_border,
+          size: 25,
+          color: isFavorite ? const Color(0xFFF06275) : Colors.black,
         ),
-        onPressed: () {
-          setState(() {
-            isFavorite = !isFavorite; // 🔄 Toggle favorite state
-          });
-        },
+        onPressed: _toggleFavorite,
       ),
     );
   }
+}
+
+Future<Map<String, dynamic>> fetchProviderReviewSummary(String providerId) async {
+  final querySnapshot = await FirebaseFirestore.instance
+      .collection('reviews')
+      .where('providerId', isEqualTo: providerId)
+      .get();
+
+  final reviews = querySnapshot.docs;
+
+  if (reviews.isEmpty) {
+    return {
+      'avgRating': 0.0,
+      'count': 0,
+    };
+  }
+
+  double totalRating = 0.0;
+
+  for (var doc in reviews) {
+    final data = doc.data() as Map<String, dynamic>;
+    totalRating += (data['rating'] ?? 0).toDouble();
+  }
+
+  final double avgRating = totalRating / reviews.length;
+
+  return {
+    'avgRating': avgRating,
+    'count': reviews.length,
+  };
+}
+
+Future<Map<String, dynamic>> fetchPostReviewSummary(String postId) async {
+  final snapshot = await FirebaseFirestore.instance
+      .collection('reviews')
+      .where('postId', isEqualTo: postId)
+      .get();
+
+  final reviews = snapshot.docs;
+  if (reviews.isEmpty) return {'avgRating': 0.0, 'count': 0};
+
+  double totalRating = 0.0;
+  for (var doc in reviews) {
+    final data = doc.data();
+    totalRating += (data['rating'] ?? 0).toDouble();
+  }
+
+  return {
+    'avgRating': totalRating / reviews.length,
+    'count': reviews.length,
+  };
 }

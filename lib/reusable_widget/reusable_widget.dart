@@ -1527,7 +1527,256 @@ void showFloatingMessage(
 }
 
 
+// class TimeSlotSelector extends StatefulWidget {
+//   final Function(String) onSelected;
+//   final String? selectedTime;
+//
+//   const TimeSlotSelector({
+//     Key? key,
+//     required this.onSelected,
+//     this.selectedTime,
+//   }) : super(key: key);
+//
+//   @override
+//   State<TimeSlotSelector> createState() => _TimeSlotSelectorState();
+// }
+//
+// class _TimeSlotSelectorState extends State<TimeSlotSelector> {
+//   bool isAM = true;
+//
+//   List<String> _generateTimeSlots(bool isAM) {
+//     List<String> slots = [];
+//     int startHour = isAM ? 0 : 12; // 0 for AM, 12 for PM
+//
+//     for (int i = 0; i < 12; i++) {
+//       final hour24 = (startHour + i) % 24;
+//       slots.add(_formatTime(hour24, 0));
+//       slots.add(_formatTime(hour24, 30));
+//     }
+//
+//     return slots;
+//   }
+//
+//   String _formatTime(int hour24, int minute) {
+//     final hour12 = hour24 % 12 == 0 ? 12 : hour24 % 12;
+//     final minStr = minute.toString().padLeft(2, '0');
+//     final period = hour24 < 12 ? 'AM' : 'PM';
+//     return "$hour12:$minStr $period";
+//   }
+//
+//   @override
+//   Widget build(BuildContext context) {
+//     final slots = _generateTimeSlots(isAM);
+//
+//     return Column(
+//       children: [
+//         // AM/PM Toggle
+//         Row(
+//           mainAxisAlignment: MainAxisAlignment.center,
+//           children: [
+//             ChoiceChip(
+//               label: const Text('AM'),
+//               selected: isAM,
+//               onSelected: (_) => setState(() => isAM = true),
+//               selectedColor: const Color(0xFFFF9342),
+//             ),
+//             const SizedBox(width: 10),
+//             ChoiceChip(
+//               label: const Text('PM'),
+//               selected: !isAM,
+//               onSelected: (_) => setState(() => isAM = false),
+//               selectedColor: const Color(0xFFFF9342),
+//             ),
+//           ],
+//         ),
+//         const SizedBox(height: 20),
+//
+//         // Time Slots
+//         GridView.builder(
+//           shrinkWrap: true,
+//           physics: const NeverScrollableScrollPhysics(),
+//           itemCount: slots.length,
+//           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+//             crossAxisCount: 3,
+//             crossAxisSpacing: 12,
+//             mainAxisSpacing: 12,
+//             childAspectRatio: 2.8,
+//           ),
+//           itemBuilder: (context, index) {
+//             final time = slots[index];
+//             final isSelected = time == widget.selectedTime;
+//
+//             return InkWell(
+//               onTap: () => widget.onSelected(time),
+//               borderRadius: BorderRadius.circular(12),
+//               child: AnimatedContainer(
+//                 duration: const Duration(milliseconds: 200),
+//                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+//                 decoration: BoxDecoration(
+//                   borderRadius: BorderRadius.circular(12),
+//                   color: isSelected ? const Color(0xFFFF9342) : Colors.white,
+//                   border: Border.all(
+//                     color: isSelected ? const Color(0xFFFF9342) : Colors.grey.shade300,
+//                     width: 1.5,
+//                   ),
+//                   boxShadow: [
+//                     if (isSelected)
+//                       BoxShadow(
+//                         color: Colors.orange.withOpacity(0.3),
+//                         blurRadius: 6,
+//                         offset: const Offset(0, 3),
+//                       ),
+//                   ],
+//                 ),
+//                 child: Center(
+//                   child: Text(
+//                     time,
+//                     style: TextStyle(
+//                       color: isSelected ? Colors.white : Colors.black87,
+//                       fontWeight: FontWeight.w600,
+//                       fontSize: 14,
+//                     ),
+//                   ),
+//                 ),
+//               ),
+//             );
+//           },
+//         ),
+//       ],
+//     );
+//   }
+// }
 
 
+class TimeSlotSelector extends StatefulWidget {
+  final Function(String) onSelected;
+  final String? selectedTime;
+  final List<String> disabledSlots;
 
+  const TimeSlotSelector({
+    Key? key,
+    required this.onSelected,
+    this.selectedTime,
+    required this.disabledSlots,
+  }) : super(key: key);
+
+  @override
+  State<TimeSlotSelector> createState() => _TimeSlotSelectorState();
+}
+
+class _TimeSlotSelectorState extends State<TimeSlotSelector> {
+  bool isAM = true;
+
+  List<String> _generateTimeSlots(bool isAM) {
+    List<String> slots = [];
+    int startHour = isAM ? 0 : 12;
+
+    for (int i = 0; i < 12; i++) {
+      final hour24 = (startHour + i) % 24;
+      slots.add(_formatTime(hour24, 0));
+      slots.add(_formatTime(hour24, 30));
+    }
+
+    return slots;
+  }
+
+  String _formatTime(int hour24, int minute) {
+    final hour12 = hour24 % 12 == 0 ? 12 : hour24 % 12;
+    final minStr = minute.toString().padLeft(2, '0');
+    final period = hour24 < 12 ? 'AM' : 'PM';
+    return "$hour12:$minStr $period";
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final slots = _generateTimeSlots(isAM);
+
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            ChoiceChip(
+              label: const Text('AM'),
+              selected: isAM,
+              onSelected: (_) => setState(() => isAM = true),
+              selectedColor: const Color(0xFFFF9342),
+            ),
+            const SizedBox(width: 10),
+            ChoiceChip(
+              label: const Text('PM'),
+              selected: !isAM,
+              onSelected: (_) => setState(() => isAM = false),
+              selectedColor: const Color(0xFFFF9342),
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: slots.length,
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 2.8,
+          ),
+          itemBuilder: (context, index) {
+            final time = slots[index];
+            final isSelected = time == widget.selectedTime;
+            final isDisabled = widget.disabledSlots.contains(time);
+
+            return InkWell(
+              onTap: isDisabled ? null : () => widget.onSelected(time),
+              borderRadius: BorderRadius.circular(12),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  color: isDisabled
+                      ? Colors.grey.shade200
+                      : isSelected
+                      ? const Color(0xFFFF9342)
+                      : Colors.white,
+                  border: Border.all(
+                    color: isDisabled
+                        ? Colors.grey.shade300
+                        : isSelected
+                        ? const Color(0xFFFF9342)
+                        : Colors.grey.shade300,
+                    width: 1.5,
+                  ),
+                  boxShadow: [
+                    if (isSelected && !isDisabled)
+                      BoxShadow(
+                        color: Colors.orange.withOpacity(0.3),
+                        blurRadius: 6,
+                        offset: const Offset(0, 3),
+                      ),
+                  ],
+                ),
+                child: Center(
+                  child: Text(
+                    time,
+                    style: TextStyle(
+                      color: isDisabled
+                          ? Colors.grey
+                          : isSelected
+                          ? Colors.white
+                          : Colors.black87,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
 

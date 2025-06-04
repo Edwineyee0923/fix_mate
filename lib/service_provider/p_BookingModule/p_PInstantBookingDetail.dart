@@ -8,6 +8,8 @@ import 'package:intl/intl.dart';
 import 'package:flutter/services.dart';
 import 'package:fix_mate/reusable_widget/reusable_widget.dart';
 import 'package:fix_mate/services/RefundEvidenceUpload.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 
 class p_PInstantBookingDetail extends StatefulWidget {
   final String bookingId;
@@ -62,6 +64,184 @@ class _p_PInstantBookingDetailState extends State<p_PInstantBookingDetail> {
     if (picked != null) setState(() => _rescheduleDate = picked);
   }
 
+
+  String _slotFromIndex(int index) {
+    int hour = index ~/ 2;
+    int minute = (index % 2) * 30;
+    final period = hour < 12 ? 'AM' : 'PM';
+    final hour12 = hour % 12 == 0 ? 12 : hour % 12;
+    final minuteStr = minute.toString().padLeft(2, '0');
+    return '$hour12:$minuteStr $period';
+  }
+
+  bool _isTimeBefore(String slot, String reference) {
+    final slotTime = _parseToTimeOfDay(slot);
+    final refTime = _parseToTimeOfDay(reference);
+    if (slotTime == null || refTime == null) return false;
+    return slotTime.hour < refTime.hour ||
+        (slotTime.hour == refTime.hour && slotTime.minute < refTime.minute);
+  }
+
+  bool _isTimeAfter(String slot, String reference) {
+    final slotTime = _parseToTimeOfDay(slot);
+    final refTime = _parseToTimeOfDay(reference);
+    if (slotTime == null || refTime == null) return false;
+    return slotTime.hour > refTime.hour ||
+        (slotTime.hour == refTime.hour && slotTime.minute > refTime.minute);
+  }
+
+
+  TimeOfDay? _parseToTimeOfDay(String? timeStr) {
+    if (timeStr == null) return null;
+    final match = RegExp(r'^(\d{1,2}):(\d{2})\s?(AM|PM)$', caseSensitive: false).firstMatch(timeStr.trim());
+    if (match == null) return null;
+
+    int hour = int.parse(match.group(1)!);
+    int minute = int.parse(match.group(2)!);
+    final period = match.group(3)!.toUpperCase();
+
+    if (period == 'PM' && hour != 12) hour += 12;
+    if (period == 'AM' && hour == 12) hour = 0;
+
+    return TimeOfDay(hour: hour, minute: minute);
+  }
+
+  int? _indexFromSlot(String slot) {
+    final time = _parseToTimeOfDay(slot);
+    if (time == null) return null;
+    return time.hour * 2 + (time.minute >= 30 ? 1 : 0);
+  }
+
+
+  Future<List<String>> getDisabledSlots(String providerId, DateTime selectedDate) async {
+    final slots = <String>[];
+
+    // ✅ Step 1: Get all active bookings
+    final bookings = await FirebaseFirestore.instance
+        .collection('bookings')
+        .where('serviceProviderId', isEqualTo: providerId)
+        .where('status', isEqualTo: 'Active')
+        .where('finalDate', isEqualTo: DateFormat("d MMM yyyy").format(selectedDate))
+        .get();
+
+    for (var doc in bookings.docs) {
+      String bookedTime = doc['finalTime'];
+      slots.add(bookedTime);
+
+      final index = _indexFromSlot(bookedTime);
+      if (index != null && index < 47) {
+        slots.add(_slotFromIndex(index + 1)); // buffer after
+      }
+    }
+
+    // ✅ Step 2: Get availability info from provider document
+    final spDoc = await FirebaseFirestore.instance
+        .collection('service_providers')
+        .doc(providerId)
+        .get();
+
+    final day = DateFormat('EEEE').format(selectedDate); // e.g. Monday
+    final data = spDoc.data() as Map<String, dynamic>;
+    final availability = data['availability'] as Map<String, dynamic>?;
+
+    if (availability == null) {
+      // No availability config at all → assume fully available
+      print("✅ No availability config — assuming full availability.");
+      return slots;
+    }
+
+    if (!availability.containsKey(day)) {
+      // This day not configured → disable all
+      print("⛔ No availability set for $day — disabling full day.");
+      return List.generate(48, (i) => _slotFromIndex(i));
+    }
+
+    final availableStart = availability[day]['start'];
+    final availableEnd = availability[day]['end'];
+
+    if (availableStart == null || availableEnd == null) {
+      // Start or end not defined → disable all
+      print("⛔ Incomplete availability for $day — disabling full day.");
+      return List.generate(48, (i) => _slotFromIndex(i));
+    }
+
+    // ✅ Step 3: Disable times outside of available range
+    final allSlots = List.generate(48, (i) => _slotFromIndex(i));
+    final outsideAvailableRange = allSlots.where((slot) {
+      return _isTimeBefore(slot, availableStart) || _isTimeAfter(slot, availableEnd);
+    });
+
+    slots.addAll(outsideAvailableRange);
+    return slots;
+  }
+
+
+
+
+  Future<void> _showTimeSlotSelector({
+    required bool isPreferred,
+    required DateTime? selectedDate,
+  }) async {
+    print("🟢 _showTimeSlotSelector triggered | isPreferred: $isPreferred | selectedDate: $selectedDate");
+
+    if (selectedDate == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Please select a date first.")),
+      );
+      return;
+    }
+
+    // 🟨 Get the service provider ID
+    final spId = FirebaseAuth.instance.currentUser?.uid; // ✅ Fetches logged-in provider's ID
+    if (spId == null) return;
+
+    // 🟨 Fetch disabled slots
+    final disabledSlots = await getDisabledSlots(spId, selectedDate);
+    print("⏰ Time slot tapped | disabledSlots count: ${disabledSlots.length}");
+
+    String? selectedTimeStr;
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                "Select a time slot",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              TimeSlotSelector(
+                selectedTime: null,
+                disabledSlots: disabledSlots,
+                onSelected: (selected) {
+                  selectedTimeStr = selected;
+                  Navigator.pop(context);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (selectedTimeStr != null) {
+      setState(() {
+        if (isPreferred) {
+          _rescheduleTime = _parseToTimeOfDay(selectedTimeStr!);
+        } else {
+          _rescheduleTime = _parseToTimeOfDay(selectedTimeStr!);
+        }
+      });
+    }
+  }
 
   Future<void> _selectTime(BuildContext context) async {
     final now = DateTime.now();
@@ -118,24 +298,6 @@ class _p_PInstantBookingDetailState extends State<p_PInstantBookingDetail> {
     final docRef = query.docs.first.reference;
 
     if (approve) {
-      // 👇 Show confirmation dialog to choose refund or not
-      // final refundChoice = await showDialog<bool>(
-      //   context: context,
-      //   builder: (context) => AlertDialog(
-      //     title: const Text("Refund Decision"),
-      //     content: const Text("Do you want to refund the user?"),
-      //     actions: [
-      //       TextButton(
-      //         child: const Text("Don't Refund"),
-      //         onPressed: () => Navigator.pop(context, false),
-      //       ),
-      //       ElevatedButton(
-      //         child: const Text("Refund"),
-      //         onPressed: () => Navigator.pop(context, true),
-      //       ),
-      //     ],
-      //   ),
-      // );
 
       final refundChoice = await showDialog<bool>(
         context: context,
@@ -311,20 +473,25 @@ class _p_PInstantBookingDetailState extends State<p_PInstantBookingDetail> {
     }
   }
 
-
-
-
   Widget _buildDateTimePicker(String label, dynamic value, VoidCallback onTap, {required bool isDate}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: InkWell(
         onTap: onTap,
+        borderRadius: BorderRadius.circular(12), // ✅ preserve ripple radius
         child: Container(
           padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
             color: Colors.white,
-            border: Border.all(color: Colors.grey.shade300, width: 1.5),
+            border: Border.all(color: Colors.black, width: 0.9), // ✅ updated border style
             borderRadius: BorderRadius.circular(12),
+            boxShadow: [ // ✅ added shadow for modern card look
+              BoxShadow(
+                color: const Color(0xFFD19C86).withOpacity(1),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -335,11 +502,16 @@ class _p_PInstantBookingDetailState extends State<p_PInstantBookingDetail> {
                     ? DateFormat("d MMM yyyy").format(value)
                     : "${value.hourOfPeriod}:${value.minute.toString().padLeft(2, '0')} ${value.period == DayPeriod.am ? 'AM' : 'PM'}")
                     : label,
-                style: TextStyle(color: value != null ? Colors.black : Colors.black54),
+                style: TextStyle(
+                  color: value != null ? Colors.black : Colors.black54,
+                  fontWeight: value != null ? FontWeight.bold : FontWeight.normal,
+                  fontSize: value != null ? 16 : 14,
+                ),
               ),
               Icon(
-                  isDate ? Icons.calendar_month : Icons.access_time,
-                  color: Color(0xFFB87F65), size: 26
+                isDate ? Icons.calendar_month : Icons.access_time,
+                color: Color(0xFFB87F65),
+                size: 26,
               ),
             ],
           ),
@@ -347,6 +519,42 @@ class _p_PInstantBookingDetailState extends State<p_PInstantBookingDetail> {
       ),
     );
   }
+
+
+
+  // Widget _buildDateTimePicker(String label, dynamic value, VoidCallback onTap, {required bool isDate}) {
+  //   return Padding(
+  //     padding: const EdgeInsets.symmetric(vertical: 8),
+  //     child: InkWell(
+  //       onTap: onTap,
+  //       child: Container(
+  //         padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+  //         decoration: BoxDecoration(
+  //           color: Colors.white,
+  //           border: Border.all(color: Colors.grey.shade300, width: 1.5),
+  //           borderRadius: BorderRadius.circular(12),
+  //         ),
+  //         child: Row(
+  //           mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  //           children: [
+  //             Text(
+  //               value != null
+  //                   ? (value is DateTime
+  //                   ? DateFormat("d MMM yyyy").format(value)
+  //                   : "${value.hourOfPeriod}:${value.minute.toString().padLeft(2, '0')} ${value.period == DayPeriod.am ? 'AM' : 'PM'}")
+  //                   : label,
+  //               style: TextStyle(color: value != null ? Colors.black : Colors.black54),
+  //             ),
+  //             Icon(
+  //                 isDate ? Icons.calendar_month : Icons.access_time,
+  //                 color: Color(0xFFB87F65), size: 26
+  //             ),
+  //           ],
+  //         ),
+  //       ),
+  //     ),
+  //   );
+  // }
 
   Future<void> _confirmReschedule() async {
     if (_rescheduleDate == null || _rescheduleTime == null) {
@@ -387,8 +595,12 @@ class _p_PInstantBookingDetailState extends State<p_PInstantBookingDetail> {
         final formattedDate = DateFormat("d MMM yyyy").format(_rescheduleDate!); // Example: 25 Apr 2025
 
         final dt = DateTime(0, 1, 1, _rescheduleTime!.hour, _rescheduleTime!.minute);
-        final formattedTime = DateFormat("h:mm a").format(dt); // Example: 4:05 PM
+        final rawFormatted = DateFormat("h:mm a").format(dt);
+        final formattedTime = rawFormatted.replaceAll(RegExp(r'[\u00A0\u202F]'), ' ');
 
+        print("⏰ Raw formattedTime: '$rawFormatted'");
+        print("✅ Clean formattedTime: '$formattedTime'");
+        print("🔍 Unicode values: ${formattedTime.runes.toList()}");
 
         await docRef.update({
           'finalDate': formattedDate,
@@ -540,9 +752,19 @@ class _p_PInstantBookingDetailState extends State<p_PInstantBookingDetail> {
       String finalDate = selectedSchedule == 'preferred'
           ? bookingData!["preferredDate"]
           : bookingData!["alternativeDate"];
-      String finalTime = selectedSchedule == 'preferred'
+      // String finalTime = selectedSchedule == 'preferred'
+      //     ? bookingData!["preferredTime"]
+      //     : bookingData!["alternativeTime"];
+
+      String rawFinalTime = selectedSchedule == 'preferred'
           ? bookingData!["preferredTime"]
           : bookingData!["alternativeTime"];
+
+      String finalTime = rawFinalTime.replaceAll(RegExp(r'[\u00A0\u202F]'), ' '); // Normalize space
+      print("⏰ Raw finalTime: '$rawFinalTime'");
+      print("✅ Normalized finalTime: '$finalTime'");
+      print("🔍 Unicode: ${finalTime.runes.toList()}");
+
 
       final query = await FirebaseFirestore.instance
           .collection('bookings')
@@ -901,108 +1123,361 @@ class _p_PInstantBookingDetailState extends State<p_PInstantBookingDetail> {
                 ),
               )
             ] else ...[
+              // 🔘 Schedule Selection + Confirm Button in One Card
               Opacity(
                 opacity: isRescheduling ? 0.5 : 1.0,
                 child: IgnorePointer(
                   ignoring: isRescheduling,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text("Choose Schedule to Confirm", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                      CheckboxListTile(
-                        title: Text(
-                          "Preferred Schedule: ${_formatDate(bookingData!["preferredDate"])} at ${_formatTime(bookingData!["preferredTime"])}",
-                          style: TextStyle(color: isRescheduling ? Colors.grey : Colors.black),
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.grey.withOpacity(0.15),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
                         ),
-                        value: selectedSchedule == 'preferred',
-                        activeColor: isRescheduling ? Colors.grey : Colors.green,
-                        onChanged: isRescheduling ? null : (val) {
-                          setState(() => selectedSchedule = 'preferred');
-                        },
-                      ),
-                      if (bookingData!["alternativeDate"] != null && bookingData!["alternativeTime"] != null)
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // 🗓️ Title Row
+                        Row(
+                          children: const [
+                            Icon(Icons.calendar_today, color: Color(0xFF464E65)),
+                            SizedBox(width: 8),
+                            Text(
+                              "Choose Schedule to Confirm",
+                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+
+                        // Preferred Schedule
                         CheckboxListTile(
-                          title: Text(
-                            "Alternative Schedule: ${_formatDate(bookingData!["alternativeDate"])} at ${_formatTime(bookingData!["alternativeTime"])}",
-                            style: TextStyle(color: isRescheduling ? Colors.grey : Colors.black),
+                          contentPadding: EdgeInsets.zero,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                          value: selectedSchedule == 'alternative',
-                          activeColor: isRescheduling ? Colors.grey : Colors.green,
-                          onChanged: isRescheduling ? null : (val) {
-                            setState(() => selectedSchedule = 'alternative');
+                          tileColor: Colors.grey.shade100,
+                          title: Text(
+                            "Preferred: ${_formatDate(bookingData!["preferredDate"])} at ${_formatTime(bookingData!["preferredTime"])}",
+                            style: const TextStyle(fontWeight: FontWeight.w500),
+                          ),
+                          value: selectedSchedule == 'preferred',
+                          activeColor: Colors.green,
+                          onChanged: (val) {
+                            setState(() => selectedSchedule = 'preferred');
                           },
                         ),
-                    ],
+                        const SizedBox(height: 10),
+
+                        // Alternative Schedule
+                        if (bookingData!["alternativeDate"] != null && bookingData!["alternativeTime"] != null)
+                          CheckboxListTile(
+                            contentPadding: EdgeInsets.zero,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            tileColor: Colors.grey.shade100,
+                            title: Text(
+                              "Alternative: ${_formatDate(bookingData!["alternativeDate"])} at ${_formatTime(bookingData!["alternativeTime"])}",
+                              style: const TextStyle(fontWeight: FontWeight.w500),
+                            ),
+                            value: selectedSchedule == 'alternative',
+                            activeColor: Colors.green,
+                            onChanged: (val) {
+                              setState(() => selectedSchedule = 'alternative');
+                            },
+                          ),
+
+                        const SizedBox(height: 18),
+
+                        // Confirm Schedule Button (Inside Same Card)
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            icon: isSubmitting
+                                ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                                : const Icon(Icons.check_circle_outline),
+                            label: const Text("Confirm Schedule"),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF464E65),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(30),
+                              ),
+                              textStyle: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            onPressed: selectedSchedule == null || isSubmitting ? null : _confirmSchedule,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
-              ElevatedButton.icon(
-                icon: isSubmitting ? CircularProgressIndicator(color: Colors.white) : Icon(Icons.check),
-                label: Text("Confirm Schedule"),
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
-                onPressed: selectedSchedule == null || isSubmitting ? null : () async {
-                  await _confirmSchedule();
-                },
-              ),
-              const SizedBox(height: 16),
-              Text(
-                "⚠ Both booking schedules are unavailable.\nTry to contact seeker via WhatsApp and reschedule below.",
-                style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 10),
-              ElevatedButton.icon(
-                icon: Icon(Icons.edit_calendar),
-                label: Text("Edit Schedule"),
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
-                onPressed: () {
-                  setState(() {
-                    isRescheduling = true;
-                  });
-                },
+
+              const SizedBox(height: 20),
+
+              // ⚠️ Reschedule Message + Edit Button in One Card
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  // color: const Color(0xFFFFF3F3),
+                  color: Colors.white,
+
+                  border: Border.all(color: Colors.red.shade100),
+                  // border: Border.all(color: Color(0xFF464E65)),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Message
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(Icons.warning_amber_rounded, color: Colors.red),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            "If both schedules are unavailable,\ntry contacting the seeker via WhatsApp to reschedule below.",
+                            style: TextStyle(
+                              color: Colors.red.shade700,
+                              fontWeight: FontWeight.w600,
+                              height: 1.4,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Edit Schedule Button (inside same card)
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        icon: const Icon(Icons.edit_calendar),
+                        label: const Text("Edit Schedule"),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Color(0xFF464E65),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            isRescheduling = true;
+                          });
+                        },
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ]
+
+
           ],
 
+
           if (isRescheduling && !rescheduleSent) ...[
-            const SizedBox(height: 5),
-            Text(
-              "❌ The previous reschedule was rejected by the service seeker.\n"
-                  "Please discuss a suitable time via WhatsApp and propose a new schedule below.",
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.red,
-                fontWeight: FontWeight.w600,
+            const SizedBox(height: 16),
+
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white, // Soft pink background
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: Color(0xFFFB9798), width: 1),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+
+                  // 🔴 Alert message
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.red.shade200),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(Icons.info_outline, color: Colors.red, size: 20),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            "The previous reschedule was rejected by the service seeker.\n"
+                                "Please discuss a suitable time via WhatsApp and propose a new schedule below.",
+                            style: TextStyle(
+                              fontSize: 13.5,
+                              color: Colors.red.shade800,
+                              height: 1.4,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // 🗓 Header
+                  Text("Custom Reschedule Date & Time",
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+
+                  const SizedBox(height: 10),
+
+                  // 📅 Date picker
+                  _buildDateTimePicker(
+                    "Select new date",
+                    _rescheduleDate,
+                        () => _selectDate(context),
+                    isDate: true,
+                  ),
+
+                  // ⏰ Time picker
+                  _buildDateTimePicker(
+                    "Select Preferred Time",
+                    _rescheduleTime,
+                        () => _showTimeSlotSelector(
+                      isPreferred: true,
+                      selectedDate: _rescheduleDate,
+                    ),
+                    isDate: false,
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // ✅ Action buttons
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        width: 150,
+                        child: OutlinedButton(
+                          onPressed: () {
+                            setState(() {
+                              isRescheduling = false;
+                              _rescheduleDate = null;
+                              _rescheduleTime = null;
+                            });
+                          },
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Color(0xFFfb9798),
+                            side: BorderSide(color: Color(0xFFfb9798)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                          child: const Text(
+                            "Cancel",
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      SizedBox(
+                        width: 150,
+                        child: ElevatedButton(
+                          onPressed: isSubmitting ? null : _confirmReschedule,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Color(0xFFfb9798),
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          child: const Text(
+                            "Confirm",
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 16),
-            Text("Custom Reschedule Date & Time", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          ]
 
-            _buildDateTimePicker("Select new date", _rescheduleDate, () => _selectDate(context), isDate: true),
-            _buildDateTimePicker("Select new time", _rescheduleTime, () => _selectTime(context), isDate: false),
+          // if (isRescheduling && !rescheduleSent) ...[
+          //   const SizedBox(height: 5),
+          //   Text(
+          //     "❌ The previous reschedule was rejected by the service seeker.\n"
+          //         "Please discuss a suitable time via WhatsApp and propose a new schedule below.",
+          //     style: TextStyle(
+          //       fontSize: 14,
+          //       color: Colors.red,
+          //       fontWeight: FontWeight.w600,
+          //     ),
+          //   ),
+          //   const SizedBox(height: 16),
+          //   Text("Custom Reschedule Date & Time", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          //
+          //   _buildDateTimePicker("Select new date", _rescheduleDate, () => _selectDate(context), isDate: true),
+          //   // _buildDateTimePicker("Select new time", _rescheduleTime, () => _selectTime(context), isDate: false),
+          //
+          //   _buildDateTimePicker(
+          //     "Select Preferred Time",
+          //     _rescheduleTime,
+          //         () => _showTimeSlotSelector(
+          //       isPreferred: true,
+          //       selectedDate: _rescheduleDate,
+          //     ),
+          //     isDate: false,
+          //   ),
+          //
+          //   const SizedBox(height: 10),
+          //   Row(
+          //     mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          //     children: [
+          //       TextButton(
+          //         onPressed: () {
+          //           setState(() {
+          //             isRescheduling = false;
+          //             _rescheduleDate = null;
+          //             _rescheduleTime = null;
+          //           });
+          //         },
+          //         child: Text("Cancel Reschedule"),
+          //       ),
+          //       ElevatedButton(
+          //         onPressed: isSubmitting ? null : _confirmReschedule,
+          //         style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+          //         child: Text("Confirm Reschedule"),
+          //       ),
+          //     ],
+          //   ),
+          // ]
 
-            const SizedBox(height: 10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                TextButton(
-                  onPressed: () {
-                    setState(() {
-                      isRescheduling = false;
-                      _rescheduleDate = null;
-                      _rescheduleTime = null;
-                    });
-                  },
-                  child: Text("Cancel Reschedule"),
-                ),
-                ElevatedButton(
-                  onPressed: isSubmitting ? null : _confirmReschedule,
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-                  child: Text("Confirm Reschedule"),
-                ),
-              ],
-            ),
-          ] else if (rescheduleSent) ...[
+          else if (rescheduleSent) ...[
             Text(
               "📌 Booking schedule has been reset.\nWaiting for service seeker to confirm the new schedule.",
               style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.orange),

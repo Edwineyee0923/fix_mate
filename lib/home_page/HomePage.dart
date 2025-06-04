@@ -1,6 +1,8 @@
 import 'package:fix_mate/home_page/login_option.dart';
 import 'package:fix_mate/home_page/login_page.dart';
+import 'package:fix_mate/home_page/privacy_policy.dart';
 import 'package:fix_mate/home_page/register_option.dart';
+import 'package:fix_mate/home_page/terms_of_service.dart';
 import 'package:flutter/material.dart';
 import 'package:fix_mate/reusable_widget/reusable_widget.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -177,7 +179,14 @@ class _HomePageState extends State<HomePage> {
                           ),
                         ),
                         GestureDetector(
-                          onTap: () => sendEmail(),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const terms_of_service(),
+                              ),
+                            );
+                          },
                           child: Text(
                             'Terms of Service',
                             style: TextStyle(
@@ -205,7 +214,14 @@ class _HomePageState extends State<HomePage> {
                           ),
                         ),
                         GestureDetector(
-                          onTap: () => sendEmail(),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const privacy_policy(),
+                              ),
+                            );
+                          },
                           child: Text(
                             'Privacy Policy',
                             style: TextStyle(

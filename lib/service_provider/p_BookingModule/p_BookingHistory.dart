@@ -55,7 +55,7 @@ class _p_BookingHistoryState extends State<p_BookingHistory> {
 
   }
 
-  // Function to format timestamps
+
   String formatTimestamp(Timestamp? timestamp) {
     if (timestamp == null) return "N/A";
     // DateTime dateTime = timestamp.toDate().add(const Duration(hours: 8));
@@ -514,115 +514,7 @@ class _p_BookingHistoryState extends State<p_BookingHistory> {
                                 // TODO: Add redirect to PromotionBookingDetail if needed
                               }
                             },
-                            // child: Card(
-                            //   margin: const EdgeInsets.symmetric(vertical: 10),
-                            //   elevation: 3,
-                            //   child: Padding(
-                            //     padding: const EdgeInsets.all(16),
-                            //     child: Column(
-                            //       crossAxisAlignment: CrossAxisAlignment.start,
-                            //       children: [
-                            //         Row(
-                            //           children: [
-                            //             Container(
-                            //               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            //               decoration: BoxDecoration(
-                            //                 color: getStatusColor(data, isActive),
-                            //                 borderRadius: BorderRadius.circular(8),
-                            //               ),
-                            //               child: Text(
-                            //                 getStatusLabel(data, isActive),
-                            //                 style: const TextStyle(
-                            //                   color: Colors.white,
-                            //                   fontWeight: FontWeight.w500,
-                            //                   fontSize: 14,
-                            //                 ),
-                            //               ),
-                            //             ),
-                            //             if (!(doc['providerHasSeen'] ?? true))
-                            //               Container(
-                            //                 margin: const EdgeInsets.only(left: 5),
-                            //                 width: 10,
-                            //                 height: 10,
-                            //                 decoration: const BoxDecoration(
-                            //                   color: Colors.red,
-                            //                   shape: BoxShape.circle,
-                            //                 ),
-                            //               ),
-                            //           ],
-                            //         ),
-                            //
-                            //         const SizedBox(height: 5),
-                            //         Text("Service Title: ${doc['IPTitle']}"),
-                            //         Text("Booking ID: ${doc['bookingId']}"),
-                            //         Text("Status: ${doc['status']}", style: const TextStyle(color: Colors.red)),
-                            //         Text("Service Category: ${data['serviceCategory']}"),
-                            //         Text("Price: RM ${doc['price']}",),
-                            //         Text("Location: ${doc['location']}",),
-                            //         if (data['isRescheduling'] == true && data['rescheduleSent'] == false) ...[
-                            //           Text("Final Schedule (Rescheduled): ${data['finalDate']}, ${data['finalTime']}"),
-                            //           Text("❌ Reschedule rejected by seeker. Please suggest a new schedule based on your WhatsApp discussion.", style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.w500)),
-                            //         ] else if (data['isRescheduling'] == true && data['rescheduleSent'] == true) ...[
-                            //           Text("Final Schedule (Rescheduled): ${data['finalDate']}, ${data['finalTime']}"),
-                            //           Text("⚠ Awaiting confirmation from seeker", style: TextStyle(color: Colors.orange, fontWeight: FontWeight.w500)),
-                            //         ] else if (isActive || data['status'] == "Completed") ...[
-                            //           Text("Final Schedule: ${data['finalDate']}, ${data['finalTime']}"),
-                            //         ] else if (data['status'] == 'Cancelled')...[
-                            //           Text(
-                            //           "Cancelled At: ${formatTimestamp(data['cancelledAt'])}",
-                            //           ),
-                            //         ]
-                            //         else ...[
-                            //           Text("Preferred Schedule: ${data['preferredDate']}, ${data['preferredTime']}"),
-                            //           if (data['alternativeDate'] != null && data['alternativeTime'] != null)
-                            //             Text("Alternative Schedule: ${data['alternativeDate']}, ${data['alternativeTime']}"),
-                            //         ],
-                            //         if (data['status'] == 'Completed' && data['completedAt'] != null)
-                            //           Text(
-                            //             "Completed At: ${formatTimestamp(data['completedAt'])}",
-                            //           ),
-                            //
-                            //
-                            //         Text(
-                            //           "Type: ${isInstantBooking ? "Instant Booking" : "Promotion"}",
-                            //           style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                            //         ),
-                            //
-                            //
-                            //         const SizedBox(height: 8),
-                            //
-                            //         if (data['status'] == 'Active' && data['pCompleted'] != true) ...[
-                            //           Row(
-                            //             crossAxisAlignment: CrossAxisAlignment.center,
-                            //             children: [
-                            //               Icon(Icons.warning_amber_rounded, color: Colors.orange.shade600, size: 18),
-                            //               const SizedBox(width: 6),
-                            //               Expanded(
-                            //                 child: Text(
-                            //                   "Don’t forget to upload at least 3 service photos before clicking “Service Completed” — tap the card to begin!",
-                            //                   style: TextStyle(
-                            //                     color: Colors.orange.shade700,
-                            //                     fontSize: 12.5,
-                            //                     fontWeight: FontWeight.w500,
-                            //                   ),
-                            //                 ),
-                            //               ),
-                            //             ],
-                            //           ),
-                            //
-                            //         ] else if (data['pCompleted'] == true && data['status'] != 'Completed') ...[
-                            //           const Padding(
-                            //             padding: EdgeInsets.only(top: 6),
-                            //             child: Text(
-                            //               "✅ You have marked this service as completed.\nWaiting for seeker confirmation or auto-complete after three days.",
-                            //               style: TextStyle(color: Colors.green, fontStyle: FontStyle.italic),
-                            //             ),
-                            //           ),
-                            //         ],
-                            //       ],
-                            //     ),
-                            //   ),
-                            // ),
+
                             child: Card(
                               margin: const EdgeInsets.symmetric(vertical: 10),
                               shape: RoundedRectangleBorder(

@@ -55,14 +55,277 @@ class _s_SetBookingDetailsState extends State<s_SetBookingDetails> {
         .get();
 
     if (snapshot.docs.isNotEmpty) {
-      String? address = snapshot.docs.first['address'];
+      final data = snapshot.docs.first.data() as Map<String, dynamic>;
+      final address = data['address'] as String?;
+
       if (address != null && address.isNotEmpty) {
         setState(() {
           _locationController.text = address;
         });
+      } else {
+        print("⚠️ Address field is missing or empty.");
+      }
+    } else {
+      print("⚠️ No service seeker document found for this user.");
+    }
+
+  }
+
+  String _slotFromIndex(int index) {
+    int hour = index ~/ 2;
+    int minute = (index % 2) * 30;
+    final period = hour < 12 ? 'AM' : 'PM';
+    final hour12 = hour % 12 == 0 ? 12 : hour % 12;
+    final minuteStr = minute.toString().padLeft(2, '0');
+    return '$hour12:$minuteStr $period';
+  }
+
+  bool _isTimeBefore(String slot, String reference) {
+    final slotTime = _parseToTimeOfDay(slot);
+    final refTime = _parseToTimeOfDay(reference);
+    if (slotTime == null || refTime == null) return false;
+    return slotTime.hour < refTime.hour ||
+        (slotTime.hour == refTime.hour && slotTime.minute < refTime.minute);
+  }
+
+  bool _isTimeAfter(String slot, String reference) {
+    final slotTime = _parseToTimeOfDay(slot);
+    final refTime = _parseToTimeOfDay(reference);
+    if (slotTime == null || refTime == null) return false;
+    return slotTime.hour > refTime.hour ||
+        (slotTime.hour == refTime.hour && slotTime.minute > refTime.minute);
+  }
+
+  TimeOfDay? _parseToTimeOfDay(String? timeStr) {
+    if (timeStr == null) return null;
+    final match = RegExp(r'^(\d{1,2}):(\d{2})\s?(AM|PM)$', caseSensitive: false).firstMatch(timeStr.trim());
+    if (match == null) return null;
+
+    int hour = int.parse(match.group(1)!);
+    int minute = int.parse(match.group(2)!);
+    final period = match.group(3)!.toUpperCase();
+
+    if (period == 'PM' && hour != 12) hour += 12;
+    if (period == 'AM' && hour == 12) hour = 0;
+
+    return TimeOfDay(hour: hour, minute: minute);
+  }
+
+  int? _indexFromSlot(String slot) {
+    final time = _parseToTimeOfDay(slot);
+    if (time == null) return null;
+    return time.hour * 2 + (time.minute >= 30 ? 1 : 0);
+  }
+
+
+  // Future<List<String>> getDisabledSlots(String providerId, DateTime selectedDate) async {
+  //   final slots = <String>[];
+  //
+  //   final bookings = await FirebaseFirestore.instance
+  //       .collection('bookings')
+  //       .where('serviceProviderId', isEqualTo: providerId)
+  //       .where('status', isEqualTo: 'Active')
+  //       .where('finalDate', isEqualTo: DateFormat("d MMM yyyy").format(selectedDate))
+  //       .get();
+  //
+  //   // for (var doc in bookings.docs) {
+  //   //   slots.add(doc['finalTime']); // Format must match TimeSlotSelector
+  //   // }
+  //
+  //   // for (var doc in bookings.docs) {
+  //   //   String bookedTime = doc['finalTime'];
+  //   //   slots.add(bookedTime);
+  //   //
+  //   //   // Block 30 mins before and after
+  //   //   final index = _indexFromSlot(bookedTime);
+  //   //   if (index != null) {
+  //   //     if (index > 0) slots.add(_slotFromIndex(index - 1)); // Before
+  //   //     if (index < 47) slots.add(_slotFromIndex(index + 1)); // After
+  //   //   }
+  //   // }
+  //
+  //   for (var doc in bookings.docs) {
+  //     String bookedTime = doc['finalTime'];
+  //     slots.add(bookedTime); // current slot
+  //
+  //     final index = _indexFromSlot(bookedTime);
+  //     if (index != null && index < 47) {
+  //       slots.add(_slotFromIndex(index + 1)); // buffer slot after
+  //     }
+  //   }
+  //
+  //
+  //   // 🔍 Get unavailable times outside of provider's available hours
+  //   final spDoc = await FirebaseFirestore.instance
+  //       .collection('service_providers')
+  //       .doc(providerId)
+  //       .get();
+  //
+  //   final day = DateFormat('EEEE').format(selectedDate); // e.g., Monday
+  //   // final availableStart = spDoc['availability'][day]?['start'];
+  //   // final availableEnd = spDoc['availability'][day]?['end'];
+  //   final data = spDoc.data() as Map<String, dynamic>;
+  //   final availability = data['availability'] as Map<String, dynamic>?;
+  //
+  //   if (availability == null || availability[day] == null) {
+  //     print("⚠️ No availability set for $day — assuming fully available.");
+  //     return slots; // only booked times will be disabled
+  //   }
+  //
+  //   final availableStart = availability[day]['start'];
+  //   final availableEnd = availability[day]['end'];
+  //
+  //   if (availableStart == null || availableEnd == null) {
+  //     print("⚠️ Incomplete availability config — assuming fully available.");
+  //     return slots;
+  //   }
+  //
+  //
+  //
+  //   if (availableStart == null || availableEnd == null) {
+  //     // whole day unavailable
+  //     return List.generate(48, (i) => _slotFromIndex(i)); // disable all
+  //   }
+  //
+  //   final allSlots = List.generate(48, (i) => _slotFromIndex(i));
+  //   final filtered = allSlots.where((slot) {
+  //     return _isTimeBefore(slot, availableStart) || _isTimeAfter(slot, availableEnd);
+  //   });
+  //
+  //   slots.addAll(filtered);
+  //   return slots;
+  // }
+
+
+  Future<List<String>> getDisabledSlots(String providerId, DateTime selectedDate) async {
+    final slots = <String>[];
+
+    // 🔹 Fetch active bookings for the day
+    final bookings = await FirebaseFirestore.instance
+        .collection('bookings')
+        .where('serviceProviderId', isEqualTo: providerId)
+        .where('status', isEqualTo: 'Active')
+        .where('finalDate', isEqualTo: DateFormat("d MMM yyyy").format(selectedDate))
+        .get();
+
+    // 🔹 Add current and buffer slots from bookings
+    for (var doc in bookings.docs) {
+      String bookedTime = doc['finalTime'];
+      slots.add(bookedTime); // current slot
+
+      final index = _indexFromSlot(bookedTime);
+      if (index != null && index < 47) {
+        slots.add(_slotFromIndex(index + 1)); // buffer slot after
       }
     }
+
+    // 🔹 Check service provider availability config
+    final spDoc = await FirebaseFirestore.instance
+        .collection('service_providers')
+        .doc(providerId)
+        .get();
+
+    final day = DateFormat('EEEE').format(selectedDate); // e.g., Monday
+    final data = spDoc.data() as Map<String, dynamic>;
+    final availability = data['availability'] as Map<String, dynamic>?;
+
+    // ✅ No availability field at all → assume fully available
+    if (availability == null) {
+      print("✅ No availability config found — assuming fully available.");
+      return slots; // only booked slots will be disabled
+    }
+
+    // ❌ Day not configured → disable full day
+    if (!availability.containsKey(day)) {
+      print("⛔ No availability set for $day — disabling full day.");
+      return List.generate(48, (i) => _slotFromIndex(i));
+    }
+
+    final availableStart = availability[day]['start'];
+    final availableEnd = availability[day]['end'];
+
+    // ❌ Day is configured but incomplete → disable full day
+    if (availableStart == null || availableEnd == null) {
+      print("⛔ Incomplete availability for $day — disabling full day.");
+      return List.generate(48, (i) => _slotFromIndex(i));
+    }
+
+    // 🔸 Disable slots before or after availability range
+    final allSlots = List.generate(48, (i) => _slotFromIndex(i));
+    final filtered = allSlots.where((slot) {
+      return _isTimeBefore(slot, availableStart) || _isTimeAfter(slot, availableEnd);
+    });
+
+    slots.addAll(filtered);
+    return slots;
   }
+
+
+  Future<void> _showTimeSlotSelector({
+    required bool isPreferred,
+    required DateTime? selectedDate,
+  }) async {
+    print("🟢 _showTimeSlotSelector triggered | isPreferred: $isPreferred | selectedDate: $selectedDate");
+
+    if (selectedDate == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Please select a date first.")),
+      );
+      return;
+    }
+
+    // 🟨 Get the service provider ID
+    final spId = widget.spId;
+    if (spId == null) return;
+
+    // 🟨 Fetch disabled slots
+    final disabledSlots = await getDisabledSlots(spId, selectedDate);
+    print("⏰ Time slot tapped | disabledSlots count: ${disabledSlots.length}");
+
+    String? selectedTimeStr;
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                "Select a time slot",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              TimeSlotSelector(
+                selectedTime: null,
+                disabledSlots: disabledSlots,
+                onSelected: (selected) {
+                  selectedTimeStr = selected;
+                  Navigator.pop(context);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (selectedTimeStr != null) {
+      setState(() {
+        if (isPreferred) {
+          _preferredTime = _parseToTimeOfDay(selectedTimeStr!);
+        } else {
+          _alternativeTime = _parseToTimeOfDay(selectedTimeStr!);
+        }
+      });
+    }
+  }
+
 
   /// 🗓 Formats the date to "29 Mac 2025"
   String _formatDate(DateTime date) {
@@ -287,6 +550,10 @@ class _s_SetBookingDetailsState extends State<s_SetBookingDetails> {
       // 🔹 Generate Shorter & Confidential Booking ID
       String bookingId = await generateBookingId();
 
+
+
+
+
       // 🔹 Navigate to Payment Summary Screen
       Navigator.push(
         context,
@@ -356,14 +623,48 @@ class _s_SetBookingDetailsState extends State<s_SetBookingDetails> {
             SizedBox(height: 10),
             // Preferred Date & Time
             Text("Preferred Date & Time", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            _buildDateTimePicker("Select a date", _preferredDate, () => _selectDate(context, true), isDate: true),
-            _buildDateTimePicker("Select a time", _preferredTime, () => _selectTime(context, true), isDate: false),
+            // _buildDateTimePicker("Select a date", _preferredDate, () => _selectDate(context, true), isDate: true),
+            // _buildDateTimePicker("Select a time", _preferredTime, () => _selectTime(context, true), isDate: false),
 
+            // Preferred Date & Time
+            _buildDateTimePicker(
+              "Select a date",
+              _preferredDate,
+                  () => _selectDate(context, true),
+              isDate: true,
+            ),
+            _buildDateTimePicker(
+              "Select a time",
+              _preferredTime,
+                  () => _showTimeSlotSelector(
+                isPreferred: true,
+                selectedDate: _preferredDate,
+              ),
+              isDate: false,
+            ),
             // Alternative Date & Time
             SizedBox(height: 20),
             Text("Alternative Date & Time", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            _buildDateTimePicker("Select a date", _alternativeDate, () => _selectDate(context, false), isDate: true),
-            _buildDateTimePicker("Select a time", _alternativeTime, () => _selectTime(context, false), isDate: false),
+            // _buildDateTimePicker("Select a date", _alternativeDate, () => _selectDate(context, false), isDate: true),
+            // _buildDateTimePicker("Select a time", _alternativeTime, () => _selectTime(context, false), isDate: false),
+            // Alternative Date & Time
+            _buildDateTimePicker(
+              "Select a date",
+              _alternativeDate,
+                  () => _selectDate(context, false),
+              isDate: true,
+            ),
+            _buildDateTimePicker(
+              "Select a time",
+              _alternativeTime,
+                  () => _showTimeSlotSelector(
+                isPreferred: false,
+                selectedDate: _alternativeDate,
+              ),
+              isDate: false,
+            ),
+
+
 
             SizedBox(height: 20),
 

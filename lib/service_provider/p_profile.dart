@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'package:fix_mate/service_provider/p_BookingCalender.dart';
+import 'package:fix_mate/service_provider/p_SchedulePage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -26,6 +28,8 @@ class _p_profileState extends State<p_profile> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final UploadService _uploadService = UploadService();
+  final providerId = FirebaseAuth.instance.currentUser?.uid ?? '';
+
 
   File? _image;
   String? _imageUrl;
@@ -650,13 +654,43 @@ class _p_profileState extends State<p_profile> {
           ),
           SizedBox(height: 25),
 
-          // ✅ Show Log Out button only when isEditing is true
           if (!isEditing)
           dk_button(
             context,
-            "Log Out",
-            _logoutUser, // Calls the logout function
+            "My Schedule",
+                () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => p_SchedulePage(),
+                ),
+              );
+            },
           ),
+
+          if (!isEditing)
+            dk_button(
+              context,
+              "My Booking Calender",
+                  () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => p_BookingCalender(),
+                  ),
+                );
+              },
+            ),
+
+
+          // ✅ Show Log Out button only when isEditing is true
+          if (!isEditing)
+            dk_button(
+              context,
+              "Log Out",
+              _logoutUser, // Calls the logout function
+            ),
+
           SizedBox(height: 15),
         ],
       ),

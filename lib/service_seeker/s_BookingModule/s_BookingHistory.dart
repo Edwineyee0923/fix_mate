@@ -511,7 +511,7 @@ class _s_BookingHistoryState extends State<s_BookingHistory> {
                                     Row(
                                       children: List.generate(
                                         review['rating'] ?? 0,
-                                            (i) => const Icon(Icons.star, size: 18, color: Colors.amber),
+                                            (i) => const Icon(Icons.star_rounded, size: 18, color: Colors.amber),
                                       ),
                                     ),
 

@@ -2,11 +2,13 @@ import 'package:fix_mate/service_provider/p_EditInstantPost.dart';
 import 'package:fix_mate/service_provider/p_FilterInstantPost.dart';
 import 'package:fix_mate/service_seeker/s_FilterInstantPost.dart';
 import 'package:fix_mate/service_seeker/s_FilterSPPost.dart';
+import 'package:fix_mate/service_seeker/s_HomePage.dart';
 import 'package:fix_mate/service_seeker/s_InstantPostInfo.dart';
 import 'package:fix_mate/service_seeker/s_SPInfo.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:fix_mate/reusable_widget/reusable_widget.dart';
 
 class s_SPList extends StatefulWidget {
   final String initialSearchQuery;
@@ -14,6 +16,7 @@ class s_SPList extends StatefulWidget {
   final List<String> initialStates; // ✅ Ensure it's a List<String>
   // final RangeValues initialPriceRange; // ✅ Add price range parameter
   final String initialSortOrder; // ✅ Sorting order
+  final double? initialRatingThreshold;
 
   const s_SPList({
     Key? key,
@@ -22,6 +25,7 @@ class s_SPList extends StatefulWidget {
     this.initialStates = const [], // ✅ Default to empty list
     // this.initialPriceRange = const RangeValues(0, 1000), // ✅ Default price range
     this.initialSortOrder = "Random", // ✅ Default sorting order
+    this.initialRatingThreshold,
   }) : super(key: key);
 
   @override
@@ -41,8 +45,10 @@ class _s_SPListState extends State<s_SPList> {
   List<String> selectedStates = []; // ✅ Declare selectedStates
   // RangeValues selectedPriceRange = RangeValues(0, 1000); // ✅ Store price range
   String? selectedSortOrder; // Can be null when nothing is selected
+  double? selectedRatingThreshold;
   double averageRating = 0.0;
   int totalReviews = 0;
+  List<Widget> providerFavourites = [];
 
 
   @override
@@ -53,6 +59,7 @@ class _s_SPListState extends State<s_SPList> {
     selectedStates = List<String>.from(widget.initialStates); // ✅ Ensure list format
     // selectedPriceRange = widget.initialPriceRange; // ✅ Initialize price range
     selectedSortOrder = widget.initialSortOrder; // ✅ Initialize sorting
+    selectedRatingThreshold = widget.initialRatingThreshold;
 
     _searchController.text = searchQuery; // ✅ Set initial text
     _searchController.addListener(() {
@@ -110,6 +117,7 @@ class _s_SPListState extends State<s_SPList> {
     print("Categories: $selectedCategories");
     print("States: $selectedStates");
     print("Sort Order: $selectedSortOrder");
+    print("🎯 Selected Rating Threshold: $selectedRatingThreshold");
 
     try {
       User? user = _auth.currentUser;
@@ -147,18 +155,37 @@ class _s_SPListState extends State<s_SPList> {
         int matchScore = 0;
 
         // Category match scoring
-        if (selectedCategories.isNotEmpty &&
-            (data['selectedExpertiseFields'] as List<dynamic>)
-                .any((category) => selectedCategories.contains(category))) {
+        if (selectedCategories.isNotEmpty) {
+          int categoryMatches = (data['selectedExpertiseFields'] as List<dynamic>)
+              .where((category) => selectedCategories.contains(category))
+              .length;
+          matchScore += categoryMatches; // ✅ Adds 1 per matched category
+        }
+
+
+
+        // State match scoring
+        if (selectedStates.isNotEmpty) {
+          int stateMatches = (data['selectedStates'] as List<dynamic>)
+              .where((state) => selectedStates.contains(state))
+              .length;
+          matchScore += stateMatches; // ✅ Adds 1 per match
+        }
+
+        // 👇 Fetch review summary for this provider
+        // Fetch rating summary
+        final reviewSummary = await fetchProviderReviewSummary(doc.id);
+        final averageRating = reviewSummary['avgRating'];
+        final totalReviews = reviewSummary['count'];
+
+        // ✅ Add score if meets or exceeds threshold
+        if (selectedRatingThreshold != null && averageRating >= selectedRatingThreshold!) {
           matchScore += 1;
         }
 
-        // State match scoring
-        if (selectedStates.isNotEmpty &&
-            (data['selectedStates'] as List<dynamic>)
-                .any((state) => selectedStates.contains(state))) {
-          matchScore += 1;
-        }
+        data['averageRating'] = averageRating;
+        data['totalReviews'] = totalReviews;
+
 
         // Name match scoring
         if (searchQuery.isNotEmpty &&
@@ -175,10 +202,6 @@ class _s_SPListState extends State<s_SPList> {
         if (matchScore > 0) {
           data['matchScore'] = matchScore;
           data['docId'] = doc.id;
-          // 👇 Fetch review summary for this provider
-          final reviewSummary = await fetchProviderReviewSummary(doc.id);
-          data['averageRating'] = reviewSummary['avgRating'];
-          data['totalReviews'] = reviewSummary['count'];
           scoredPosts.add(data);
         }
 
@@ -223,6 +246,11 @@ class _s_SPListState extends State<s_SPList> {
           docId: data['docId'],
           averageRating: data['averageRating'] ?? 0.0,
           totalReviews: data['totalReviews'] ?? 0,
+          onUnfavourite: () {
+            setState(() {
+              providerFavourites.removeWhere((w) => w.key == ValueKey(data['docId']));
+            });
+          },
         );
       }).toList();
 
@@ -246,6 +274,7 @@ class _s_SPListState extends State<s_SPList> {
           initialStates: selectedStates,
           // initialPriceRange: selectedPriceRange,
           initialSortOrder: selectedSortOrder,
+          initialRatingThreshold: selectedRatingThreshold,
         ),
       ),
     );
@@ -257,6 +286,7 @@ class _s_SPListState extends State<s_SPList> {
         selectedStates = List<String>.from(result['selectedStates'] ?? []);
         // selectedPriceRange = result["priceRange"];
         selectedSortOrder = result["sortOrder"];
+        selectedRatingThreshold = result['ratingThreshold'];
 
         // ✅ Mark filters as applied
         hasFiltered = true;
@@ -265,7 +295,8 @@ class _s_SPListState extends State<s_SPList> {
         bool isFiltered = searchQuery.isNotEmpty ||
             selectedCategories.isNotEmpty ||
             selectedStates.isNotEmpty ||
-            selectedSortOrder != null;
+            selectedSortOrder != null ||
+            selectedRatingThreshold != null;
             // (selectedPriceRange.start > 0 || selectedPriceRange.end < 1000);
 
         if (isFiltered) {
@@ -280,6 +311,7 @@ class _s_SPListState extends State<s_SPList> {
       });
     }
   }
+
 
 
 
@@ -333,7 +365,13 @@ class _s_SPListState extends State<s_SPList> {
         backgroundColor: Color(0xFFfb9798),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () =>
+              Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => s_HomePage(),
+            ),
+          ), // return true = change,
         ),
         title: Text(
           "Service Provider List",
@@ -402,6 +440,8 @@ Widget buildSPCard({
   required String docId,
   required double averageRating, // ✅ New
   required int totalReviews,
+  required VoidCallback onUnfavourite, // ✅ Add this
+
 }) {
   return GestureDetector(
     onTap: onTap,
@@ -480,6 +520,8 @@ Widget buildSPCard({
                             ],
                           ),
                           const SizedBox(height: 8),
+
+                          // Star Rating
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
@@ -513,7 +555,7 @@ Widget buildSPCard({
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     const Icon(Icons.star_rounded, color: Colors.amber, size: 18),
-                                    const SizedBox(width: 6),
+                                    const SizedBox(width: 3),
                                     Text(
                                       avgRating.toStringAsFixed(1),
                                       style: TextStyle(
@@ -531,8 +573,6 @@ Widget buildSPCard({
                                         fontWeight: FontWeight.w500,
                                       ),
                                     ),
-                                    const SizedBox(width: 4),
-                                    const Icon(Icons.chevron_right, size: 16, color: Colors.grey),
                                   ],
                                 );
                               },
@@ -562,7 +602,10 @@ Widget buildSPCard({
                     ),
                   ],
                 ),
-                child: FavoriteButton2(),
+                child: FavoriteButton2(
+                  providerId: docId,
+                  onUnfavourite: onUnfavourite, // ✅ Pass callback to button
+                ),
               ),
             ),
           ],
@@ -574,9 +617,16 @@ Widget buildSPCard({
 
 
 
-
+// Service Provider Favourite
 class FavoriteButton2 extends StatefulWidget {
-  const FavoriteButton2({Key? key}) : super(key: key);
+  final String providerId;
+  final VoidCallback? onUnfavourite; // ✅ Add this
+
+  const FavoriteButton2({
+    Key? key,
+    required this.providerId,
+    this.onUnfavourite, // ✅ Add this
+  }) : super(key: key);
 
   @override
   _FavoriteButton2State createState() => _FavoriteButton2State();
@@ -584,11 +634,67 @@ class FavoriteButton2 extends StatefulWidget {
 
 class _FavoriteButton2State extends State<FavoriteButton2> {
   bool isFavorite = false;
+  final user = FirebaseAuth.instance.currentUser;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkIfFavorited();
+  }
+
+  Future<void> _checkIfFavorited() async {
+    if (user == null) return;
+
+    final doc = await FirebaseFirestore.instance
+        .collection('service_seekers')
+        .doc(user!.uid)
+        .collection('favourites_provider')
+        .doc(widget.providerId)
+        .get();
+
+    setState(() {
+      isFavorite = doc.exists;
+    });
+  }
+
+  Future<void> _toggleFavorite() async {
+    if (user == null) return;
+
+    final favRef = FirebaseFirestore.instance
+        .collection('service_seekers')
+        .doc(user!.uid)
+        .collection('favourites_provider')
+        .doc(widget.providerId);
+
+    try {
+      if (isFavorite) {
+        await favRef.delete();
+        widget.onUnfavourite?.call(); // ✅ Trigger removal callback
+        ReusableSnackBar(context, "Removed provider from favourites",
+            icon: Icons.favorite_border, iconColor: Colors.grey);
+      } else {
+        await favRef.set({
+          'providerId': widget.providerId,
+          'favoritedAt': FieldValue.serverTimestamp(),
+        });
+        ReusableSnackBar(context, "Added provider to favourites",
+            icon: Icons.favorite, iconColor: Color(0xFFF06275));
+      }
+
+      setState(() {
+        isFavorite = !isFavorite;
+      });
+    } catch (e) {
+      ReusableSnackBar(context, "Failed to update provider favourite",
+          icon: Icons.error, iconColor: Colors.red);
+      print("❌ Error toggling provider favorite: $e");
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 300), // Smooth transition effect
+      duration: const Duration(milliseconds: 300),
       width: 35,
       height: 35,
       decoration: BoxDecoration(
@@ -596,30 +702,28 @@ class _FavoriteButton2State extends State<FavoriteButton2> {
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: isFavorite ? Color(0xFFF06275).withOpacity(0.5) : Colors.grey.withOpacity(0.0), // Change shadow color
+            color: isFavorite
+                ? const Color(0xFFF06275).withOpacity(0.5)
+                : Colors.grey.withOpacity(0.0),
             spreadRadius: 2,
             blurRadius: 4,
           ),
         ],
       ),
       child: Stack(
-        alignment: Alignment.center, // Ensures the icon is perfectly centered
+        alignment: Alignment.center,
         children: [
           Icon(
             isFavorite ? Icons.favorite : Icons.favorite_border,
-            size: 22, // ✅ Ensures the icon is 25 in size
-            color: isFavorite ? Color(0xFFF06275) : Colors.black,
+            size: 22,
+            color: isFavorite ? const Color(0xFFF06275) : Colors.black,
           ),
           Positioned.fill(
             child: Material(
               color: Colors.transparent,
               shape: const CircleBorder(),
               child: InkWell(
-                onTap: () {
-                  setState(() {
-                    isFavorite = !isFavorite;
-                  });
-                },
+                onTap: _toggleFavorite,
                 borderRadius: BorderRadius.circular(50),
               ),
             ),
@@ -629,6 +733,8 @@ class _FavoriteButton2State extends State<FavoriteButton2> {
     );
   }
 }
+
+
 
 Future<Map<String, dynamic>> fetchProviderReviewSummary(String providerId) async {
   final querySnapshot = await FirebaseFirestore.instance
