@@ -13,7 +13,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fix_mate/reusable_widget/reusable_widget.dart';
 import 'package:fix_mate/services/showBookingNotification.dart';
 import 'package:fix_mate/services/booking_reminder.dart';
-
+import 'package:intl/intl.dart';
 
 class p_HomePage extends StatefulWidget {
   static String routeName = "/service_provider/p_HomePage";
@@ -37,30 +37,91 @@ class _p_HomePageState extends State<p_HomePage> {
   TextEditingController _searchController = TextEditingController();
 
   @override
-  // void initState() {
-  //   super.initState();
-  //   _loadInstantPosts(); // Load posts when the page initializes
-  //   _loadPromotionPosts(); // Load posts when the page initializes
-  // }
-
-  @override
   void initState() {
     super.initState();
-
-    // 📦 Load content posts
-    _loadInstantPosts();
-    _loadPromotionPosts();
-
-    // 🔔 Schedule booking reminders if user is logged in
-    final currentUser = FirebaseAuth.instance.currentUser;
-    if (currentUser != null) {
-      scheduleReminders(currentUser.uid);
-    }
-
-    // Optional: listenToProviderNotifications(); // if you want to re-enable this later
+    _loadInstantPosts(); // Load posts when the page initializes
+    _loadPromotionPosts(); // Load posts when the page initializes
+    _checkAndScheduleUpcomingBookings();
   }
 
 
+  Future<void> _checkAndScheduleUpcomingBookings() async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return;
+
+    final query = await FirebaseFirestore.instance
+        .collection('bookings')
+        .where('providerId', isEqualTo: currentUser.uid)
+        .where('status', isEqualTo: 'Confirmed')
+        .get();
+
+    for (final doc in query.docs) {
+      final data = doc.data();
+
+      // Ensure the required field exists
+      if (data.containsKey('finalDateTime')) {
+        final bookingTime = (data['finalDateTime'] as Timestamp).toDate();
+
+        await scheduleBookingReminders(
+          bookingId: data['bookingId'],
+          postId: data['postId'],
+          seekerId: data['seekerId'],
+          providerId: data['providerId'],
+          finalDateTime: bookingTime,
+        );
+      }
+    }
+  }
+
+
+  Future<void> testBookingReminderTrigger() async {
+    final now = DateTime.now();
+    final finalDateTime = now.add(Duration(minutes: 2)); // 6 mins ahead
+
+    final bookingId = "TEST-${DateFormat('HHmmss').format(now)}";
+    final providerId = FirebaseAuth.instance.currentUser?.uid ?? "testProvider001";
+
+    // 1. Add test booking to Firestore
+    await FirebaseFirestore.instance.collection('bookings').add({
+      'bookingId': bookingId,
+      'postId': 'TESTPOST01',
+      'providerId': providerId,
+      'seekerId': 'TESTSEEKER01',
+      'status': 'Confirmed',
+      'finalDateTime': finalDateTime,
+      'finalDate': DateFormat('d MMM yyyy').format(finalDateTime),
+      'finalTime': DateFormat('h:mm a').format(finalDateTime),
+    });
+
+    // 2. Schedule notifications for 5, 10, 15, 30 mins before
+    await scheduleBookingReminders(
+      bookingId: bookingId,
+      postId: 'TESTPOST01',
+      seekerId: 'TESTSEEKER01',
+      providerId: providerId,
+      finalDateTime: finalDateTime,
+    );
+
+    print("✅ Test booking created and reminders scheduled for: $finalDateTime");
+  }
+  // @override
+  // void initState() {
+  //   super.initState();
+  //
+  //   // 📦 Load content posts
+  //   _loadInstantPosts();
+  //   _loadPromotionPosts();
+  //
+  //   // 🔔 Schedule booking reminders if user is logged in
+  //   final currentUser = FirebaseAuth.instance.currentUser;
+  //   if (currentUser != null) {
+  //     scheduleReminders(currentUser.uid);
+  //   }
+  //
+  //   // Optional: listenToProviderNotifications(); // if you want to re-enable this later
+  // }
+  //
+  //
   // Future<void> listenToProviderNotifications() async {
   //   final currentUser = FirebaseAuth.instance.currentUser;
   //   if (currentUser == null) return;
@@ -605,6 +666,13 @@ class _p_HomePageState extends State<p_HomePage> {
               child: const Icon(Icons.add, size: 28, color: Colors.white),
             ),
           ),
+
+
+          ElevatedButton(
+            onPressed: testBookingReminderTrigger,
+            child: Text("🧪 Test Notification"),
+          )
+
         ],
       ),
     );

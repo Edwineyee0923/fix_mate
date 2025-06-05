@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:fix_mate/reusable_widget/reusable_widget.dart';
 import 'package:fix_mate/services/RefundEvidenceUpload.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:fix_mate/services/showBookingNotification.dart';
 
 
 class p_PInstantBookingDetail extends StatefulWidget {
@@ -743,6 +744,73 @@ class _p_PInstantBookingDetailState extends State<p_PInstantBookingDetail> {
   }
 
 
+  // Future<void> _confirmSchedule() async {
+  //   if (selectedSchedule == null) return;
+  //
+  //   setState(() => isSubmitting = true);
+  //
+  //   try {
+  //     String finalDate = selectedSchedule == 'preferred'
+  //         ? bookingData!["preferredDate"]
+  //         : bookingData!["alternativeDate"];
+  //     // String finalTime = selectedSchedule == 'preferred'
+  //     //     ? bookingData!["preferredTime"]
+  //     //     : bookingData!["alternativeTime"];
+  //
+  //     String rawFinalTime = selectedSchedule == 'preferred'
+  //         ? bookingData!["preferredTime"]
+  //         : bookingData!["alternativeTime"];
+  //
+  //     String finalTime = rawFinalTime.replaceAll(RegExp(r'[\u00A0\u202F]'), ' '); // Normalize space
+  //     print("⏰ Raw finalTime: '$rawFinalTime'");
+  //     print("✅ Normalized finalTime: '$finalTime'");
+  //     print("🔍 Unicode: ${finalTime.runes.toList()}");
+  //
+  //
+  //     final query = await FirebaseFirestore.instance
+  //         .collection('bookings')
+  //         .where('bookingId', isEqualTo: widget.bookingId)
+  //         .limit(1)
+  //         .get();
+  //
+  //     if (query.docs.isNotEmpty) {
+  //       final docRef = query.docs.first.reference;
+  //       await docRef.update({
+  //         'finalDate': finalDate,
+  //         'finalTime': finalTime,
+  //         'status': 'Active',
+  //         'updatedAt': FieldValue.serverTimestamp(),
+  //       });
+  //
+  //
+  //       // 🔔 Add a notification to Firestore for the service seeker
+  //       await FirebaseFirestore.instance.collection('s_notifications').add({
+  //         'seekerId': widget.seekerId,
+  //         'providerId': bookingData?['serviceProviderId'],
+  //         'bookingId': widget.bookingId,
+  //         'postId': widget.postId,
+  //         'title': 'Service Confirmed\n(#${widget.bookingId})',
+  //         'message': 'Your service booking has been confirmed by the provider.',
+  //         'isRead': false,
+  //         'createdAt': FieldValue.serverTimestamp(),
+  //       });
+  //     }
+  //     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Schedule confirmed successfully.")));
+  //
+  //     Navigator.pushReplacement(
+  //       context,
+  //       MaterialPageRoute(
+  //         builder: (context) => const p_BookingHistory(initialTabIndex: 1),
+  //       ),
+  //     );
+  //   } catch (e) {
+  //     print("❌ Failed to confirm schedule: $e");
+  //     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to confirm schedule.")));
+  //   } finally {
+  //     setState(() => isSubmitting = false);
+  //   }
+  // }
+
   Future<void> _confirmSchedule() async {
     if (selectedSchedule == null) return;
 
@@ -752,19 +820,18 @@ class _p_PInstantBookingDetailState extends State<p_PInstantBookingDetail> {
       String finalDate = selectedSchedule == 'preferred'
           ? bookingData!["preferredDate"]
           : bookingData!["alternativeDate"];
-      // String finalTime = selectedSchedule == 'preferred'
-      //     ? bookingData!["preferredTime"]
-      //     : bookingData!["alternativeTime"];
 
       String rawFinalTime = selectedSchedule == 'preferred'
           ? bookingData!["preferredTime"]
           : bookingData!["alternativeTime"];
 
-      String finalTime = rawFinalTime.replaceAll(RegExp(r'[\u00A0\u202F]'), ' '); // Normalize space
+      String finalTime = rawFinalTime
+          .replaceAll(RegExp(r'[\u00A0\u202F]'), ' ') // Replace hidden Unicode
+          .replaceAll(RegExp(r'\s+'), ' ')           // Normalize multiple spaces
+          .trim();                                    // Trim leading/trailing
       print("⏰ Raw finalTime: '$rawFinalTime'");
       print("✅ Normalized finalTime: '$finalTime'");
       print("🔍 Unicode: ${finalTime.runes.toList()}");
-
 
       final query = await FirebaseFirestore.instance
           .collection('bookings')
@@ -774,6 +841,8 @@ class _p_PInstantBookingDetailState extends State<p_PInstantBookingDetail> {
 
       if (query.docs.isNotEmpty) {
         final docRef = query.docs.first.reference;
+
+        // ✅ Update the booking as Active
         await docRef.update({
           'finalDate': finalDate,
           'finalTime': finalTime,
@@ -781,8 +850,25 @@ class _p_PInstantBookingDetailState extends State<p_PInstantBookingDetail> {
           'updatedAt': FieldValue.serverTimestamp(),
         });
 
+        // ✅ Combine date + time string into a single DateTime object
+        // DateTime finalDateTime = DateTime.parse("$finalDate $finalTime");
 
-        // 🔔 Add a notification to Firestore for the service seeker
+        final inputFormat = DateFormat('d MMM yyyy h:mm a');
+        final DateTime finalDateTime = inputFormat.parse('$finalDate $finalTime');
+
+
+        // ✅ Schedule the booking reminders!
+        await scheduleBookingReminders(
+          bookingId: widget.bookingId,
+          postId: widget.postId,
+          seekerId: widget.seekerId,
+          providerId: bookingData?['serviceProviderId'],
+          finalDateTime: finalDateTime,
+        );
+
+        print("✅ Booking confirmed and reminders scheduled for: $finalDateTime");
+
+        // 🔔 Notify the service seeker
         await FirebaseFirestore.instance.collection('s_notifications').add({
           'seekerId': widget.seekerId,
           'providerId': bookingData?['serviceProviderId'],
@@ -794,6 +880,7 @@ class _p_PInstantBookingDetailState extends State<p_PInstantBookingDetail> {
           'createdAt': FieldValue.serverTimestamp(),
         });
       }
+
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Schedule confirmed successfully.")));
 
       Navigator.pushReplacement(
@@ -809,7 +896,6 @@ class _p_PInstantBookingDetailState extends State<p_PInstantBookingDetail> {
       setState(() => isSubmitting = false);
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
