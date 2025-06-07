@@ -47,7 +47,9 @@
         <meta-data
             android:name="io.branch.sdk.TestMode"
             android:value="true"/> <!-- Set to true since you're testing on emulator -->
-
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@mipmap/ic_launcher" />
 
         <activity
             android:name=".MainActivity"

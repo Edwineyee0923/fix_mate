@@ -9,7 +9,9 @@ import 'package:intl/intl.dart';
 
 
 class p_BookingCalender extends StatefulWidget {
-  const p_BookingCalender({super.key});
+  final String? highlightedBookingId;
+  const p_BookingCalender({Key? key, this.highlightedBookingId}) : super(key: key);
+
 
   @override
   State<p_BookingCalender> createState() => _p_BookingCalenderState();
@@ -95,7 +97,7 @@ class _p_BookingCalenderState extends State<p_BookingCalender> {
           "My Booking Calendar",
           style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
         ),
-        titleSpacing: 5,
+        titleSpacing: 2,
       ),
 
       body: Column(
@@ -291,5 +293,12 @@ class _p_BookingCalenderState extends State<p_BookingCalender> {
       // backgroundColor: const Color(0xFFF5F6FA),
     );
   }
+  Color getEventColor(String bookingId) {
+    if (bookingId == widget.highlightedBookingId) {
+      return Colors.orangeAccent; // 🔶 Highlight color
+    }
+    return const Color(0xFF464E65); // Default card icon color
+  }
 
 }
+

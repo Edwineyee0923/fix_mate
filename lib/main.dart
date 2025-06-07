@@ -496,6 +496,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:fix_mate/home_page/login_page.dart';
 import 'package:fix_mate/service_provider/p_BookingModule/p_BookingHistory.dart';
 import 'package:fix_mate/service_provider/p_BookingCalender.dart';
+import 'package:fix_mate/service_provider/p_Dashboard.dart';
 import 'package:fix_mate/service_provider/p_HomePage.dart';
 import 'package:fix_mate/service_provider/p_Rating.dart';
 import 'package:fix_mate/service_provider/p_profile.dart';
@@ -515,7 +516,7 @@ import 'firebase_options.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fix_mate/reusable_widget/reusable_widget.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-
+import 'package:flutter/services.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
@@ -533,8 +534,31 @@ Future<void> main() async {
   await initializeDateFormatting('en', null); // Ensures proper date formatting for locale
   await initializeNotifications(); // Add this
 
+
+  // 🟡 Ask for exact alarm permission (only needed once)
+  // await requestExactAlarmPermission();
+
   runApp(const MyApp());
 }
+
+
+// Future<void> initializeNotifications() async {
+//   const AndroidInitializationSettings initializationSettingsAndroid = AndroidInitializationSettings('fixmate_icon');
+//
+//   final InitializationSettings initializationSettings = InitializationSettings(
+//     android: initializationSettingsAndroid,
+//   );
+//
+//   await flutterLocalNotificationsPlugin.initialize(
+//     initializationSettings,
+//     onDidReceiveNotificationResponse: (response) {
+//       // Navigate on click
+//       navigatorKey.currentState?.push(
+//         MaterialPageRoute(builder: (_) => const p_BookingCalender()),
+//       );
+//     },
+//   );
+// }
 
 
 Future<void> initializeNotifications() async {
@@ -544,16 +568,55 @@ Future<void> initializeNotifications() async {
     android: initializationSettingsAndroid,
   );
 
+  // 🔐 Request notification permission explicitly (required for Android 13+)
+  await flutterLocalNotificationsPlugin
+      .resolvePlatformSpecificImplementation<
+      AndroidFlutterLocalNotificationsPlugin>()
+      ?.requestPermission();
+
   await flutterLocalNotificationsPlugin.initialize(
     initializationSettings,
-    onDidReceiveNotificationResponse: (response) {
-      // Navigate on click
-      navigatorKey.currentState?.push(
-        MaterialPageRoute(builder: (_) => const p_BookingCalender()),
-      );
+    onDidReceiveNotificationResponse: (response) async {
+      final payload = response.payload ?? '';
+      final parts = payload.split('|');
+      if (parts.length >= 4) {
+        final bookingId = parts[0];
+        final postId = parts[1];
+        final seekerId = parts[2];
+        final providerId = parts[3];
+
+        // Save Firestore notification only when notification is triggered
+        await FirebaseFirestore.instance.collection('p_notifications').add({
+          'providerId': providerId,
+          'bookingId': bookingId,
+          'postId': postId,
+          'seekerId': seekerId,
+          'title': 'Booking Reminder\n(#$bookingId)',
+          'message': 'Your scheduled booking service is about to start, please double check your booking details',
+          'isRead': false,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+
+        navigatorKey.currentState?.push(
+          MaterialPageRoute(
+            builder: (_) => p_BookingCalender(
+              highlightedBookingId: bookingId,
+            ),
+          ),
+        );
+      }
     },
   );
 }
+
+// Future<void> requestExactAlarmPermission() async {
+//   const platform = MethodChannel('com.example.fix_mate/alarm');
+//   try {
+//     await platform.invokeMethod('openExactAlarmSettings');
+//   } on PlatformException catch (e) {
+//     print("❌ Failed to open exact alarm settings: ${e.message}");
+//   }
+// }
 
 
 class MyApp extends StatefulWidget {
@@ -727,7 +790,7 @@ class _MyAppState extends State<MyApp> {
         primarySwatch: Colors.orange,
         fontFamily: 'Poppins',
       ),
-      home: p_HomePage(),
+      home: p_Dashboard(),
     );
   }
 }

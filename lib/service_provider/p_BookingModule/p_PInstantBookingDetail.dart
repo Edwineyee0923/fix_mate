@@ -795,8 +795,12 @@ class _p_PInstantBookingDetailState extends State<p_PInstantBookingDetail> {
   //         'createdAt': FieldValue.serverTimestamp(),
   //       });
   //     }
-  //     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Schedule confirmed successfully.")));
-  //
+  //     ReusableSnackBar(
+  //       context,
+  //       "Schedule confirmed successfully!",
+  //       icon: Icons.check_circle,
+  //       iconColor: Colors.green,
+  //     );
   //     Navigator.pushReplacement(
   //       context,
   //       MaterialPageRoute(
@@ -881,7 +885,12 @@ class _p_PInstantBookingDetailState extends State<p_PInstantBookingDetail> {
         });
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Schedule confirmed successfully.")));
+      ReusableSnackBar(
+        context,
+        "Schedule confirmed successfully!",
+        icon: Icons.check_circle,
+        iconColor: Colors.green,
+      );
 
       Navigator.pushReplacement(
         context,

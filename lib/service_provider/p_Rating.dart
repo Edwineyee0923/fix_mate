@@ -1,3 +1,4 @@
+import 'package:fix_mate/service_provider/p_HomePage.dart';
 import 'package:fix_mate/service_provider/p_ServiceDirectoryModule/p_InstantPostInfo.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -77,7 +78,19 @@ class _p_RatingState extends State<p_Rating> {
 
   @override
     Widget build(BuildContext context) {
-      return ProviderLayout(
+      return WillPopScope(
+          onWillPop: () async {
+            if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop(); // go back to previous screen
+            } else {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const p_HomePage()),
+              );
+            }
+            return false; // block default pop
+          },
+      child: ProviderLayout(
         selectedIndex: 2,
         child: Scaffold(
           backgroundColor: const Color(0xFFFFF8F2),
@@ -92,6 +105,7 @@ class _p_RatingState extends State<p_Rating> {
           ),
           body: _buildRatingBody(),
         ),
+      )
       );
     }
 

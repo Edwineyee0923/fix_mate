@@ -213,9 +213,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fix_mate/service_provider/p_BookingModule/p_BookingHistory.dart';
+import 'package:fix_mate/service_provider/p_Dashboard.dart';
 import 'package:fix_mate/service_provider/p_HomePage.dart';
 import 'package:fix_mate/service_provider/p_Rating.dart';
-import 'package:fix_mate/service_provider/p_profile.dart';
 import 'package:flutter/material.dart';
 
 class p_footer extends StatefulWidget {
@@ -243,7 +243,7 @@ class _p_footerState extends State<p_footer> {
         screen = p_Rating();
         break;
       case 3:
-        screen = p_profile();
+        screen = p_Dashboard();
         break;
       default:
         screen = p_HomePage();
@@ -307,10 +307,10 @@ class _p_footerState extends State<p_footer> {
           icon: Icon(Icons.stars, size: 30),
           label: 'My Reviews',
         ),
-        const BottomNavigationBarItem(
-          icon: Icon(Icons.person, size: 30),
-          label: 'Profile',
-        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.dashboard_rounded, size: 30),
+          label: 'Dashboard',
+        )
       ],
       currentIndex: widget.selectedIndex,
       selectedItemColor: const Color(0xFF464E65),

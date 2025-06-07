@@ -14,6 +14,8 @@ import 'package:fix_mate/reusable_widget/reusable_widget.dart';
 import 'package:fix_mate/services/showBookingNotification.dart';
 import 'package:fix_mate/services/booking_reminder.dart';
 import 'package:intl/intl.dart';
+import 'dart:io'; // For exit()
+
 
 class p_HomePage extends StatefulWidget {
   static String routeName = "/service_provider/p_HomePage";
@@ -41,37 +43,56 @@ class _p_HomePageState extends State<p_HomePage> {
     super.initState();
     _loadInstantPosts(); // Load posts when the page initializes
     _loadPromotionPosts(); // Load posts when the page initializes
-    _checkAndScheduleUpcomingBookings();
+    // _checkAndScheduleUpcomingBookings();
   }
 
-
-  Future<void> _checkAndScheduleUpcomingBookings() async {
-    final currentUser = FirebaseAuth.instance.currentUser;
-    if (currentUser == null) return;
-
-    final query = await FirebaseFirestore.instance
-        .collection('bookings')
-        .where('providerId', isEqualTo: currentUser.uid)
-        .where('status', isEqualTo: 'Confirmed')
-        .get();
-
-    for (final doc in query.docs) {
-      final data = doc.data();
-
-      // Ensure the required field exists
-      if (data.containsKey('finalDateTime')) {
-        final bookingTime = (data['finalDateTime'] as Timestamp).toDate();
-
-        await scheduleBookingReminders(
-          bookingId: data['bookingId'],
-          postId: data['postId'],
-          seekerId: data['seekerId'],
-          providerId: data['providerId'],
-          finalDateTime: bookingTime,
-        );
-      }
-    }
+  Future<bool> _onWillPop(BuildContext context) async {
+    showDialog(
+      context: context,
+      builder: (context) => ConfirmationDialog(
+        title: "Exit Application",
+        message: "Are you sure you want to leave this application?",
+        confirmText: "Yes",
+        cancelText: "No",
+        icon: Icons.exit_to_app,
+        iconColor: const Color(0xFF464E65),
+        confirmButtonColor: const Color(0xFF464E65),
+        cancelButtonColor: Colors.white,
+        onConfirm: () {
+          exit(0);
+        },
+      ),
+    );
+    return false; // prevent default pop
   }
+
+  // Future<void> _checkAndScheduleUpcomingBookings() async {
+  //   final currentUser = FirebaseAuth.instance.currentUser;
+  //   if (currentUser == null) return;
+  //
+  //   final query = await FirebaseFirestore.instance
+  //       .collection('bookings')
+  //       .where('providerId', isEqualTo: currentUser.uid)
+  //       .where('status', isEqualTo: 'Confirmed')
+  //       .get();
+  //
+  //   for (final doc in query.docs) {
+  //     final data = doc.data();
+  //
+  //     // Ensure the required field exists
+  //     if (data.containsKey('finalDateTime')) {
+  //       final bookingTime = (data['finalDateTime'] as Timestamp).toDate();
+  //
+  //       await scheduleBookingReminders(
+  //         bookingId: data['bookingId'],
+  //         postId: data['postId'],
+  //         seekerId: data['seekerId'],
+  //         providerId: data['providerId'],
+  //         finalDateTime: bookingTime,
+  //       );
+  //     }
+  //   }
+  // }
 
 
   Future<void> testBookingReminderTrigger() async {
@@ -774,7 +795,9 @@ class _p_HomePageState extends State<p_HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return ProviderLayout(
+    return WillPopScope(
+      onWillPop: () => _onWillPop(context),
+    child: ProviderLayout(
         selectedIndex: 0,
         child: Scaffold(
           backgroundColor: Color(0xFFFFF8F2),
@@ -802,6 +825,7 @@ class _p_HomePageState extends State<p_HomePage> {
             ),
           ),
         )
+    )
     );
   }
 }

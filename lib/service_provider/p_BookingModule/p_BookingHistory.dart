@@ -3,6 +3,7 @@ import 'package:fix_mate/service_provider/p_BookingModule/p_CCInstantBookingDeta
 import 'package:fix_mate/service_provider/p_BookingModule/p_CInstantBookingDetail.dart';
 import 'package:fix_mate/service_provider/p_BookingModule/p_Notification.dart';
 import 'package:fix_mate/service_provider/p_BookingModule/p_PInstantBookingDetail.dart';
+import 'package:fix_mate/service_provider/p_HomePage.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -306,7 +307,19 @@ class _p_BookingHistoryState extends State<p_BookingHistory> {
 
   @override
   Widget build(BuildContext context) {
-    return ProviderLayout(
+    return WillPopScope(
+        onWillPop: () async {
+          if (Navigator.of(context).canPop()) {
+            Navigator.of(context).pop(); // go back to previous screen
+          } else {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const p_HomePage()),
+            );
+          }
+          return false; // block default pop
+        },
+    child: ProviderLayout(
       selectedIndex: 1,
       child: Scaffold(
         backgroundColor: const Color(0xFFFFF8F2),
@@ -314,7 +327,7 @@ class _p_BookingHistoryState extends State<p_BookingHistory> {
           backgroundColor: const Color(0xFF464E65),
           title: const Text(
             "Booking History",
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
           ),
           titleSpacing: 25,
           automaticallyImplyLeading: false,
@@ -797,6 +810,7 @@ class _p_BookingHistoryState extends State<p_BookingHistory> {
           ],
         ),
       ),
+    )
     );
   }
 }

@@ -236,9 +236,7 @@ class _p_profileState extends State<p_profile> {
 
   @override
   Widget build(BuildContext context) {
-    return ProviderLayout(
-      selectedIndex: 3,
-      child: Scaffold(
+    return Scaffold(
       backgroundColor: Color(0xFFFFFFF2),
       appBar: AppBar(
         backgroundColor: Color(0xFF464E65),
@@ -255,20 +253,33 @@ class _p_profileState extends State<p_profile> {
         //     }
         //   },
         // ),
-        leading: isEditing
-            ? IconButton(
+        // leading: isEditing
+        //     ? IconButton(
+        //   icon: Icon(
+        //     Icons.arrow_back_ios_new_rounded,
+        //     color: Colors.white, // Makes the icon white
+        //   ),
+        //   onPressed: () {
+        //     _showDiscardChangesDialog(); // ✅ Ask user before discarding changes
+        //   },
+        // )
+        //     : null, // ✅ Hides the back button when `isEditing` is false
+        leading: IconButton(
           icon: Icon(
             Icons.arrow_back_ios_new_rounded,
-            color: Colors.white, // Makes the icon white
+            color: Colors.white,
           ),
           onPressed: () {
-            _showDiscardChangesDialog(); // ✅ Ask user before discarding changes
+            if (isEditing) {
+              _showDiscardChangesDialog(); // Show dialog when editing
+            } else {
+              Navigator.pop(context); // Go back normally when not editing
+            }
           },
-        )
-            : null, // ✅ Hides the back button when `isEditing` is false
+        ),
 
-        title: Text("My Profile", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white,)),
-        titleSpacing: isEditing ? 5 : 25, // ✅ Adjust title spacing dynamically
+        title: Text("My Profile", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white,)),
+        titleSpacing: 2, // ✅ Adjust title spacing dynamically
         automaticallyImplyLeading: false,
         actions: [
           Padding(
@@ -327,8 +338,7 @@ class _p_profileState extends State<p_profile> {
           ),
         ),
       ),
-      )
-    );
+      );
   }
 
   Widget _buildProfileFields() {
@@ -652,45 +662,6 @@ class _p_profileState extends State<p_profile> {
                 ),
             ],
           ),
-          SizedBox(height: 25),
-
-          if (!isEditing)
-          dk_button(
-            context,
-            "My Schedule",
-                () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => p_SchedulePage(),
-                ),
-              );
-            },
-          ),
-
-          if (!isEditing)
-            dk_button(
-              context,
-              "My Booking Calender",
-                  () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => p_BookingCalender(),
-                  ),
-                );
-              },
-            ),
-
-
-          // ✅ Show Log Out button only when isEditing is true
-          if (!isEditing)
-            dk_button(
-              context,
-              "Log Out",
-              _logoutUser, // Calls the logout function
-            ),
-
           SizedBox(height: 15),
         ],
       ),

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:fix_mate/service_seeker/s_BookingCalender.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -450,6 +451,21 @@ class _s_profileState extends State<s_profile> {
             ),
           ),
           SizedBox(height: 25),
+
+
+          if (!isEditing)
+            pk_button(
+              context,
+              "My Booking Calender",
+                  () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => s_BookingCalender(),
+                  ),
+                );
+              },
+            ),
 
           // ✅ Show Log Out button only when isEditing is true
           if (!isEditing)

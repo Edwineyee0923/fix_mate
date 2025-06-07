@@ -4,6 +4,7 @@ import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'package:fix_mate/admin/a_application_detail.dart';
+import 'package:flutter/material.dart';
 
 
 class SP_application extends StatefulWidget {
