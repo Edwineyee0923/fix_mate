@@ -6,7 +6,7 @@
 // import 'package:fix_mate/service_provider/p_Rating.dart';
 // import 'package:fix_mate/service_provider/p_profile.dart';
 // import 'package:fix_mate/service_seeker/s_HomePage.dart';
-// import 'package:fix_mate/service_seeker/s_ReviewRating/s_Rating.dart';
+// import 'package:fix_mate/service_seeker/s_ReviewRating/s_RateService.dart';
 // import 'package:fix_mate/service_seeker/s_SPList.dart';
 // import 'package:fix_mate/service_seeker/s_ReviewRating/s_SPRating.dart';
 // import 'package:fix_mate/service_seeker/s_profile.dart';
@@ -223,7 +223,7 @@
 // import 'package:fix_mate/service_provider/p_Rating.dart';
 // import 'package:fix_mate/service_provider/p_profile.dart';
 // import 'package:fix_mate/service_seeker/s_HomePage.dart';
-// import 'package:fix_mate/service_seeker/s_ReviewRating/s_Rating.dart';
+// import 'package:fix_mate/service_seeker/s_ReviewRating/s_RateService.dart';
 // import 'package:fix_mate/service_seeker/s_SPList.dart';
 // import 'package:fix_mate/service_seeker/s_ReviewRating/s_SPRating.dart';
 // import 'package:fix_mate/service_seeker/s_profile.dart';
@@ -500,8 +500,10 @@ import 'package:fix_mate/service_provider/p_Dashboard.dart';
 import 'package:fix_mate/service_provider/p_HomePage.dart';
 import 'package:fix_mate/service_provider/p_Rating.dart';
 import 'package:fix_mate/service_provider/p_profile.dart';
+import 'package:fix_mate/service_seeker/s_Dashboard.dart';
 import 'package:fix_mate/service_seeker/s_HomePage.dart';
-import 'package:fix_mate/service_seeker/s_ReviewRating/s_Rating.dart';
+import 'package:fix_mate/service_seeker/s_ReviewRating/s_MyReview.dart';
+import 'package:fix_mate/service_seeker/s_ReviewRating/s_RateService.dart';
 import 'package:fix_mate/service_seeker/s_SPList.dart';
 import 'package:fix_mate/service_seeker/s_ReviewRating/s_SPRating.dart';
 import 'package:fix_mate/service_seeker/s_profile.dart';
@@ -790,7 +792,7 @@ class _MyAppState extends State<MyApp> {
         primarySwatch: Colors.orange,
         fontFamily: 'Poppins',
       ),
-      home: p_Dashboard(),
+      home: s_Dashboard(),
     );
   }
 }

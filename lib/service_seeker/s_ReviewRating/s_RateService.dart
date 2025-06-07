@@ -5,12 +5,12 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:fix_mate/reusable_widget/reusable_widget.dart';
 
-class s_Rating extends StatefulWidget {
+class s_RateService extends StatefulWidget {
   final String bookingId;
   final String postId;
   final String providerId;
 
-  const s_Rating({
+  const s_RateService({
     Key? key,
     required this.bookingId,
     required this.postId,
@@ -18,10 +18,10 @@ class s_Rating extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  State<s_Rating> createState() => _s_RatingState();
+  State<s_RateService> createState() => _s_RateServiceState();
 }
 
-class _s_RatingState extends State<s_Rating> {
+class _s_RateServiceState extends State<s_RateService> {
   int _rating = 5;
   int _quality = 5;
   int _responsiveness = 5;

@@ -1,5 +1,6 @@
 import 'package:fix_mate/home_page/HomePage.dart';
 import 'package:fix_mate/service_provider/p_BookingCalender.dart';
+import 'package:fix_mate/service_provider/p_BookingModule/p_AInstantBookingDetail.dart';
 import 'package:fix_mate/service_provider/p_BookingModule/p_BookingHistory.dart';
 import 'package:fix_mate/service_provider/p_HomePage.dart';
 import 'package:fix_mate/service_provider/p_SchedulePage.dart';
@@ -33,7 +34,7 @@ class _p_DashboardState extends State<p_Dashboard> {
   bool isLoading = true;
   Map<String, dynamic> operationHours = {};
   Map<String, int> unseenCounts = {
-    'pending': 0,
+    'pending confirmation': 0,
     'active': 0,
     'completed': 0,
     'cancelled': 0,
@@ -152,14 +153,28 @@ class _p_DashboardState extends State<p_Dashboard> {
 
       DateTime? combined;
       try {
-        combined = DateTime.parse(
-            "${DateFormat('yyyy-MM-dd').format(DateFormat('d MMM yyyy').parse(dateStr))} "
-                "${DateFormat('HH:mm').format(DateFormat.jm().parse(timeStr))}");
-      } catch (_) {}
+        final cleanDateStr = dateStr.replaceAll(RegExp(r'\s+'), ' ').trim();
+        final cleanTimeStr = timeStr.replaceAll(RegExp(r'\s+'), ' ').trim();
+
+        final parsedDate = DateFormat('d MMM yyyy').parseLoose(cleanDateStr);
+        final parsedTime = DateFormat.jm().parseLoose(cleanTimeStr);
+
+        combined = DateTime(
+          parsedDate.year,
+          parsedDate.month,
+          parsedDate.day,
+          parsedTime.hour,
+          parsedTime.minute,
+        );
+      } catch (e) {
+        print('❌ Failed to parse: "$dateStr $timeStr" → $e');
+      }
 
       return {
         'docId': doc.id,
         'bookingId': data['bookingId'] ?? '',
+        'postId': data['postId'] ?? '',
+        'serviceSeekerId': data['serviceSeekerId'] ?? '',
         'IPTitle': data['IPTitle'] ?? '',
         'finalDate': dateStr,
         'finalTime': timeStr,
@@ -173,6 +188,9 @@ class _p_DashboardState extends State<p_Dashboard> {
     setState(() {
       _upcomingBookings = bookings.take(3).toList();
     });
+
+    // ✅ Log after setState to confirm
+    print("✅ Found ${_upcomingBookings.length} upcoming bookings");
   }
 
   void _logoutUser() async {
@@ -1194,8 +1212,10 @@ Widget _buildCompactProviderInfoSection() {
               child: Text("No upcoming bookings", style: TextStyle(color: Colors.grey[600], fontSize: 14)),
             )
           else
-            Column(
-              children: _upcomingBookings.map((b) => _buildBookingCard(b)).toList(),
+            SingleChildScrollView(
+              child: Column(
+                children: _upcomingBookings.map((b) => _buildBookingCard(b)).toList(),
+              ),
             )
         ],
       ),
@@ -1203,7 +1223,36 @@ Widget _buildCompactProviderInfoSection() {
   }
 
   Widget _buildBookingCard(Map<String, dynamic> booking) {
-    return Container(
+    return InkWell(
+        onTap: () {
+          final postId = booking['postId'];
+          final seekerId = booking['serviceSeekerId'];
+          final bookingId = booking['bookingId'];
+
+          if (postId == null || seekerId == null || bookingId == null) {
+            print("❌ Missing booking data:");
+            print("postId: $postId");
+            print("providerId: $seekerId");
+            print("bookingId: $bookingId");
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("Booking info is incomplete.")),
+            );
+            return;
+          }
+
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => p_AInstantBookingDetail(
+                bookingId: bookingId,
+                postId: postId,
+                seekerId: booking['serviceSeekerId'],
+              ),
+            ),
+          );
+        },
+      child: Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -1244,6 +1293,7 @@ Widget _buildCompactProviderInfoSection() {
           ),
         ],
       ),
+    ),
     );
   }
 
