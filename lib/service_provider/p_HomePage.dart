@@ -15,6 +15,7 @@ import 'package:fix_mate/services/showBookingNotification.dart';
 import 'package:fix_mate/services/booking_reminder.dart';
 import 'package:intl/intl.dart';
 import 'dart:io'; // For exit()
+import 'package:flutter/services.dart';
 
 
 class p_HomePage extends StatefulWidget {
@@ -43,7 +44,41 @@ class _p_HomePageState extends State<p_HomePage> {
     super.initState();
     _loadInstantPosts(); // Load posts when the page initializes
     _loadPromotionPosts(); // Load posts when the page initializes
-    // _checkAndScheduleUpcomingBookings();
+    _checkAndScheduleUpcomingBookings();
+  }
+
+  Future<void> _checkAndScheduleUpcomingBookings() async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return;
+
+    final snapshot = await FirebaseFirestore.instance
+        .collection('bookings')
+        .where('seekerId', isEqualTo: currentUser.uid) // or 'providerId'
+        .where('status', isEqualTo: 'Active')
+        .get();
+
+    for (var doc in snapshot.docs) {
+      final data = doc.data();
+      final bookingId = doc.id;
+      final postId = data['postId'];
+      final seekerId = data['seekerId'];
+      final providerId = data['providerId'];
+      final dateStr = data['finalDate'];
+      final timeStr = data['finalTime'];
+
+      if (dateStr == null || timeStr == null) continue;
+
+      final finalDateTime = DateFormat("d MMM yyyy h:mm a").parse("$dateStr $timeStr");
+
+      // 🟡 Your scheduleBookingReminders() method goes here
+      await scheduleBookingReminders(
+        bookingId: bookingId,
+        postId: postId,
+        seekerId: seekerId,
+        providerId: providerId,
+        finalDateTime: finalDateTime,
+      );
+    }
   }
 
   Future<bool> _onWillPop(BuildContext context) async {
@@ -59,72 +94,51 @@ class _p_HomePageState extends State<p_HomePage> {
         confirmButtonColor: const Color(0xFF464E65),
         cancelButtonColor: Colors.white,
         onConfirm: () {
-          exit(0);
+          Navigator.of(context).pop(); // Close the dialog first
+          if (Platform.isAndroid) {
+            SystemNavigator.pop(); // Smooth exit with animation
+          } else if (Platform.isIOS) {
+            // iOS doesn't support closing apps programmatically
+            // Optionally show a message or just dismiss the dialog
+          }
         },
       ),
     );
     return false; // prevent default pop
   }
 
-  // Future<void> _checkAndScheduleUpcomingBookings() async {
-  //   final currentUser = FirebaseAuth.instance.currentUser;
-  //   if (currentUser == null) return;
+
+
+  // Future<void> testBookingReminderTrigger() async {
+  //   final now = DateTime.now();
+  //   final finalDateTime = now.add(Duration(minutes: 2)); // 6 mins ahead
   //
-  //   final query = await FirebaseFirestore.instance
-  //       .collection('bookings')
-  //       .where('providerId', isEqualTo: currentUser.uid)
-  //       .where('status', isEqualTo: 'Confirmed')
-  //       .get();
+  //   final bookingId = "TEST-${DateFormat('HHmmss').format(now)}";
+  //   final providerId = FirebaseAuth.instance.currentUser?.uid ?? "testProvider001";
   //
-  //   for (final doc in query.docs) {
-  //     final data = doc.data();
+  //   // 1. Add test booking to Firestore
+  //   await FirebaseFirestore.instance.collection('bookings').add({
+  //     'bookingId': bookingId,
+  //     'postId': 'TESTPOST01',
+  //     'providerId': providerId,
+  //     'seekerId': providerId,
+  //     'status': 'Confirmed',
+  //     'finalDateTime': finalDateTime,
+  //     'finalDate': DateFormat('d MMM yyyy').format(finalDateTime),
+  //     'finalTime': DateFormat('h:mm a').format(finalDateTime),
+  //   });
   //
-  //     // Ensure the required field exists
-  //     if (data.containsKey('finalDateTime')) {
-  //       final bookingTime = (data['finalDateTime'] as Timestamp).toDate();
+  //   // 2. Schedule notifications for 5, 10, 15, 30 mins before
+  //   await scheduleBookingReminders(
+  //     bookingId: bookingId,
+  //     postId: 'TESTPOST01',
+  //     seekerId: 'TESTSEEKER01',
+  //     providerId: providerId,
+  //     finalDateTime: finalDateTime,
+  //   );
   //
-  //       await scheduleBookingReminders(
-  //         bookingId: data['bookingId'],
-  //         postId: data['postId'],
-  //         seekerId: data['seekerId'],
-  //         providerId: data['providerId'],
-  //         finalDateTime: bookingTime,
-  //       );
-  //     }
-  //   }
+  //   print("✅ Test booking created and reminders scheduled for: $finalDateTime");
   // }
-
-
-  Future<void> testBookingReminderTrigger() async {
-    final now = DateTime.now();
-    final finalDateTime = now.add(Duration(minutes: 2)); // 6 mins ahead
-
-    final bookingId = "TEST-${DateFormat('HHmmss').format(now)}";
-    final providerId = FirebaseAuth.instance.currentUser?.uid ?? "testProvider001";
-
-    // 1. Add test booking to Firestore
-    await FirebaseFirestore.instance.collection('bookings').add({
-      'bookingId': bookingId,
-      'postId': 'TESTPOST01',
-      'providerId': providerId,
-      'seekerId': 'TESTSEEKER01',
-      'status': 'Confirmed',
-      'finalDateTime': finalDateTime,
-      'finalDate': DateFormat('d MMM yyyy').format(finalDateTime),
-      'finalTime': DateFormat('h:mm a').format(finalDateTime),
-    });
-
-    // 2. Schedule notifications for 5, 10, 15, 30 mins before
-    await scheduleBookingReminders(
-      bookingId: bookingId,
-      postId: 'TESTPOST01',
-      seekerId: 'TESTSEEKER01',
-      providerId: providerId,
-      finalDateTime: finalDateTime,
-    );
-
-    print("✅ Test booking created and reminders scheduled for: $finalDateTime");
-  }
   // @override
   // void initState() {
   //   super.initState();
@@ -285,13 +299,26 @@ class _p_HomePageState extends State<p_HomePage> {
         print("Fetched ${snapshot.docs.length} posts");
       }
 
-      List<Widget> instantPosts = snapshot.docs.map((doc) {
+      // List<Widget> instantPosts = snapshot.docs.map((doc) {
+      //   Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+
+      // 👇 Use Future.wait to handle async inside the loop
+      List<Widget> instantPosts = await Future.wait(snapshot.docs.map((doc) async {
         Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+
+        // 👇 Fetch review summary
+        final reviewSummary = await fetchPostReviewSummary(doc.id);
+        final double avgRating = reviewSummary['avgRating'] ?? 0.0;
+        final int reviewCount = reviewSummary['count'] ?? 0;
+
 
         return KeyedSubtree(
             key: ValueKey<String>(data['IPTitle'] ?? "Unknown"),
         child: buildInstantBookingCard(
           context: context,
+          docId: doc.id,
+          avgRating: avgRating,
+          reviewCount: reviewCount,
           IPTitle: data['IPTitle'] ?? "Unknown",
           ServiceStates: (data['ServiceStates'] as List<dynamic>?)?.join(", ") ?? "Unknown",
           ServiceCategory: (data['ServiceCategory'] as List<dynamic>?)?.join(", ") ?? "No services listed",
@@ -339,7 +366,7 @@ class _p_HomePageState extends State<p_HomePage> {
           onToggleComplete: _loadInstantPosts,
         ),
         );
-      }).toList();
+      }).toList());
 
       setState(() {
         allInstantPosts = instantPosts;
@@ -374,12 +401,23 @@ class _p_HomePageState extends State<p_HomePage> {
         print("Fetched ${snapshot.docs.length} promotion posts");
       }
 
-      List<Widget> promotionPosts = snapshot.docs.map((doc) {
-        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+
+        // 👇 Use Future.wait to handle async inside the loop
+        List<Widget> promotionPosts = await Future.wait(snapshot.docs.map((doc) async {
+          Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+
+
+        // 👇 Fetch review summary
+        final reviewSummary = await fetchPostReviewSummary(doc.id);
+        final double avgRating = reviewSummary['avgRating'] ?? 0.0;
+        final int reviewCount = reviewSummary['count'] ?? 0;
 
         return KeyedSubtree(
             key: ValueKey<String>(data['PTitle'] ?? "Unknown"),
         child: buildPromotionCard(
+          docId: doc.id,
+          avgRating: avgRating,
+          reviewCount: reviewCount,
           PTitle: data['PTitle'] ?? "Unknown",
           ServiceStates: (data['ServiceStates'] as List<dynamic>?)?.join(", ") ?? "Unknown",
           ServiceCategory: (data['ServiceCategory'] as List<dynamic>?)?.join(", ") ?? "No services listed",
@@ -433,7 +471,7 @@ class _p_HomePageState extends State<p_HomePage> {
           onToggleComplete: _loadPromotionPosts,
         ),
         );
-      }).toList();
+      }).toList());
 
       setState(() {
         allPromotionPosts = promotionPosts;
@@ -659,7 +697,7 @@ class _p_HomePageState extends State<p_HomePage> {
             style: TextStyle(color: Colors.black54),
           )
               : SizedBox(
-            height: 280,
+            height: 290,
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(children: displayedInstantPosts), // ✅ Updates dynamically
@@ -689,10 +727,10 @@ class _p_HomePageState extends State<p_HomePage> {
           ),
 
 
-          ElevatedButton(
-            onPressed: testBookingReminderTrigger,
-            child: Text("🧪 Test Notification"),
-          )
+          // ElevatedButton(
+          //   onPressed: testBookingReminderTrigger,
+          //   child: Text("🧪 Test Notification"),
+          // )
 
         ],
       ),
@@ -759,7 +797,7 @@ class _p_HomePageState extends State<p_HomePage> {
             style: TextStyle(color: Colors.black54),
           )
               : SizedBox(
-            height: 280,
+            height: 290,
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(children: displayedPromotionPosts), // ✅ Updated dynamically
@@ -838,6 +876,9 @@ Widget buildInstantBookingCard({
   required String ServiceCategory,
   required List<String> imageUrls,
   required int IPPrice,
+  required String docId,
+  required double avgRating,
+  required int reviewCount,
   required bool isActive,
   required String postId,
   required VoidCallback onEdit,
@@ -875,14 +916,65 @@ Widget buildInstantBookingCard({
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      IPTitle,
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 2,
-                    ),
-                    const SizedBox(height: 4),
+                    // Text(
+                    //   IPTitle,
+                    //   style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                    //   overflow: TextOverflow.ellipsis,
+                    //   maxLines: 2,
+                    // ),
+                    // const SizedBox(height: 4),
 
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Title (supports up to 2 lines)
+                        Expanded(
+                          child: Text(
+                            IPTitle,
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 2,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        // ⭐ Rating badge
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFFFFF7EC), Color(0xFFFEE9D7)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(24),
+                            border: Border.all(color: Colors.orangeAccent.shade100),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.orange.withOpacity(0.1),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.star_rounded, color: Colors.amber, size: 14),
+                              const SizedBox(width: 3),
+                              Text(
+                                avgRating.toStringAsFixed(1),
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 12,
+                                  color: Colors.grey[800],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 6),
                     // 📌 Location with Icon
                     Row(
                       children: [
@@ -1027,7 +1119,7 @@ Widget buildInstantBookingCard({
 
           // 📌 Price (Bottom-right of the card)
           Positioned(
-            bottom: 10,
+            bottom: 6,
             right: 12,
             child: Text(
               "RM $IPPrice", // Directly use the stored integer
@@ -1041,8 +1133,8 @@ Widget buildInstantBookingCard({
 
           // 👇 Status label at bottom-right of the card (beside price)
           Positioned(
-            bottom: 15,
-            left: 15,
+            bottom: 10,
+            left: 12,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
@@ -1077,6 +1169,9 @@ Widget buildPromotionCard({
   required bool isActive,
   required String postId,
   required double PDiscountPercentage,
+  required String docId,
+  required double avgRating, // ⭐️ New
+  required int reviewCount,  // ⭐️ New
   required VoidCallback onEdit,
   required VoidCallback onDelete,
   required VoidCallback onToggleComplete,
@@ -1110,13 +1205,58 @@ Widget buildPromotionCard({
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      PTitle,
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 2,
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // 📌 Title - wraps up to 2 lines
+                        Expanded(
+                          child: Text(
+                            PTitle,
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 2,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        // ⭐ Rating badge - top aligned
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFFFFF7EC), Color(0xFFFEE9D7)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(24),
+                            border: Border.all(color: Colors.orange.shade100),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.orange.withOpacity(0.15),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.star_rounded, color: Colors.amber, size: 14),
+                              const SizedBox(width: 3),
+                              Text(
+                                avgRating.toStringAsFixed(1),
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                  color: Colors.grey[800],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 6),
+
+
 
                     // 📌 Location with Icon
                     Row(
@@ -1283,7 +1423,7 @@ Widget buildPromotionCard({
 
           // 📌 Price Display (Bottom-right)
           Positioned(
-            bottom: 10,
+            bottom: 6,
             right: 12,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.end,
@@ -1297,7 +1437,7 @@ Widget buildPromotionCard({
                     decoration: TextDecoration.lineThrough, // Strikethrough effect
                   ),
                 ),
-                const SizedBox(height: 2), // Spacing
+
 
                 // Discounted Price (Larger & Bold)
                 Text(
@@ -1315,8 +1455,8 @@ Widget buildPromotionCard({
 
           // 👇 Status label at bottom-right of the card (beside price)
           Positioned(
-            bottom: 15,
-            left: 15,
+            bottom: 12,
+            left: 12,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
@@ -1338,4 +1478,34 @@ Widget buildPromotionCard({
     ),
   ),
   );
+}
+
+Future<Map<String, dynamic>> fetchPostReviewSummary(String postId) async {
+  final snapshot = await FirebaseFirestore.instance
+      .collection('reviews')
+      .where('postId', isEqualTo: postId)
+      .get();
+
+  final reviews = snapshot.docs;
+
+  if (reviews.isEmpty) {
+    return {
+      'avgRating': 0.0,
+      'count': 0,
+    };
+  }
+
+  double totalRating = 0.0;
+
+  for (var doc in reviews) {
+    final data = doc.data() as Map<String, dynamic>;
+    totalRating += (data['rating'] ?? 0).toDouble();
+  }
+
+  final double avgRating = totalRating / reviews.length;
+
+  return {
+    'avgRating': avgRating,
+    'count': reviews.length,
+  };
 }

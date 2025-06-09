@@ -215,7 +215,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fix_mate/service_provider/p_BookingModule/p_BookingHistory.dart';
 import 'package:fix_mate/service_provider/p_Dashboard.dart';
 import 'package:fix_mate/service_provider/p_HomePage.dart';
-import 'package:fix_mate/service_provider/p_Rating.dart';
+import 'package:fix_mate/service_provider/p_ReviewRating/p_Rating.dart';
 import 'package:flutter/material.dart';
 
 class p_footer extends StatefulWidget {

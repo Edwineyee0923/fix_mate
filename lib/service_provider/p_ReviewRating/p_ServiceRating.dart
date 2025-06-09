@@ -1,24 +1,20 @@
 import 'package:fix_mate/service_seeker/s_InstantPostInfo.dart';
-import 'package:fix_mate/service_seeker/s_PromotionPostInfo.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fix_mate/services/ReviewVideoViewer.dart';
 import 'package:fix_mate/services/FullScreenImageViewer.dart';
-import 'package:fix_mate/reusable_widget/reusable_widget.dart';
 
+class p_ServiceRating extends StatefulWidget {
+  final String postId;
 
-class s_SPRating extends StatefulWidget {
-  final String providerId;
-
-  // const s_SPRating({super.key, required this.providerId});
-  const s_SPRating({Key? key, required this.providerId}) : super(key: key);
+  const p_ServiceRating({Key? key, required this.postId}) : super(key: key);
 
   @override
-  _s_SPRatingState createState() => _s_SPRatingState();
+  _p_ServiceRatingState createState() => _p_ServiceRatingState();
 }
 
-class _s_SPRatingState extends State<s_SPRating> {
+class _p_ServiceRatingState extends State<p_ServiceRating> {
   String selectedRating = "All Ratings";
 
   Map<int, int> _calculateStarCounts(List<QueryDocumentSnapshot> reviews) {
@@ -47,56 +43,22 @@ class _s_SPRatingState extends State<s_SPRating> {
 
 
 
-  // Future<List<String>> fetchPostImages(String postId) async {
-  //   final postSnap = await FirebaseFirestore.instance
-  //       .collection('instant_booking')
-  //       .doc(postId)
-  //       .get();
-  //
-  //   if (postSnap.exists) {
-  //     final data = postSnap.data();
-  //     if (data != null && data['IPImage'] is List) {
-  //       return List<String>.from(data['IPImage']);
-  //     }
-  //   }
-  //   return [];
-  // }
-
-  // Function to format timestamps
-
-
-
-  Future<List<String>> fetchPostImages(String bookingId, String postId) async {
-    String collectionName;
-    if (bookingId.startsWith('BKPR-')) {
-      collectionName = 'promotion';
-    } else if (bookingId.startsWith('BKIB-')) {
-      collectionName = 'instant_booking';
-    } else {
-      print("❌ Unknown booking type for ID: $bookingId");
-      return [];
-    }
-
+  Future<List<String>> fetchPostImages(String postId) async {
     final postSnap = await FirebaseFirestore.instance
-        .collection(collectionName)
+        .collection('instant_booking')
         .doc(postId)
         .get();
 
     if (postSnap.exists) {
       final data = postSnap.data();
-      if (data != null) {
-        if (collectionName == 'promotion' && data['PImage'] is List) {
-          return List<String>.from(data['PImage']);
-        } else if (collectionName == 'instant_booking' && data['IPImage'] is List) {
-          return List<String>.from(data['IPImage']);
-        }
+      if (data != null && data['IPImage'] is List) {
+        return List<String>.from(data['IPImage']);
       }
     }
-
     return [];
   }
 
-
+  // Function to format timestamps
   String formatTimestamp(Timestamp? timestamp) {
     if (timestamp == null) return "N/A";
     // DateTime dateTime = timestamp.toDate().add(const Duration(hours: 8));
@@ -115,22 +77,22 @@ class _s_SPRatingState extends State<s_SPRating> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        backgroundColor: const Color(0xFFFFF8F2),
-        appBar: AppBar(
-          backgroundColor: const Color(0xFFfb9798),
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
-            onPressed: () => Navigator.pop(context),
-          ),
-          title: const Text(
-            "Service Provider Ratings",
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
-          ),
-          titleSpacing: 2,
-          automaticallyImplyLeading: false,
+      backgroundColor: const Color(0xFFFFF8F2),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF464E65),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
         ),
-        body: _buildRatingBody(),
-      );
+        title: const Text(
+          "Service Ratings",
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+        ),
+        titleSpacing: 2,
+        automaticallyImplyLeading: false,
+      ),
+      body: _buildRatingBody(),
+    );
   }
 
   Widget _buildAspectRating(String title, double value) {
@@ -161,7 +123,7 @@ class _s_SPRatingState extends State<s_SPRating> {
       margin: const EdgeInsets.only(top: 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0x1Aff6f61),
+        color: const Color(0x2661A9FF),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -192,7 +154,7 @@ class _s_SPRatingState extends State<s_SPRating> {
     return FutureBuilder<QuerySnapshot>(
       future: FirebaseFirestore.instance
           .collection('reviews')
-          .where('providerId', isEqualTo: widget.providerId)
+          .where('postId', isEqualTo: widget.postId)
           .orderBy('updatedAt', descending: true)
           .get(),
       builder: (context, snapshot) {
@@ -269,7 +231,7 @@ class _s_SPRatingState extends State<s_SPRating> {
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
                         // color: const Color(0xFF464E65).withOpacity(0.05),
-                        color: const Color(0x1Aff6f61),
+                        color: const Color(0x2661A9FF),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Column(
@@ -328,8 +290,8 @@ class _s_SPRatingState extends State<s_SPRating> {
                                     child: LinearProgressIndicator(
                                       value: ratio,
                                       minHeight: 10,
-                                      backgroundColor: Color(0x1Aff6f61),
-                                      valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFfb9798)),
+                                      backgroundColor: Color(0x3361A9FF),
+                                      valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF464E65)),
                                     ),
                                   ),
                                 ),
@@ -411,7 +373,7 @@ class _s_SPRatingState extends State<s_SPRating> {
 
                       // Review section appear at here
                       final postId = review['postId'];
-                      final bookingId = review['bookingId'] ?? '';
+
                       return Padding(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 10, vertical: 0),
@@ -425,9 +387,6 @@ class _s_SPRatingState extends State<s_SPRating> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Row(
-
-
-
                                   children: [
                                     CircleAvatar(
                                       radius: 16,
@@ -578,95 +537,6 @@ class _s_SPRatingState extends State<s_SPRating> {
                                         ),
                                     ],
                                   ),
-                                const SizedBox(height: 10),
-                                GestureDetector(
-                                  onTap: () {
-                                    if (bookingId.startsWith('BKIB-')) {
-                                      // Instant Booking → navigate to InstantPostInfo
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (_) => s_InstantPostInfo(docId: postId),
-                                        ),
-                                      );
-                                    } else if (bookingId.startsWith('BKPR-')) {
-                                      // Promotion → navigate to PromotionPostInfo
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (_) => s_PromotionPostInfo(docId: postId),
-                                        ),
-                                      );
-                                    } else {
-                                      ReusableSnackBar(context, "Unable to determine post type.", icon: Icons.warning, iconColor: Colors.orange);
-                                    }
-                                  },
-                                  child: Container(
-                                    padding: const EdgeInsets.all(10),
-                                    margin: const EdgeInsets.only(bottom: 2),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0x1Aff6f61),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Row(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        FutureBuilder<List<String>>(
-                                          future: fetchPostImages(review['bookingId'], review['postId']),
-                                          builder: (context, snapshot) {
-                                            final imageUrls = snapshot.data ?? [];
-                                            final imageUrl = imageUrls.isNotEmpty
-                                                ? imageUrls.first
-                                                : "";
-
-                                            return ClipRRect(
-                                              borderRadius: BorderRadius.circular(10),
-                                              child: imageUrl.isNotEmpty
-                                                  ? Image.network(
-                                                imageUrl,
-                                                width: 50,
-                                                height: 50,
-                                                fit: BoxFit.cover,
-                                              )
-                                                  : Container(
-                                                width: 60,
-                                                height: 60,
-                                                color: Colors.grey[300],
-                                                child: const Icon(Icons.broken_image,
-                                                    color: Colors.grey),
-                                              ),
-                                            );
-                                          },
-                                        ),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment
-                                                .start,
-                                            children: [
-                                              Text(
-                                                "${review['serviceTitle'] ?? '-'}",
-                                                style: const TextStyle(
-                                                  fontSize: 15,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: Colors.black87,
-                                                ),
-                                              ),
-                                              const SizedBox(height: 6),
-                                              Text(
-                                                "By: ${review['providerName'] ?? '-'}",
-                                                style: const TextStyle(
-                                                  fontSize: 13,
-                                                  color: Colors.black54,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
                               ],
                             ),
                           ),
@@ -685,7 +555,7 @@ class _s_SPRatingState extends State<s_SPRating> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: const Color(0x1Aff6f61), // light tinted background
+        color: const Color(0x2661A9FF), // light tinted background
         borderRadius: BorderRadius.circular(30),
       ),
       child: Row(

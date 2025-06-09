@@ -1,6 +1,7 @@
 
 
 
+import 'package:fix_mate/service_seeker/s_SPInfo.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:http/http.dart' as http;
@@ -133,6 +134,7 @@ class _s_IPPaymentSummaryState extends State<s_IPPaymentSummary> {
       final response = await FlutterBranchSdk.getShortUrl(buo: buo, linkProperties: lp);
       final deepLink = response.success ? response.result : 'https://fixmate.com/deeplink-fallback';
 
+
       final bodyData = {
         'userSecretKey': widget.toyyibSecretKey,
         'categoryCode': widget.toyyibCategory,
@@ -174,6 +176,74 @@ class _s_IPPaymentSummaryState extends State<s_IPPaymentSummary> {
       );
     }
   }
+
+
+  // Future<String> _createToyyibPayBill() async {
+  //   try {
+  //     final buo = BranchUniversalObject(
+  //       canonicalIdentifier: 'booking/${widget.bookingId}',
+  //       title: 'Booking Confirmed',
+  //       contentDescription: 'Tap to confirm your booking in FixMate',
+  //       contentMetadata: BranchContentMetaData()
+  //         ..addCustomMetadata('bookingId', widget.bookingId)
+  //         ..addCustomMetadata('spId', widget.spId)
+  //         ..addCustomMetadata('serviceSeekerId', widget.serviceSeekerId)
+  //         ..addCustomMetadata('postId', widget.postId),
+  //     );
+  //
+  //     final lp = BranchLinkProperties(channel: 'toyyibpay', feature: 'payment');
+  //     final response = await FlutterBranchSdk.getShortUrl(buo: buo, linkProperties: lp);
+  //     // final deepLink = response.success ? response.result : 'https://fixmate.com/deeplink-fallback';
+  //
+  //     // final deepLink = response.success
+  //     //     ? 'https://edwineyee0923.github.io/fixmate-redirect/'  // ✅ use your GitHub Pages redirect
+  //     //     : 'https://fixmate.com/deeplink-fallback';              // fallback just in case
+  //
+  //     final deepLink = 'https://j64jm.app.link/payment-result?bookingId=${widget.bookingId}&spId=${widget.spId}&postId=${widget.postId}&serviceSeekerId=${widget.serviceSeekerId}';
+  //
+  //
+  //     final bodyData = {
+  //       'userSecretKey': widget.toyyibSecretKey,
+  //       'categoryCode': widget.toyyibCategory,
+  //       'billName': 'Service Booking',
+  //       'billDescription': 'Payment for booking ID: ${widget.bookingId}',
+  //       'billPriceSetting': '1',
+  //       'billPayorInfo': '1',
+  //       'billAmount': (widget.totalPrice * 100).toString(),
+  //       'billReturnUrl': deepLink,
+  //       'billCallbackUrl': 'https://your-server.com/toyyibpay-callback',
+  //       'billExternalReferenceNo': widget.bookingId,
+  //       'billTo': widget.userEmail,
+  //       'billEmail': widget.userEmail,
+  //       'billPhone': widget.userPhone,
+  //     };
+  //
+  //     final apiUrl = Uri.parse('https://toyyibpay.com/index.php/api/createBill');
+  //     final responseToyyib = await http.post(apiUrl, body: bodyData);
+  //     final responseData = jsonDecode(responseToyyib.body);
+  //
+  //     if (responseToyyib.statusCode == 200 && responseData.isNotEmpty && responseData[0]['BillCode'] != null) {
+  //       return "https://toyyibpay.com/${responseData[0]['BillCode']}";
+  //     }
+  //     return "";
+  //   } catch (e) {
+  //     print("❌ Error during payment bill creation: $e");
+  //     return "";
+  //   }
+  // }
+  //
+  // Future<void> _initiatePayment(BuildContext context) async {
+  //   await _saveBookingToFirestore();
+  //   final url = await _createToyyibPayBill();
+  //   if (url.isNotEmpty) {
+  //     await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+  //   } else {
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       const SnackBar(content: Text("Failed to initiate payment. Please try again.")),
+  //     );
+  //   }
+  // }
+
 
   @override
   Widget build(BuildContext context) {
@@ -238,27 +308,50 @@ class _s_IPPaymentSummaryState extends State<s_IPPaymentSummary> {
             child: const CircularProgressIndicator(),
           ),
           const SizedBox(height: 20),
-          Card(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            elevation: 3,
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text("Service Provider", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      CircleAvatar(backgroundImage: NetworkImage(widget.spImageURL), radius: 24),
-                      const SizedBox(width: 12),
-                      Expanded(child: Text(widget.spName, style: const TextStyle(fontSize: 16))),
-                    ],
-                  )
-                ],
+          InkWell(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ServiceProviderScreen(docId: widget.spId),
+                ),
+              );
+            },
+            borderRadius: BorderRadius.circular(16), // for ripple clipping
+            child: Card(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              elevation: 3,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      "Service Provider",
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          backgroundImage: NetworkImage(widget.spImageURL),
+                          radius: 24,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            widget.spName,
+                            style: const TextStyle(fontSize: 16),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
+
           const SizedBox(height: 20),
           Card(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),

@@ -1,8 +1,10 @@
-import 'package:fix_mate/service_seeker/s_BookingModule/s_AInstantBookingDetail.dart';
-import 'package:fix_mate/service_seeker/s_BookingModule/s_CCInstantBookingDetail.dart';
-import 'package:fix_mate/service_seeker/s_BookingModule/s_CInstantBookingDetail.dart';
+import 'package:fix_mate/service_seeker/s_BookingCalender.dart';
+import 'package:fix_mate/service_seeker/s_BookingModule/s_ABookingDetail.dart';
+import 'package:fix_mate/service_seeker/s_BookingModule/s_CCBookingDetail.dart';
+import 'package:fix_mate/service_seeker/s_BookingModule/s_CBookingDetail.dart';
 import 'package:fix_mate/service_seeker/s_BookingModule/s_Notification.dart';
-import 'package:fix_mate/service_seeker/s_BookingModule/s_PInstantBookingDetail.dart';
+import 'package:fix_mate/service_seeker/s_BookingModule/s_PBookingDetail.dart';
+import 'package:fix_mate/service_seeker/s_HomePage.dart';
 import 'package:fix_mate/service_seeker/s_InstantPostInfo.dart';
 import 'package:fix_mate/service_seeker/s_ReviewRating/s_RateService.dart';
 import 'package:flutter/material.dart';
@@ -12,6 +14,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fix_mate/reusable_widget/reusable_widget.dart';
 import 'package:fix_mate/services/FullScreenImageViewer.dart';
 import 'package:fix_mate/services/ReviewVideoViewer.dart';
+import 'package:fix_mate/services/showBookingNotification.dart';
+
 
 
 class s_BookingHistory extends StatefulWidget {
@@ -28,7 +32,7 @@ class s_BookingHistory extends StatefulWidget {
 class _s_BookingHistoryState extends State<s_BookingHistory> {
   String? seekerId;
   int _selectedIndex = 0;
-  final List<String> statuses = ["Pending Confirmation", "Active", "Completed", "Cancelled", "Review"];
+  final List<String> statuses = ["Pending Confirmation", "Active", "Completed", "Cancelled"];
   final ScrollController _tabScrollController = ScrollController();
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
@@ -44,6 +48,7 @@ class _s_BookingHistoryState extends State<s_BookingHistory> {
 
     if (seekerId != null) {
       _fetchAllBookings();
+      _scheduleSeekerReminders();
     }
 
     _selectedIndex = widget.initialTabIndex;
@@ -87,6 +92,36 @@ class _s_BookingHistoryState extends State<s_BookingHistory> {
       }).toList();
     });
   }
+
+  Future<void> _scheduleSeekerReminders() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+
+    final snapshot = await FirebaseFirestore.instance
+        .collection('bookings')
+        .where('serviceSeekerId', isEqualTo: uid)
+        .where('status', isEqualTo: 'Active')
+        .get();
+
+    final now = DateTime.now();
+
+    for (var doc in snapshot.docs) {
+      final data = doc.data();
+      final finalDateTime = data['finalDateTime']?.toDate();
+
+      if (finalDateTime != null && finalDateTime.isAfter(now)) {
+        await scheduleBookingReminders(
+          bookingId: data['bookingId'],
+          postId: data['postId'],
+          seekerId: uid,
+          providerId: data['serviceProviderId'],
+          finalDateTime: finalDateTime,
+        );
+      }
+    }
+  }
+
+
 
   Widget _buildSearchBar() {
     return Padding(
@@ -232,26 +267,6 @@ class _s_BookingHistoryState extends State<s_BookingHistory> {
     );
   }
 
-  Widget _buildCriteriaTag(String title, dynamic value) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: const Color(0x1Aff6f61), // light tinted background
-        borderRadius: BorderRadius.circular(30),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.star, size: 16, color: Colors.amber),
-          const SizedBox(width: 4),
-          Text(
-            "$title: $value",
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
-          ),
-        ],
-      ),
-    );
-  }
 
 
 
@@ -322,7 +337,19 @@ class _s_BookingHistoryState extends State<s_BookingHistory> {
 
   @override
   Widget build(BuildContext context) {
-    return SeekerLayout(
+    return WillPopScope(
+        onWillPop: () async {
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop(); // go back to previous screen
+      } else {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const s_HomePage()),
+        );
+      }
+      return false; // block default pop
+    },
+    child: SeekerLayout(
       selectedIndex: 1,
       child: Scaffold(
         backgroundColor: const Color(0xFFFFF8F2),
@@ -335,7 +362,20 @@ class _s_BookingHistoryState extends State<s_BookingHistory> {
           titleSpacing: 25,
           automaticallyImplyLeading: false,
           actions: [
-            if (seekerId != null)
+            if (seekerId != null) ...[
+              // 📅 Calendar Button
+              IconButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => s_BookingCalender()),
+                  );
+                },
+                icon: const Icon(Icons.calendar_today_rounded, size: 25, color: Colors.white),
+                tooltip: 'View Calendar',
+              ),
+
+              // 🔔 Notification Button
               StreamBuilder<QuerySnapshot>(
                 stream: FirebaseFirestore.instance
                     .collection('s_notifications')
@@ -345,7 +385,7 @@ class _s_BookingHistoryState extends State<s_BookingHistory> {
                 builder: (context, snapshot) {
                   int unreadCount = snapshot.data?.docs.length ?? 0;
                   return Padding(
-                    padding: const EdgeInsets.only(right: 10), // 👈 Shift icon slightly left
+                    padding: const EdgeInsets.only(right: 10),
                     child: IconButton(
                       onPressed: () {
                         Navigator.push(
@@ -392,6 +432,7 @@ class _s_BookingHistoryState extends State<s_BookingHistory> {
                   );
                 },
               ),
+            ],
           ],
         ),
         body: Column(
@@ -441,276 +482,6 @@ class _s_BookingHistoryState extends State<s_BookingHistory> {
                 ? const Center(child: Text("You must be logged in."))
                 : Builder(
               builder: (context) {
-                if (statuses[_selectedIndex] == "Review") {
-                  return FutureBuilder<QuerySnapshot>(
-                    future: FirebaseFirestore.instance
-                        .collection('reviews')
-                        .where('userId', isEqualTo: seekerId)
-                        .orderBy('updatedAt', descending: true)
-                        .get(),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
-
-                      if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                        return const Center(child: Text(
-                            "You haven't submitted any reviews yet."));
-                      }
-
-
-                      // Review section appear at here
-                      final reviews = snapshot.data!.docs;
-
-                      return ListView.builder(
-                        itemCount: reviews.length,
-                        itemBuilder: (context, index) {
-                          final review = reviews[index].data() as Map<
-                              String,
-                              dynamic>;
-
-
-                          // Review section appear at here
-                          final postId = review['postId'];
-
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                            child: Card(
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              elevation: 4,
-                              child: Padding(
-                                padding: const EdgeInsets.all(16.0),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    // Header Row with Avatar and Name
-                                    Row(
-                                      children: [
-                                        CircleAvatar(
-                                          radius: 16,
-                                          backgroundImage: NetworkImage(review['userProfilePic'] ?? ""),
-                                        ),
-                                        const SizedBox(width: 10),
-                                        Text(
-                                          review['userName'] ?? "Anonymous",
-                                          style: const TextStyle(fontWeight: FontWeight.bold),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 5),
-                                    Text(
-                                        "${formatTimestamp(
-                                            review['updatedAt'])}",
-                                        style: const TextStyle(
-                                            fontSize: 13,
-                                          color: Colors.black54,)),
-                                    const SizedBox(height: 5),
-
-
-                                    // Star Rating
-                                    Row(
-                                      children: List.generate(
-                                        review['rating'] ?? 0,
-                                            (i) => const Icon(Icons.star_rounded, size: 18, color: Colors.amber),
-                                      ),
-                                    ),
-
-
-                                    // Optional Criteria Tags (modern pill-style boxes)
-                                    if (review['quality'] != null || review['responsiveness'] != null || review['punctuality'] != null)
-                                      Padding(
-                                        padding: const EdgeInsets.only(top: 10),
-                                        child: Wrap(
-                                          spacing: 8,
-                                          runSpacing: 6,
-                                          children: [
-                                            if (review['quality'] != null)
-                                              _buildCriteriaTag("Service Quality", review['quality']),
-                                            if (review['responsiveness'] != null)
-                                              _buildCriteriaTag("Responsiveness", review['responsiveness']),
-                                            if (review['punctuality'] != null)
-                                              _buildCriteriaTag("Punctuality", review['punctuality']),
-                                          ],
-                                        ),
-                                      ),
-                                    const SizedBox(height: 10),
-                                    // Comment + spacing (only shown if comment exists)
-                                    if (review['comment'] != null && review['comment'].toString().trim().isNotEmpty) ...[
-                                      Text(
-                                        review['comment'],
-                                        style: const TextStyle(fontSize: 14),
-                                        textAlign: TextAlign.justify,
-                                      ),
-                                      const SizedBox(height: 8),
-                                    ],
-
-
-
-                                    if ((review['reviewVideoUrl'] != null) ||
-                                        (review['reviewPhotoUrls'] != null &&
-                                            review['reviewPhotoUrls'] is List &&
-                                            review['reviewPhotoUrls'].isNotEmpty)) ...[
-                                      Wrap(
-                                        spacing: 8,
-                                        runSpacing: 8,
-                                        children: [
-                                          if (review['reviewVideoUrl'] != null)
-                                            SizedBox(
-                                              width: 90,
-                                              height: 90,
-                                              child: ReviewVideoPreview(videoUrl: review['reviewVideoUrl']),
-                                            ),
-                                          if (review['reviewPhotoUrls'] != null &&
-                                              review['reviewPhotoUrls'] is List)
-                                            ...List.generate(
-                                              (review['reviewPhotoUrls'] as List).length,
-                                                  (index) {
-                                                final url = review['reviewPhotoUrls'][index];
-                                                return SizedBox(
-                                                  width: 90,
-                                                  height: 90,
-                                                  child: GestureDetector(
-                                                    onTap: () {
-                                                      showDialog(
-                                                        context: context,
-                                                        builder: (_) => FullScreenImageViewer(
-                                                          imageUrls: List<String>.from(review['reviewPhotoUrls']),
-                                                          initialIndex: index,
-                                                        ),
-                                                      );
-                                                    },
-                                                    child: ClipRRect(
-                                                      borderRadius: BorderRadius.circular(10),
-                                                      child: Image.network(
-                                                        url,
-                                                        fit: BoxFit.cover,
-                                                        loadingBuilder: (context, child, loadingProgress) {
-                                                          if (loadingProgress == null) return child;
-
-                                                          return Container(
-                                                            width: double.infinity,
-                                                            height: double.infinity,
-                                                            decoration: BoxDecoration(
-                                                              color: Colors.grey[300],
-                                                              borderRadius: BorderRadius.circular(10),
-                                                            ),
-                                                            child: const Center(
-                                                              child: SizedBox(
-                                                                width: 18,
-                                                                height: 18,
-                                                                child: CircularProgressIndicator(strokeWidth: 2),
-                                                              ),
-                                                            ),
-                                                          );
-                                                        },
-                                                        errorBuilder: (context, error, stackTrace) {
-                                                          return Container(
-                                                            width: double.infinity,
-                                                            height: double.infinity,
-                                                            decoration: BoxDecoration(
-                                                              color: Colors.grey[300],
-                                                              borderRadius: BorderRadius.circular(10),
-                                                            ),
-                                                            child: const Icon(Icons.broken_image, color: Colors.grey),
-                                                          );
-                                                        },
-                                                      ),
-                                                    ),
-
-                                                  ),
-                                                );
-                                              },
-                                            ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 10),
-                                    ],
-
-                                    GestureDetector(
-                                      onTap: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (_) => s_InstantPostInfo(docId: postId),
-                                          ),
-                                        );
-                                      },
-                                      child: Container(
-                                        padding: const EdgeInsets.all(10),
-                                        margin: const EdgeInsets.only(bottom: 2),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0x1Aff6f61), // Light tint of your brand color (10% opacity)
-                                          borderRadius: BorderRadius.circular(12),
-                                        ),
-                                        child: Row(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            // ✅ Service Image
-                                            FutureBuilder<List<String>>(
-                                              future: fetchPostImages(postId),
-                                              builder: (context, snapshot) {
-                                                final imageUrls = snapshot.data ?? [];
-                                                final imageUrl = imageUrls.isNotEmpty ? imageUrls.first : "";
-
-                                                return ClipRRect(
-                                                  borderRadius: BorderRadius.circular(10),
-                                                  child: imageUrl.isNotEmpty
-                                                      ? Image.network(
-                                                    imageUrl,
-                                                    width: 50,
-                                                    height: 50,
-                                                    fit: BoxFit.cover,
-                                                  )
-                                                      : Container(
-                                                    width: 60,
-                                                    height: 60,
-                                                    color: Colors.grey[300],
-                                                    child: const Icon(Icons.broken_image, color: Colors.grey),
-                                                  ),
-                                                );
-                                              },
-                                            ),
-
-                                            const SizedBox(width: 12),
-
-                                            // ✅ Service Info Text
-                                            Expanded(
-                                              child: Column(
-                                                crossAxisAlignment: CrossAxisAlignment.start,
-                                                children: [
-                                                  Text(
-                                                    "${review['serviceTitle'] ?? '-'}",
-                                                    style: const TextStyle(
-                                                      fontSize: 15,
-                                                      fontWeight: FontWeight.w600,
-                                                      color: Colors.black87,
-                                                    ),
-                                                  ),
-                                                  const SizedBox(height: 6),
-                                                  Text(
-                                                    "By: ${review['providerName'] ?? '-'}",
-                                                    style: const TextStyle(
-                                                      fontSize: 13,
-                                                      color: Colors.black54,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      );
-                    },
-                  );
-                } else {
                   // Fallback if not in Review tab, e.g. Active, Completed, Cancelled
                   return StreamBuilder<QuerySnapshot>(
                     stream: FirebaseFirestore.instance.collection('bookings')
@@ -780,23 +551,23 @@ class _s_BookingHistoryState extends State<s_BookingHistory> {
                                           MaterialPageRoute(
                                             builder: (context) =>
                                             isCompleted
-                                                ? s_CInstantBookingDetail(
+                                                ? s_CBookingDetail(
                                               bookingId: bookingId,
                                               postId: data['postId'],
                                               providerId: data['serviceProviderId'],
                                             )
                                                 : isActive
-                                                ? s_AInstantBookingDetail(
+                                                ? s_ABookingDetail(
                                               bookingId: bookingId,
                                               postId: data['postId'],
                                               providerId: data['serviceProviderId'],
                                             ) : isCancelled
-                                                ? s_CCInstantBookingDetail(
+                                                ? s_CCBookingDetail(
                                               bookingId: data['bookingId'],
                                               postId: data['postId'],
                                               providerId: data['serviceProviderId'],
                                             )
-                                                : s_PInstantBookingDetail(
+                                                : s_PBookingDetail(
                                               bookingId: bookingId,
                                               postId: data['postId'],
                                               providerId: data['serviceProviderId'],
@@ -1245,11 +1016,6 @@ class _s_BookingHistoryState extends State<s_BookingHistory> {
                                                                       data['reviewed'] = updated['reviewed']; // ✅ Update value locally
                                                                     });
 
-                                                                    showFloatingMessage(
-                                                                      context,
-                                                                      "Review submitted successfully!",
-                                                                      icon: Icons.check_circle_outline,
-                                                                    );
                                                                   }
                                                                 }
                                                               },
@@ -1378,12 +1144,12 @@ class _s_BookingHistoryState extends State<s_BookingHistory> {
                     },
                   );
                 }
-              },
             ),
           )
           ]
         ),
       ),
+    )
     );
   }
 }

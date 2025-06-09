@@ -465,7 +465,19 @@ class _s_FavouriteState extends State<s_Favourite> {
 
   @override
   Widget build(BuildContext context) {
-    return SeekerLayout(
+    return WillPopScope(
+      onWillPop: () async {
+        if (Navigator.of(context).canPop()) {
+          Navigator.of(context).pop(); // go back to previous screen
+        } else {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const s_HomePage()),
+          );
+        }
+        return false; // block default pop
+      },
+    child: SeekerLayout(
       selectedIndex: 2,
       child: DefaultTabController(
         length: 3,
@@ -473,9 +485,11 @@ class _s_FavouriteState extends State<s_Favourite> {
           backgroundColor: const Color(0xFFFFF8F2),
           appBar: AppBar(
             backgroundColor: const Color(0xFFfb9798),
-            title: const Text("Favourites", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
+            title: const Text("Favourite", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
             centerTitle: true,
             elevation: 0,
+            automaticallyImplyLeading: false,
+
             // bottom: const TabBar(
             //   // isScrollable: true,
             //   indicatorColor: Colors.white,
@@ -492,9 +506,9 @@ class _s_FavouriteState extends State<s_Favourite> {
               labelColor: Colors.white,
               unselectedLabelColor: Colors.white70,
               tabs: [
-                Tab(child: Text("Instant Book", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800))),
-                Tab(child: Text("Promotions", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800))),
-                Tab(child: Text("Providers", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800))),
+                Tab(child: Text("Inst Book", style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600))),
+                Tab(child: Text("Promotion", style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600))),
+                Tab(child: Text("Provider", style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600))),
               ],
             ),
 
@@ -508,6 +522,7 @@ class _s_FavouriteState extends State<s_Favourite> {
           ),
         ),
       ),
+    )
     );
   }
 }

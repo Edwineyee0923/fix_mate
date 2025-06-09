@@ -1,9 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:fix_mate/service_seeker/s_BookingModule/s_AInstantBookingDetail.dart';
-import 'package:fix_mate/service_seeker/s_BookingModule/s_CCInstantBookingDetail.dart';
-import 'package:fix_mate/service_seeker/s_BookingModule/s_CInstantBookingDetail.dart';
-import 'package:fix_mate/service_seeker/s_BookingModule/s_PInstantBookingDetail.dart';
+import 'package:fix_mate/service_seeker/s_BookingModule/s_ABookingDetail.dart';
+import 'package:fix_mate/service_seeker/s_BookingModule/s_CCBookingDetail.dart';
+import 'package:fix_mate/service_seeker/s_BookingModule/s_CBookingDetail.dart';
+import 'package:fix_mate/service_seeker/s_BookingModule/s_PBookingDetail.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:fix_mate/reusable_widget/reusable_widget.dart';
@@ -172,25 +172,25 @@ class _s_NotificationState extends State<s_Notification> {
                       Widget targetScreen;
 
                       if (status == 'Active') {
-                        targetScreen = s_AInstantBookingDetail(
+                        targetScreen = s_ABookingDetail(
                           bookingId: doc['bookingId'],
                           postId: doc['postId'],
                           providerId: doc['providerId'],
                         );
                       } else if (status == 'Completed') {
-                        targetScreen = s_CInstantBookingDetail(
+                        targetScreen = s_CBookingDetail(
                           bookingId: doc['bookingId'],
                           postId: doc['postId'],
                           providerId: doc['providerId'],
                         );
                       } else if (status == 'Cancelled') {
-                        targetScreen = s_CCInstantBookingDetail(
+                        targetScreen = s_CCBookingDetail(
                           bookingId: doc['bookingId'],
                           postId: doc['postId'],
                           providerId: doc['providerId'],
                         );
                       } else {
-                        targetScreen = s_PInstantBookingDetail(
+                        targetScreen = s_PBookingDetail(
                           bookingId: doc['bookingId'],
                           postId: doc['postId'],
                           providerId: doc['providerId'],

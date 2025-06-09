@@ -255,7 +255,7 @@ class _s_InstantPostInfoState extends State<s_InstantPostInfo> with TickerProvid
                         },
                       ),
                       Positioned(
-                        bottom: 20,
+                        bottom: 9,
                         left: 16,
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -743,7 +743,7 @@ class _s_InstantPostInfoState extends State<s_InstantPostInfo> with TickerProvid
               children: [
                 Expanded(child: _buildAspectRating("Service Quality", avgQuality)),
                 _verticalDivider(),
-                Expanded(child: _buildAspectRating("Responsiveness", avgResponsiveness)),
+                Expanded(child: _buildAspectRating("Response", avgResponsiveness)),
                 _verticalDivider(),
                 Expanded(child: _buildAspectRating("Punctuality", avgPunctuality)),
               ],

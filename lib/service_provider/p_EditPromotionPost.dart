@@ -384,7 +384,7 @@ class _p_EditPromotionPostState extends State<p_EditPromotionPost> {
           "Edit Promotion Post",
           style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
         ),
-        titleSpacing: 5,
+        titleSpacing: 2,
       ),
       body: SingleChildScrollView(
         padding: EdgeInsets.all(16),
@@ -597,15 +597,16 @@ class _p_EditPromotionPostState extends State<p_EditPromotionPost> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  "(May select more than one service category.)",
+                  "(Please select the most suitable service category.)",
                   style: const TextStyle(fontSize: 14,fontWeight: FontWeight.w500, fontStyle: FontStyle.italic, color: Colors.black54),
                 ),
                 CustomRadioGroup(
                   key: ValueKey(selectedExpertiseFields.hashCode), // Force rebuild when selectedExpertiseFields change
                   options: expertiseOptions, // This ensures options are loaded
                   selectedValues: selectedExpertiseFields, // Creates a fresh instance
+                  isSingleSelect: true, // ✅ Force only 1 selection
                   isRequired: true,
-                  requiredMessage: "Please select at least one service category!",
+                  requiredMessage: "Please select one category",
                   onSelected: (newSelection) {
                     setState(() {
                       selectedExpertiseFields = List.from(newSelection); // ✅ Ensure it's a new instance

@@ -15,6 +15,7 @@ class p_PromotionPostList extends StatefulWidget {
   final String initialSortOrder; // ✅ Sorting order
   final RangeValues initialDiscountRange;
   final String? initialPostType;
+  final double? initialServiceRating;
 
   const p_PromotionPostList({
     Key? key,
@@ -25,6 +26,7 @@ class p_PromotionPostList extends StatefulWidget {
     this.initialSortOrder = "Newest", // ✅ Default sorting order
     this.initialDiscountRange = const RangeValues(0, 100), // ✅ Default price range
     this.initialPostType = "No selected",
+    this.initialServiceRating,
   }) : super(key: key);
 
   @override
@@ -46,6 +48,7 @@ class _p_PromotionPostListState extends State<p_PromotionPostList> {
   String? selectedSortOrder; // Can be null when nothing is selected
   RangeValues selectedDiscountRange = RangeValues(0, 100); // ✅ Store price range
   String? selectedPostType;
+  double? selectedServiceRating;
 
   @override
   void initState() {
@@ -57,6 +60,7 @@ class _p_PromotionPostListState extends State<p_PromotionPostList> {
     selectedSortOrder = widget.initialSortOrder; // ✅ Initialize sorting
     selectedDiscountRange = widget.initialDiscountRange;
     selectedPostType = widget.initialPostType;
+    selectedServiceRating = widget.initialServiceRating;
 
     _searchController.text = searchQuery; // ✅ Set initial text
     _searchController.addListener(() {
@@ -122,6 +126,147 @@ class _p_PromotionPostListState extends State<p_PromotionPostList> {
 
 
 
+//   Future<void> _loadPromotionPosts() async {
+//     print("🔍 Loading Promotion Posts...");
+//     print("🔄 Reloading posts with filters:");
+//     print("Search Query: $searchQuery");
+//     print("Categories: $selectedCategories");
+//     print("States: $selectedStates");
+//     print("Price Range: $selectedPriceRange");
+//     print("Discount Range: $selectedDiscountRange");
+//     print("Sort Order: $selectedSortOrder");
+//     print("Post Type: $selectedPostType");
+//     print("Selected Post Rating: $selectedServiceRating");
+//
+//
+//     try {
+//       User? user = _auth.currentUser;
+//       if (user == null) {
+//         print("User not logged in");
+//         return;
+//       }
+//
+//       print("Fetching posts for userId: ${user.uid}");
+//
+//       // ✅ Start with a Query, NOT QuerySnapshot
+//       Query query = _firestore
+//           .collection('promotion')
+//           .where('userId', isEqualTo: user.uid);
+//
+//       // ✅ Apply post type filter if selected
+//       if (selectedPostType == "Active") {
+//         query = query.where('isActive', isEqualTo: true);
+//       } else if (selectedPostType == "Inactive") {
+//         query = query.where('isActive', isEqualTo: false);
+//       }
+//
+//
+//       // ✅ Apply Sorting Based on updatedAt Timestamp
+//       if (selectedSortOrder != null) {
+//         if (selectedSortOrder == "Newest") {
+//           query = query.orderBy('updatedAt', descending: true);
+//         } else if (selectedSortOrder == "Oldest") {
+//           query = query.orderBy('updatedAt', descending: false);
+//         }
+//       }
+//
+//
+//       // ✅ Execute the query only once
+//       QuerySnapshot snapshot = await query.get();
+//
+// // ✅ Shuffle documents for random order if needed
+//       List<QueryDocumentSnapshot> docs = snapshot.docs.toList();
+//       if (selectedSortOrder == "Random") {
+//         docs.shuffle();
+//       }
+//
+//       if (docs.isEmpty) {
+//         print("No promotion posts found for user: ${user.uid}");
+//       } else {
+//         print("Fetched ${docs.length} posts");
+//       }
+//
+//       List<Widget> promotionPosts = [];
+//
+//       for (var doc in docs) {
+//         Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+//
+//         bool matchesCategory = selectedCategories.isEmpty ||
+//             (data['ServiceCategory'] as List<dynamic>)
+//                 .any((category) => selectedCategories.contains(category));
+//
+//         bool matchesState = selectedStates.isEmpty ||
+//             (data['ServiceStates'] as List<dynamic>)
+//                 .any((state) => selectedStates.contains(state));
+//
+//         bool matchesSearch = searchQuery.isEmpty ||
+//             (data['PTitle'] as String).toLowerCase().contains(searchQuery.toLowerCase());
+//
+//         int postPrice = (data['PPrice'] as num?)?.toInt() ?? 0;
+//         bool matchesPrice = postPrice >= selectedPriceRange.start && postPrice <= selectedPriceRange.end;
+//
+//
+//         double postDiscount = (data['PDiscountPercentage'] as num?)?.toDouble() ?? 0.0;
+//         bool matchesDiscount = postDiscount >= selectedDiscountRange.start && postDiscount <= selectedDiscountRange.end;
+//
+//         // ✅ Exclude posts that do NOT match the filters
+//         if (!matchesCategory || !matchesState || !matchesSearch || !matchesPrice || !matchesDiscount) {
+//           continue;
+//         }
+//
+//         promotionPosts.add(
+//           buildPromotionCard(
+//             PTitle: data['PTitle'] ?? "Unknown",
+//             ServiceStates: (data['ServiceStates'] as List<dynamic>?)?.join(", ") ?? "Unknown",
+//             ServiceCategory: (data['ServiceCategory'] as List<dynamic>?)?.join(", ") ?? "No services listed",
+//             imageUrls: (data['PImage'] != null && data['PImage'] is List<dynamic>)
+//                 ? List<String>.from(data['PImage'])
+//                 : [],
+//             // IPPrice: (data['IPPrice'] as num?)?.toInt() ?? 0,
+//             PPrice: postPrice,
+//             PAPrice: (data['PAPrice'] as num?)?.toInt() ?? 0,
+//             PDiscountPercentage: postDiscount,
+//             isActive: data['isActive'] ?? true,
+//             postId: doc.id,
+//             onEdit: () async {
+//               final result = await Navigator.push(
+//                 context,
+//                 MaterialPageRoute(
+//                   builder: (context) => p_EditPromotionPost(docId: doc.id),
+//                 ),
+//               );
+//
+//               if (result == true) {
+//                 _loadPromotionPosts();
+//               }
+//             },
+//
+//             onDelete: () {
+//               _confirmP_Delete(doc.id);
+//             },
+//
+//             onTap: () {
+//               Navigator.push(
+//                 context,
+//                 MaterialPageRoute(
+//                   builder: (context) => p_PromotionPostInfo(docId: doc.id),
+//                 ),
+//               );
+//             },
+//
+//             onToggleComplete: _loadPromotionPosts,
+//           ),
+//         );
+//       }
+//
+//       setState(() {
+//         allPromotionPosts = promotionPosts;
+//       });
+//     } catch (e) {
+//       print("Error loading promotion posts: $e");
+//     }
+//   }
+
   Future<void> _loadPromotionPosts() async {
     print("🔍 Loading Promotion Posts...");
     print("🔄 Reloading posts with filters:");
@@ -132,6 +277,7 @@ class _p_PromotionPostListState extends State<p_PromotionPostList> {
     print("Discount Range: $selectedDiscountRange");
     print("Sort Order: $selectedSortOrder");
     print("Post Type: $selectedPostType");
+    print("Selected Post Rating: $selectedServiceRating");
 
     try {
       User? user = _auth.currentUser;
@@ -140,22 +286,18 @@ class _p_PromotionPostListState extends State<p_PromotionPostList> {
         return;
       }
 
-      print("Fetching posts for userId: ${user.uid}");
+      print("Fetching posts for userId: \${user.uid}");
 
-      // ✅ Start with a Query, NOT QuerySnapshot
       Query query = _firestore
           .collection('promotion')
           .where('userId', isEqualTo: user.uid);
 
-      // ✅ Apply post type filter if selected
       if (selectedPostType == "Active") {
         query = query.where('isActive', isEqualTo: true);
       } else if (selectedPostType == "Inactive") {
         query = query.where('isActive', isEqualTo: false);
       }
 
-
-      // ✅ Apply Sorting Based on updatedAt Timestamp
       if (selectedSortOrder != null) {
         if (selectedSortOrder == "Newest") {
           query = query.orderBy('updatedAt', descending: true);
@@ -164,20 +306,17 @@ class _p_PromotionPostListState extends State<p_PromotionPostList> {
         }
       }
 
-
-      // ✅ Execute the query only once
       QuerySnapshot snapshot = await query.get();
 
-// ✅ Shuffle documents for random order if needed
       List<QueryDocumentSnapshot> docs = snapshot.docs.toList();
       if (selectedSortOrder == "Random") {
         docs.shuffle();
       }
 
       if (docs.isEmpty) {
-        print("No promotion posts found for user: ${user.uid}");
+        print("No promotion posts found for user: \${user.uid}");
       } else {
-        print("Fetched ${docs.length} posts");
+        print("Fetched \${docs.length} posts");
       }
 
       List<Widget> promotionPosts = [];
@@ -199,24 +338,35 @@ class _p_PromotionPostListState extends State<p_PromotionPostList> {
         int postPrice = (data['PPrice'] as num?)?.toInt() ?? 0;
         bool matchesPrice = postPrice >= selectedPriceRange.start && postPrice <= selectedPriceRange.end;
 
-
         double postDiscount = (data['PDiscountPercentage'] as num?)?.toDouble() ?? 0.0;
         bool matchesDiscount = postDiscount >= selectedDiscountRange.start && postDiscount <= selectedDiscountRange.end;
 
-        // ✅ Exclude posts that do NOT match the filters
+        final postReviewSummary = await fetchPostReviewSummary(doc.id);
+        final averageRating = postReviewSummary['avgRating'] ?? 0.0;
+        final reviewCount = postReviewSummary['count'] ?? 0;
+        data['averageRating'] = averageRating;
+        data['reviewCount'] = reviewCount;
+
+        if (selectedServiceRating != null && averageRating < selectedServiceRating!) {
+          print("❌ Skipped due to low post rating: $averageRating for '\${data['PTitle']}'");
+          continue;
+        }
+
         if (!matchesCategory || !matchesState || !matchesSearch || !matchesPrice || !matchesDiscount) {
           continue;
         }
 
         promotionPosts.add(
           buildPromotionCard(
+            docId: doc.id,
+            avgRating: data['averageRating'] ?? 0.0,
+            reviewCount: data['reviewCount'] ?? 0,
             PTitle: data['PTitle'] ?? "Unknown",
             ServiceStates: (data['ServiceStates'] as List<dynamic>?)?.join(", ") ?? "Unknown",
             ServiceCategory: (data['ServiceCategory'] as List<dynamic>?)?.join(", ") ?? "No services listed",
             imageUrls: (data['PImage'] != null && data['PImage'] is List<dynamic>)
                 ? List<String>.from(data['PImage'])
                 : [],
-            // IPPrice: (data['IPPrice'] as num?)?.toInt() ?? 0,
             PPrice: postPrice,
             PAPrice: (data['PAPrice'] as num?)?.toInt() ?? 0,
             PDiscountPercentage: postDiscount,
@@ -234,11 +384,9 @@ class _p_PromotionPostListState extends State<p_PromotionPostList> {
                 _loadPromotionPosts();
               }
             },
-
             onDelete: () {
               _confirmP_Delete(doc.id);
             },
-
             onTap: () {
               Navigator.push(
                 context,
@@ -247,7 +395,6 @@ class _p_PromotionPostListState extends State<p_PromotionPostList> {
                 ),
               );
             },
-
             onToggleComplete: _loadPromotionPosts,
           ),
         );
@@ -261,6 +408,7 @@ class _p_PromotionPostListState extends State<p_PromotionPostList> {
     }
   }
 
+
   void _openFilterScreen() async {
     final result = await Navigator.push(
       context,
@@ -273,6 +421,7 @@ class _p_PromotionPostListState extends State<p_PromotionPostList> {
           initialSortOrder: selectedSortOrder,
           initialDiscountRange: selectedDiscountRange,
           initialPostType: selectedPostType,
+          initialServiceRating: selectedServiceRating,
         ),
       ),
     );
@@ -286,6 +435,8 @@ class _p_PromotionPostListState extends State<p_PromotionPostList> {
         selectedSortOrder = result["sortOrder"];
         selectedDiscountRange = result["discountRange"];
         selectedPostType = result["postType"];
+        selectedServiceRating = result["serviceRating"];
+
 
         // ✅ Mark filters as applied
         hasFiltered = true;
@@ -296,6 +447,7 @@ class _p_PromotionPostListState extends State<p_PromotionPostList> {
             selectedStates.isNotEmpty ||
             selectedSortOrder != null ||
             selectedPostType != null ||
+            selectedServiceRating != null ||
             (selectedPriceRange.start > 0 || selectedPriceRange.end < 1000) ||
             (selectedDiscountRange.start > 0 || selectedDiscountRange.end < 100);
 
@@ -426,7 +578,7 @@ class _p_PromotionPostListState extends State<p_PromotionPostList> {
               crossAxisCount: 2, // ✅ Ensures exactly 2 columns
               crossAxisSpacing: 0, // ✅ Space between columns
               mainAxisSpacing: 10, // ✅ Space between rows
-              childAspectRatio: 0.72, // ✅ Adjust aspect ratio to fit better
+              childAspectRatio: 0.66, // ✅ Adjust aspect ratio to fit better
             ),
             itemCount: allPromotionPosts.length,
             itemBuilder: (context, index) {
@@ -445,6 +597,19 @@ class _p_PromotionPostListState extends State<p_PromotionPostList> {
       backgroundColor: Color(0xFFFFF8F2),
       appBar: AppBar(
         backgroundColor: Color(0xFF464E65),
+        leading: IconButton(
+          icon: Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: Colors.white,
+          ),
+          onPressed: () =>
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => p_HomePage(),
+                ),
+              ),
+        ),
         title: Text(
           "Promotion Post List",
           style: TextStyle(
@@ -453,7 +618,7 @@ class _p_PromotionPostListState extends State<p_PromotionPostList> {
             color: Colors.white,
           ),
         ),
-        titleSpacing: 25,
+        titleSpacing: 2,
         automaticallyImplyLeading: false,
       ),
 
@@ -512,6 +677,9 @@ Widget buildPromotionCard({
   required bool isActive,
   required String postId,
   required double PDiscountPercentage,
+  required String docId,
+  required double avgRating,
+  required int reviewCount,
   required VoidCallback onEdit,
   required VoidCallback onDelete,
   required VoidCallback onToggleComplete,
@@ -520,7 +688,7 @@ Widget buildPromotionCard({
   return GestureDetector(
     onTap: onTap,
     child: Container(
-    width: 220, // Adjust width for better spacing in horizontal scroll
+    width: 240, // Adjust width for better spacing in horizontal scroll
     margin: const EdgeInsets.symmetric(horizontal: 8),
     child: Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -545,13 +713,58 @@ Widget buildPromotionCard({
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      PTitle,
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 2,
+
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // 📌 Title - wraps up to 2 lines
+                        Expanded(
+                          child: Text(
+                            PTitle,
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 2,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        // ⭐ Rating badge - top aligned
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1.5), // smaller padding
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFFFFF7EC), Color(0xFFFEE9D7)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(16), // smaller radius
+                            border: Border.all(color: Colors.orange.shade100),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.orange.withOpacity(0.1), // softer shadow
+                                blurRadius: 4,
+                                offset: const Offset(0, 1),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.star_rounded, color: Colors.amber, size: 12), // smaller icon
+                              const SizedBox(width: 2),
+                              Text(
+                                avgRating.toStringAsFixed(1),
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 11, // smaller font
+                                  color: Colors.grey[800],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                      ],
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 6),
 
                     // 📌 Location with Icon
                     Row(
@@ -726,20 +939,20 @@ Widget buildPromotionCard({
               children: [
                 // Original Price (Strikethrough)
                 Text(
-                  "RM $PAPrice",
+                  "RM$PAPrice",
                   style: const TextStyle(
                     color: Colors.redAccent,
-                    fontSize: 12,
+                    fontSize: 10,
                     decoration: TextDecoration.lineThrough, // Strikethrough effect
                   ),
                 ),
 
                 // Discounted Price (Larger & Bold)
                 Text(
-                  "RM $PPrice",
+                  "RM$PPrice",
                   style: const TextStyle(
                     color: Color(0xFF464E65),
-                    fontSize: 24,
+                    fontSize: 20,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -752,7 +965,7 @@ Widget buildPromotionCard({
             bottom: 10,
             left: 10,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
               decoration: BoxDecoration(
                 color: isActive ? Colors.green.shade100 : Colors.grey.shade300,
                 borderRadius: BorderRadius.circular(20),
@@ -761,7 +974,7 @@ Widget buildPromotionCard({
                 isActive ? "Active" : "Inactive",
                 style: TextStyle(
                   color: isActive ? Colors.green.shade800 : Colors.grey.shade700,
-                  fontSize: 11,
+                  fontSize: 10,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -772,4 +985,25 @@ Widget buildPromotionCard({
     ),
   ),
   );
+}
+
+Future<Map<String, dynamic>> fetchPostReviewSummary(String postId) async {
+  final snapshot = await FirebaseFirestore.instance
+      .collection('reviews')
+      .where('postId', isEqualTo: postId)
+      .get();
+
+  final reviews = snapshot.docs;
+  if (reviews.isEmpty) return {'avgRating': 0.0, 'count': 0};
+
+  double totalRating = 0.0;
+  for (var doc in reviews) {
+    final data = doc.data();
+    totalRating += (data['rating'] ?? 0).toDouble();
+  }
+
+  return {
+    'avgRating': totalRating / reviews.length,
+    'count': reviews.length,
+  };
 }

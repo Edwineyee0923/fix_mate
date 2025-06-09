@@ -379,7 +379,11 @@ class _login_pageState extends State<login_page> {
                         if (seekerDoc.exists) {
                           final role = seekerDoc['role'];
                           if (role == "Service Seeker") {
-                            Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => s_HomePage()));
+                            // Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => s_HomePage()));
+                            Navigator.of(context).pushAndRemoveUntil(
+                              MaterialPageRoute(builder: (_) => const s_HomePage()),
+                                  (Route<dynamic> route) => false, // removes all previous routes
+                            );
                             return;
                           }
                         }
@@ -393,7 +397,12 @@ class _login_pageState extends State<login_page> {
 
                           if (role == "Service Provider") {
                             if (status == "Approved") {
-                              Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => p_HomePage()));
+                              // Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => p_HomePage()));
+
+                              Navigator.of(context).pushAndRemoveUntil(
+                                MaterialPageRoute(builder: (_) => const p_HomePage()),
+                                    (Route<dynamic> route) => false, // removes all previous routes
+                              );
                             } else if (status == "Rejected") {
                               if (resubmissionCount < 3) {
                                 showDialog(

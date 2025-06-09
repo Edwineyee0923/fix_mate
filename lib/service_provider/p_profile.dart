@@ -662,7 +662,7 @@ class _p_profileState extends State<p_profile> {
                 ),
             ],
           ),
-          SizedBox(height: 15),
+          SizedBox(height: 60),
         ],
       ),
     );

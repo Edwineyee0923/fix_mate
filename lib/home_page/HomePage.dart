@@ -10,7 +10,7 @@ import 'package:url_launcher/url_launcher.dart';
 Future<void> sendEmail() async {
   final Uri emailUri = Uri(
     scheme: 'mailto',
-    path: 'enweiyee0923@gmail.com',
+    path: 'fixmate1168@gmail.com',
     query: {
       'subject': Uri.encodeComponent('Issue in regard to login'),
   'body': Uri.encodeComponent(

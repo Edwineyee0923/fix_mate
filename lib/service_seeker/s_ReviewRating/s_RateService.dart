@@ -1,3 +1,4 @@
+import 'package:fix_mate/service_seeker/s_ReviewRating/s_MyReview.dart';
 import 'package:fix_mate/services/MediaUploadService.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -195,21 +196,29 @@ class _s_RateServiceState extends State<s_RateService> {
         print("❌ Booking with bookingId '${widget.bookingId}' not found.");
       }
 
-      // // ✅ Show floating message before navigating back
-      // showFloatingMessage(
-      //   context,
-      //   "Thank you for your feedback! Your review have been sucessfully submitted! ",
-      //   icon: Icons.check_circle_outline,
-      // );
+      // ✅ Show Reusable success message
+      ReusableSnackBar(
+        context,
+        "Review submitted successfully!",
+        icon: Icons.check_circle,
+        iconColor: Colors.green,
+      );
 
-      // ✅ Navigate back to s_BookingHistory and trigger refresh
-      Future.delayed(const Duration(milliseconds: 1500), () {
-        Navigator.pop(context, true); // return true to refresh history
-      });
+      // ✅ Wait briefly before navigating
+      await Future.delayed(const Duration(milliseconds: 800));
+
+      // ✅ Navigate and refresh the review list
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => s_MyReview()),
+      );
     } catch (e) {
       print("❌ Error submitting review: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Failed to submit review.")),
+      ReusableSnackBar(
+        context,
+        "Failed to submit review.",
+        icon: Icons.error,
+        iconColor: Colors.red,
       );
     }
   }
@@ -252,8 +261,8 @@ class _s_RateServiceState extends State<s_RateService> {
             if (shouldExit) Navigator.pop(context);
           },
         ),
-        title: const Text("Rate Service", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
-        titleSpacing: 5,
+        title: const Text("Rate Service", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
+        titleSpacing: 2,
       ),
       body: bookingData == null || providerData == null
           ? const Center(child: CircularProgressIndicator())

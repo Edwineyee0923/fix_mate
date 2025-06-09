@@ -109,6 +109,194 @@ class _s_PromotionPostListState extends State<s_PromotionPostList> {
     );
   }
 
+  // Future<void> _loadPromotionPosts() async {
+  //   print("🔍 Loading Promotion Posts...");
+  //   print("🔄 Reloading posts with filters:");
+  //   print("Search Query: $searchQuery");
+  //   print("Categories: $selectedCategories");
+  //   print("States: $selectedStates");
+  //   print("Price Range: $selectedPriceRange");
+  //   print("Sort Order: $selectedSortOrder");
+  //   print("Selected Provider Rating: $selectedProviderRating");
+  //   print("Selected Post Rating: $selectedServiceRating");
+  //
+  //   try {
+  //     User? user = _auth.currentUser;
+  //     if (user == null) {
+  //       print("User not logged in");
+  //       return;
+  //     }
+  //
+  //     Query query = _firestore
+  //         .collection('promotion')
+  //         .where('isActive', isEqualTo: true);
+  //
+  //     if (selectedSortOrder == "Newest") {
+  //       query = query.orderBy('updatedAt', descending: true);
+  //     } else if (selectedSortOrder == "Oldest") {
+  //       query = query.orderBy('updatedAt', descending: false);
+  //     }
+  //
+  //     QuerySnapshot snapshot = await query.get();
+  //     List<QueryDocumentSnapshot> docs = snapshot.docs.toList();
+  //
+  //     if (selectedSortOrder == "Random") {
+  //       docs.shuffle();
+  //     }
+  //
+  //     List<Map<String, dynamic>> scoredPosts = [];
+  //
+  //     for (var doc in docs) {
+  //       Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+  //       int matchScore = 0;
+  //
+  //       if (selectedCategories.isNotEmpty &&
+  //           (data['ServiceCategory'] as List<dynamic>)
+  //               .any((category) => selectedCategories.contains(category))) {
+  //         matchScore += 1;
+  //       }
+  //
+  //       if (selectedStates.isNotEmpty &&
+  //           (data['ServiceStates'] as List<dynamic>)
+  //               .any((state) => selectedStates.contains(state))) {
+  //         matchScore += 1;
+  //       }
+  //
+  //       // Fetch provider review summary
+  //       final providerId = data['userId'] ?? "";
+  //
+  //       if (providerId.isEmpty) {
+  //         print("⚠️ Skipping post due to missing userId (providerId)");
+  //         continue;
+  //       }
+  //
+  //       print("🧪 providerId used for filtering: $providerId");
+  //
+  //       final providerReviewSummary = await fetchProviderReviewSummary(providerId); // ✅ Now correct
+  //       final averagePRating = providerReviewSummary['avgRating'] ?? 0.0;
+  //       final providerReviewCount = providerReviewSummary['count'] ?? 0;
+  //       if (selectedProviderRating != null && averagePRating >= selectedProviderRating!) {
+  //         print("✅ Matched Provider Rating: $averagePRating");
+  //         matchScore += 1;
+  //       } else {
+  //         print("❌ Skipped due to low provider rating: $averagePRating");
+  //       }
+  //
+  //
+  //       data['averagePRating'] = averagePRating;
+  //       data['providerReviewCount'] = providerReviewCount;
+  //
+  //       // Fetch post review summary
+  //       final postReviewSummary = await fetchPostReviewSummary(doc.id);
+  //       final averageRating = postReviewSummary['avgRating'] ?? 0.0;
+  //       final reviewCount = postReviewSummary['count'] ?? 0;
+  //
+  //       if (selectedServiceRating != null && averageRating >= selectedServiceRating!) {
+  //         matchScore += 1;
+  //       }
+  //
+  //       data['averageRating'] = averageRating;
+  //       data['reviewCount'] = reviewCount;
+  //
+  //
+  //       if (searchQuery.isNotEmpty &&
+  //           (data['PTitle'] as String)
+  //               .toLowerCase()
+  //               .contains(searchQuery.toLowerCase())) {
+  //         matchScore += 1;
+  //       }
+  //
+  //       int postPrice = (data['PPrice'] as num?)?.toInt() ?? 0;
+  //       if (postPrice >= selectedPriceRange.start &&
+  //           postPrice <= selectedPriceRange.end) {
+  //         matchScore += 1;
+  //       }
+  //
+  //       double postDiscount =
+  //           (data['PDiscountPercentage'] as num?)?.toDouble() ?? 0.0;
+  //       if (postDiscount >= selectedDiscountRange.start &&
+  //           postDiscount <= selectedDiscountRange.end) {
+  //         matchScore += 1;
+  //       }
+  //
+  //       if (selectedCategories.isEmpty &&
+  //           selectedStates.isEmpty &&
+  //           searchQuery.isEmpty &&
+  //           selectedPriceRange == RangeValues(0, double.infinity) &&
+  //           selectedDiscountRange == RangeValues(0, 100) &&
+  //           selectedProviderRating == null &&
+  //           selectedServiceRating == null) {
+  //         matchScore = 1;
+  //       }
+  //
+  //
+  //       if (matchScore > 0) {
+  //         final reviewSummary = await fetchPostReviewSummary(doc.id);
+  //         // data['avgRating'] = reviewSummary['avgRating'];
+  //         // data['reviewCount'] = reviewSummary['count'];
+  //         // data['matchScore'] = matchScore;
+  //         data['matchScore'] = matchScore;
+  //         data['docId'] = doc.id;
+  //         scoredPosts.add(data);
+  //       }
+  //     }
+  //
+  //     scoredPosts.sort((a, b) {
+  //       int scoreCompare = b['matchScore'].compareTo(a['matchScore']);
+  //       if (scoreCompare != 0) return scoreCompare;
+  //
+  //       if (selectedSortOrder == "Newest") {
+  //         return (b['updatedAt'] as Timestamp)
+  //             .compareTo(a['updatedAt'] as Timestamp);
+  //       } else if (selectedSortOrder == "Oldest") {
+  //         return (a['updatedAt'] as Timestamp)
+  //             .compareTo(b['updatedAt'] as Timestamp);
+  //       } else {
+  //         return 0;
+  //       }
+  //     });
+  //
+  //     List<Widget> promotionPosts = scoredPosts.map((data) {
+  //       int postPrice = (data['PPrice'] as num?)?.toInt() ?? 0;
+  //       double postDiscount =
+  //           (data['PDiscountPercentage'] as num?)?.toDouble() ?? 0.0;
+  //
+  //       return buildPromotionCard(
+  //         docId: data['docId'],
+  //         avgRating: data['averageRating'] ?? 0.0,
+  //         reviewCount: data['reviewCount'] ?? 0,
+  //         PTitle: data['PTitle'] ?? "Unknown",
+  //         ServiceStates:
+  //         (data['ServiceStates'] as List<dynamic>?)?.join(", ") ?? "Unknown",
+  //         ServiceCategory: (data['ServiceCategory'] as List<dynamic>?)
+  //             ?.join(", ") ??
+  //             "No services listed",
+  //         imageUrls: (data['PImage'] != null && data['PImage'] is List<dynamic>)
+  //             ? List<String>.from(data['PImage'])
+  //             : [],
+  //         PPrice: postPrice,
+  //         PAPrice: (data['PAPrice'] as num?)?.toInt() ?? 0,
+  //         PDiscountPercentage: postDiscount,
+  //         onTap: () {
+  //           Navigator.push(
+  //             context,
+  //             MaterialPageRoute(
+  //               builder: (context) =>
+  //                   s_PromotionPostInfo(docId: data['docId']),
+  //             ),
+  //           );
+  //         },
+  //       );
+  //     }).toList();
+  //
+  //     setState(() {
+  //       allPromotionPosts = promotionPosts;
+  //     });
+  //   } catch (e) {
+  //     print("Error loading Promotion Posts: $e");
+  //   }
+  // }
+
   Future<void> _loadPromotionPosts() async {
     print("🔍 Loading Promotion Posts...");
     print("🔄 Reloading posts with filters:");
@@ -116,6 +304,7 @@ class _s_PromotionPostListState extends State<s_PromotionPostList> {
     print("Categories: $selectedCategories");
     print("States: $selectedStates");
     print("Price Range: $selectedPriceRange");
+    print("Discount Range: $selectedDiscountRange");
     print("Sort Order: $selectedSortOrder");
     print("Selected Provider Rating: $selectedProviderRating");
     print("Selected Post Rating: $selectedServiceRating");
@@ -150,75 +339,78 @@ class _s_PromotionPostListState extends State<s_PromotionPostList> {
         Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
         int matchScore = 0;
 
-        if (selectedCategories.isNotEmpty &&
-            (data['ServiceCategory'] as List<dynamic>)
-                .any((category) => selectedCategories.contains(category))) {
-          matchScore += 1;
+        // ✅ Category match (count matches)
+        if (selectedCategories.isNotEmpty && data['ServiceCategory'] is List) {
+          final matches = (data['ServiceCategory'] as List<dynamic>)
+              .where((category) => selectedCategories.contains(category))
+              .length;
+          matchScore += matches;
         }
 
-        if (selectedStates.isNotEmpty &&
-            (data['ServiceStates'] as List<dynamic>)
-                .any((state) => selectedStates.contains(state))) {
-          matchScore += 1;
+        // ✅ State match (count matches)
+        if (selectedStates.isNotEmpty && data['ServiceStates'] is List) {
+          final matches = (data['ServiceStates'] as List<dynamic>)
+              .where((state) => selectedStates.contains(state))
+              .length;
+          matchScore += matches;
         }
 
-        // Fetch provider review summary
+        // ✅ Provider review summary
         final providerId = data['userId'] ?? "";
-
         if (providerId.isEmpty) {
-          print("⚠️ Skipping post due to missing userId (providerId)");
+          print("⚠️ Skipping post due to missing userId");
           continue;
         }
 
-        print("🧪 providerId used for filtering: $providerId");
-
-        final providerReviewSummary = await fetchProviderReviewSummary(providerId); // ✅ Now correct
+        final providerReviewSummary = await fetchProviderReviewSummary(providerId);
         final averagePRating = providerReviewSummary['avgRating'] ?? 0.0;
         final providerReviewCount = providerReviewSummary['count'] ?? 0;
-        if (selectedProviderRating != null && averagePRating >= selectedProviderRating!) {
-          print("✅ Matched Provider Rating: $averagePRating");
-          matchScore += 1;
-        } else {
-          print("❌ Skipped due to low provider rating: $averagePRating");
-        }
-
-
         data['averagePRating'] = averagePRating;
         data['providerReviewCount'] = providerReviewCount;
 
-        // Fetch post review summary
+        if (selectedProviderRating != null && averagePRating >= selectedProviderRating!) {
+          print("✅ Matched Provider Rating: $averagePRating for '${data['PTitle']}");
+          matchScore += 1;
+        } else if (selectedProviderRating != null) {
+          print("❌ Skipped due to low provider rating: $averagePRating for '${data['PTitle']}");
+        }
+
+        // ✅ Post review summary
         final postReviewSummary = await fetchPostReviewSummary(doc.id);
         final averageRating = postReviewSummary['avgRating'] ?? 0.0;
         final reviewCount = postReviewSummary['count'] ?? 0;
-
-        if (selectedServiceRating != null && averageRating >= selectedServiceRating!) {
-          matchScore += 1;
-        }
-
         data['averageRating'] = averageRating;
         data['reviewCount'] = reviewCount;
 
+        if (selectedServiceRating != null) {
+          if (averageRating >= selectedServiceRating!) {
+            print("✅️ Matched Post Rating: $averageRating for '${data['PTitle']}'");
+            matchScore += 1;
+          } else {
+            print("❌ Skipped due to low post rating: $averageRating for '${data['PTitle']}'");
+          }
+        }
 
+
+        // ✅ Search Query match
         if (searchQuery.isNotEmpty &&
-            (data['PTitle'] as String)
-                .toLowerCase()
-                .contains(searchQuery.toLowerCase())) {
+            (data['PTitle'] as String).toLowerCase().contains(searchQuery.toLowerCase())) {
           matchScore += 1;
         }
 
+        // ✅ Price Range match
         int postPrice = (data['PPrice'] as num?)?.toInt() ?? 0;
-        if (postPrice >= selectedPriceRange.start &&
-            postPrice <= selectedPriceRange.end) {
+        if (postPrice >= selectedPriceRange.start && postPrice <= selectedPriceRange.end) {
           matchScore += 1;
         }
 
-        double postDiscount =
-            (data['PDiscountPercentage'] as num?)?.toDouble() ?? 0.0;
-        if (postDiscount >= selectedDiscountRange.start &&
-            postDiscount <= selectedDiscountRange.end) {
+        // ✅ Discount Range match
+        double postDiscount = (data['PDiscountPercentage'] as num?)?.toDouble() ?? 0.0;
+        if (postDiscount >= selectedDiscountRange.start && postDiscount <= selectedDiscountRange.end) {
           matchScore += 1;
         }
 
+        // ✅ Fallback match score if no filters selected
         if (selectedCategories.isEmpty &&
             selectedStates.isEmpty &&
             searchQuery.isEmpty &&
@@ -229,48 +421,40 @@ class _s_PromotionPostListState extends State<s_PromotionPostList> {
           matchScore = 1;
         }
 
-
+        // ✅ Append to results if relevant
         if (matchScore > 0) {
-          final reviewSummary = await fetchPostReviewSummary(doc.id);
-          // data['avgRating'] = reviewSummary['avgRating'];
-          // data['reviewCount'] = reviewSummary['count'];
-          // data['matchScore'] = matchScore;
           data['matchScore'] = matchScore;
           data['docId'] = doc.id;
           scoredPosts.add(data);
         }
       }
 
+      // ✅ Sort by matchScore and date
       scoredPosts.sort((a, b) {
         int scoreCompare = b['matchScore'].compareTo(a['matchScore']);
         if (scoreCompare != 0) return scoreCompare;
 
         if (selectedSortOrder == "Newest") {
-          return (b['updatedAt'] as Timestamp)
-              .compareTo(a['updatedAt'] as Timestamp);
+          return (b['updatedAt'] as Timestamp).compareTo(a['updatedAt'] as Timestamp);
         } else if (selectedSortOrder == "Oldest") {
-          return (a['updatedAt'] as Timestamp)
-              .compareTo(b['updatedAt'] as Timestamp);
+          return (a['updatedAt'] as Timestamp).compareTo(b['updatedAt'] as Timestamp);
         } else {
           return 0;
         }
       });
 
+      // ✅ Convert to card widgets
       List<Widget> promotionPosts = scoredPosts.map((data) {
         int postPrice = (data['PPrice'] as num?)?.toInt() ?? 0;
-        double postDiscount =
-            (data['PDiscountPercentage'] as num?)?.toDouble() ?? 0.0;
+        double postDiscount = (data['PDiscountPercentage'] as num?)?.toDouble() ?? 0.0;
 
         return buildPromotionCard(
           docId: data['docId'],
           avgRating: data['averageRating'] ?? 0.0,
           reviewCount: data['reviewCount'] ?? 0,
           PTitle: data['PTitle'] ?? "Unknown",
-          ServiceStates:
-          (data['ServiceStates'] as List<dynamic>?)?.join(", ") ?? "Unknown",
-          ServiceCategory: (data['ServiceCategory'] as List<dynamic>?)
-              ?.join(", ") ??
-              "No services listed",
+          ServiceStates: (data['ServiceStates'] as List<dynamic>?)?.join(", ") ?? "Unknown",
+          ServiceCategory: (data['ServiceCategory'] as List<dynamic>?)?.join(", ") ?? "No services listed",
           imageUrls: (data['PImage'] != null && data['PImage'] is List<dynamic>)
               ? List<String>.from(data['PImage'])
               : [],
@@ -281,8 +465,7 @@ class _s_PromotionPostListState extends State<s_PromotionPostList> {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) =>
-                    s_PromotionPostInfo(docId: data['docId']),
+                builder: (context) => s_PromotionPostInfo(docId: data['docId']),
               ),
             );
           },
@@ -293,10 +476,9 @@ class _s_PromotionPostListState extends State<s_PromotionPostList> {
         allPromotionPosts = promotionPosts;
       });
     } catch (e) {
-      print("Error loading Promotion Posts: $e");
+      print("❌ Error loading Promotion Posts: $e");
     }
   }
-
 
 
   void _openFilterScreen() async {
@@ -648,7 +830,7 @@ Widget buildPromotionCard({
                     "RM $PAPrice",
                     style: const TextStyle(
                       color: Colors.redAccent,
-                      fontSize: 13,
+                      fontSize: 12,
                       decoration: TextDecoration.lineThrough,
                     ),
                   ),
@@ -656,7 +838,7 @@ Widget buildPromotionCard({
                     "RM $PPrice",
                     style: const TextStyle(
                       color: Color(0xFF464E65),
-                      fontSize: 22,
+                      fontSize: 20,
                       fontWeight: FontWeight.bold,
                     ),
                   ),

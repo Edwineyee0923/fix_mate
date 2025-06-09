@@ -698,12 +698,14 @@ class _p_AddPromotionPostState extends State<p_AddPromotionPost> {
               ),
             ),
             SizedBox(height: 30),
-            dk_button(
-              context,
-              "Submit Post", // ✅ Update the label
-                  () async {
-                addPromotionPost(); // ✅ Call the same function when button is pressed
-              },
+            Center(
+              child: dk_button(
+                context,
+                "Submit Post",
+                    () async {
+                  addPromotionPost();
+                },
+              ),
             ),
           ],
         ),

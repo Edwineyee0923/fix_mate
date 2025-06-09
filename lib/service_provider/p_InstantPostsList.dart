@@ -1,5 +1,6 @@
 import 'package:fix_mate/service_provider/p_EditInstantPost.dart';
 import 'package:fix_mate/service_provider/p_FilterInstantPost.dart';
+import 'package:fix_mate/service_provider/p_HomePage.dart';
 import 'package:fix_mate/service_provider/p_ServiceDirectoryModule/p_InstantPostInfo.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -13,6 +14,8 @@ class p_InstantPostList extends StatefulWidget {
   final RangeValues initialPriceRange; // ✅ Add price range parameter
   final String initialSortOrder; // ✅ Sorting order
   final String? initialPostType;
+  final double? initialServiceRating;
+
 
   const p_InstantPostList({
     Key? key,
@@ -22,6 +25,7 @@ class p_InstantPostList extends StatefulWidget {
     this.initialPriceRange = const RangeValues(0, 1000), // ✅ Default price range
     this.initialSortOrder = "Newest", // ✅ Default sorting order
     this.initialPostType = "No selected",
+    this.initialServiceRating,
   }) : super(key: key);
 
   @override
@@ -42,6 +46,7 @@ class _p_InstantPostListState extends State<p_InstantPostList> {
   RangeValues selectedPriceRange = RangeValues(0, 1000); // ✅ Store price range
   String? selectedSortOrder; // Can be null when nothing is selected
   String? selectedPostType;
+  double? selectedServiceRating;
 
   @override
   void initState() {
@@ -54,6 +59,8 @@ class _p_InstantPostListState extends State<p_InstantPostList> {
     selectedPriceRange = widget.initialPriceRange; // ✅ Initialize price range
     selectedSortOrder = widget.initialSortOrder; // ✅ Initialize sorting
     selectedPostType = widget.initialPostType;
+    selectedServiceRating = widget.initialServiceRating;
+
 
     _searchController.text = searchQuery; // ✅ Set initial text
     _searchController.addListener(() {
@@ -193,6 +200,18 @@ class _p_InstantPostListState extends State<p_InstantPostList> {
         bool matchesPrice = postPrice >= selectedPriceRange.start &&
             postPrice <= selectedPriceRange.end;
 
+        final postReviewSummary = await fetchPostReviewSummary(doc.id);
+        final averageRating = postReviewSummary['avgRating'] ?? 0.0;
+        final reviewCount = postReviewSummary['count'] ?? 0;
+        data['averageRating'] = averageRating;
+        data['reviewCount'] = reviewCount;
+
+        if (selectedServiceRating != null && averageRating < selectedServiceRating!) {
+          print("❌ Skipped due to low post rating: $averageRating for '\${data['PTitle']}'");
+          continue;
+        }
+
+
         // ✅ Exclude posts that do NOT match the filters
         if (!matchesCategory || !matchesState || !matchesSearch ||
             !matchesPrice) {
@@ -201,6 +220,9 @@ class _p_InstantPostListState extends State<p_InstantPostList> {
 
         instantPosts.add(
           buildInstantBookingCard(
+            docId: doc.id,
+            avgRating: data['averageRating'] ?? 0.0,
+            reviewCount: data['reviewCount'] ?? 0,
             IPTitle: data['IPTitle'] ?? "Unknown",
             ServiceStates: (data['ServiceStates'] as List<dynamic>?)?.join(
                 ", ") ?? "Unknown",
@@ -266,6 +288,7 @@ class _p_InstantPostListState extends State<p_InstantPostList> {
               initialPriceRange: selectedPriceRange,
               initialSortOrder: selectedSortOrder,
               initialPostType: selectedPostType,
+              initialServiceRating: selectedServiceRating,
             ),
       ),
     );
@@ -279,6 +302,8 @@ class _p_InstantPostListState extends State<p_InstantPostList> {
         selectedPriceRange = result["priceRange"];
         selectedSortOrder = result["sortOrder"];
         selectedPostType = result["postType"];
+        selectedServiceRating = result["serviceRating"];
+
 
         // ✅ Mark filters as applied
         hasFiltered = true;
@@ -288,6 +313,8 @@ class _p_InstantPostListState extends State<p_InstantPostList> {
             selectedCategories.isNotEmpty ||
             selectedStates.isNotEmpty ||
             selectedSortOrder != null ||
+            selectedPostType != null ||
+            selectedServiceRating != null ||
             (selectedPriceRange.start > 0 || selectedPriceRange.end < 1000);
 
         if (isFiltered) {
@@ -418,7 +445,7 @@ class _p_InstantPostListState extends State<p_InstantPostList> {
               crossAxisCount: 2, // ✅ Ensures exactly 2 columns
               crossAxisSpacing: 0, // ✅ Space between columns
               mainAxisSpacing: 10, // ✅ Space between rows
-              childAspectRatio: 0.72, // ✅ Adjust aspect ratio to fit better
+              childAspectRatio: 0.66, // ✅ Adjust aspect ratio to fit better
             ),
             itemCount: allInstantPosts.length,
             itemBuilder: (context, index) {
@@ -437,6 +464,19 @@ class _p_InstantPostListState extends State<p_InstantPostList> {
       backgroundColor: Color(0xFFFFF8F2),
       appBar: AppBar(
         backgroundColor: Color(0xFF464E65),
+        leading: IconButton(
+          icon: Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: Colors.white,
+          ),
+          onPressed: () =>
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => p_HomePage(),
+                ),
+              ),
+        ),
         title: Text(
           "Instant Booking Post List",
           style: TextStyle(
@@ -445,7 +485,7 @@ class _p_InstantPostListState extends State<p_InstantPostList> {
             color: Colors.white,
           ),
         ),
-        titleSpacing: 25,
+        titleSpacing: 2,
         automaticallyImplyLeading: false,
       ),
 
@@ -502,16 +542,18 @@ Widget buildInstantBookingCard({
   required int IPPrice,
   required bool isActive,
   required String postId,
+  required String docId,
+  required double avgRating,
+  required int reviewCount,
   required VoidCallback onEdit,
   required VoidCallback onDelete,
   required VoidCallback onToggleComplete,
   required VoidCallback onTap,
-
 }) {
   return GestureDetector(
     onTap: onTap,
     child: Container(
-    width: 220, // Adjust width for better spacing in horizontal scroll
+    width: 240, // Adjust width for better spacing in horizontal scroll
     margin: const EdgeInsets.symmetric(horizontal: 8),
     child: Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -536,13 +578,58 @@ Widget buildInstantBookingCard({
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      IPTitle,
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 2,
+
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // 📌 Title - wraps up to 2 lines
+                        Expanded(
+                          child: Text(
+                            IPTitle,
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 2,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        // ⭐ Rating badge - top aligned
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1.5), // smaller padding
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFFFFF7EC), Color(0xFFFEE9D7)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(16), // smaller radius
+                            border: Border.all(color: Colors.orange.shade100),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.orange.withOpacity(0.1), // softer shadow
+                                blurRadius: 4,
+                                offset: const Offset(0, 1),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.star_rounded, color: Colors.amber, size: 12), // smaller icon
+                              const SizedBox(width: 2),
+                              Text(
+                                avgRating.toStringAsFixed(1),
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 11, // smaller font
+                                  color: Colors.grey[800],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                      ],
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 6),
 
                     // 📌 Location with Icon
                     Row(
@@ -692,10 +779,10 @@ Widget buildInstantBookingCard({
             bottom: 7,
             right: 10,
             child: Text(
-              "RM $IPPrice", // Directly use the stored integer
+              "RM$IPPrice", // Directly use the stored integer
               style: const TextStyle(
                 color: Color(0xFF464E65),
-                fontSize: 24,
+                fontSize: 20,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -707,7 +794,7 @@ Widget buildInstantBookingCard({
             bottom: 10,
             left: 10,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
               decoration: BoxDecoration(
                 color: isActive ? Colors.green.shade100 : Colors.grey.shade300,
                 borderRadius: BorderRadius.circular(20),
@@ -716,7 +803,7 @@ Widget buildInstantBookingCard({
                 isActive ? "Active" : "Inactive",
                 style: TextStyle(
                   color: isActive ? Colors.green.shade800 : Colors.grey.shade700,
-                  fontSize: 11,
+                  fontSize: 10,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -727,4 +814,25 @@ Widget buildInstantBookingCard({
     ),
   ),
   );
+}
+
+Future<Map<String, dynamic>> fetchPostReviewSummary(String postId) async {
+  final snapshot = await FirebaseFirestore.instance
+      .collection('reviews')
+      .where('postId', isEqualTo: postId)
+      .get();
+
+  final reviews = snapshot.docs;
+  if (reviews.isEmpty) return {'avgRating': 0.0, 'count': 0};
+
+  double totalRating = 0.0;
+  for (var doc in reviews) {
+    final data = doc.data();
+    totalRating += (data['rating'] ?? 0).toDouble();
+  }
+
+  return {
+    'avgRating': totalRating / reviews.length,
+    'count': reviews.length,
+  };
 }

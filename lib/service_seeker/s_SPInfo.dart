@@ -105,7 +105,7 @@ class _ServiceProviderScreenState extends State<ServiceProviderScreen> {
             "Service Provider Info",
             style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
           ),
-          titleSpacing: 5,
+          titleSpacing: 2,
         ),
         body: isLoading
             ? const Center(child: CircularProgressIndicator())

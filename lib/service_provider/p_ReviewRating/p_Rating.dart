@@ -1,11 +1,13 @@
 import 'package:fix_mate/service_provider/p_HomePage.dart';
 import 'package:fix_mate/service_provider/p_ServiceDirectoryModule/p_InstantPostInfo.dart';
+import 'package:fix_mate/service_provider/p_ServiceDirectoryModule/p_PromotionPostInfo.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fix_mate/service_provider/p_layout.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fix_mate/services/ReviewVideoViewer.dart';
 import 'package:fix_mate/services/FullScreenImageViewer.dart';
+import 'package:fix_mate/reusable_widget/reusable_widget.dart';
 
 class p_Rating extends StatefulWidget {
   static String routeName = "/service_provider/p_Rating";
@@ -45,18 +47,48 @@ class _p_RatingState extends State<p_Rating> {
 
 
 
-  Future<List<String>> fetchPostImages(String postId) async {
+  // Future<List<String>> fetchPostImages(String postId) async {
+  //   final postSnap = await FirebaseFirestore.instance
+  //       .collection('instant_booking')
+  //       .doc(postId)
+  //       .get();
+  //
+  //   if (postSnap.exists) {
+  //     final data = postSnap.data();
+  //     if (data != null && data['IPImage'] is List) {
+  //       return List<String>.from(data['IPImage']);
+  //     }
+  //   }
+  //   return [];
+  // }
+
+  Future<List<String>> fetchPostImages(String bookingId, String postId) async {
+    String collectionName;
+    if (bookingId.startsWith('BKPR-')) {
+      collectionName = 'promotion';
+    } else if (bookingId.startsWith('BKIB-')) {
+      collectionName = 'instant_booking';
+    } else {
+      print("❌ Unknown booking type for ID: $bookingId");
+      return [];
+    }
+
     final postSnap = await FirebaseFirestore.instance
-        .collection('instant_booking')
+        .collection(collectionName)
         .doc(postId)
         .get();
 
     if (postSnap.exists) {
       final data = postSnap.data();
-      if (data != null && data['IPImage'] is List) {
-        return List<String>.from(data['IPImage']);
+      if (data != null) {
+        if (collectionName == 'promotion' && data['PImage'] is List) {
+          return List<String>.from(data['PImage']);
+        } else if (collectionName == 'instant_booking' && data['IPImage'] is List) {
+          return List<String>.from(data['IPImage']);
+        }
       }
     }
+
     return [];
   }
 
@@ -387,6 +419,7 @@ class _p_RatingState extends State<p_Rating> {
 
             // Review section appear at here
             final postId = review['postId'];
+            final bookingId = review['bookingId'] ?? '';
 
               return Padding(
                 padding: const EdgeInsets.symmetric(
@@ -554,13 +587,25 @@ class _p_RatingState extends State<p_Rating> {
                         const SizedBox(height: 10),
                         GestureDetector(
                           onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) =>
-                                    p_InstantPostInfo(docId: postId),
-                              ),
-                            );
+                            if (bookingId.startsWith('BKIB-')) {
+                              // Instant Booking → navigate to InstantPostInfo
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => p_InstantPostInfo(docId: postId),
+                                ),
+                              );
+                            } else if (bookingId.startsWith('BKPR-')) {
+                              // Promotion → navigate to PromotionPostInfo
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => p_PromotionPostInfo(docId: postId),
+                                ),
+                              );
+                            } else {
+                              ReusableSnackBar(context, "Unable to determine post type.", icon: Icons.warning, iconColor: Colors.orange);
+                            }
                           },
                           child: Container(
                             padding: const EdgeInsets.all(10),
@@ -573,28 +618,23 @@ class _p_RatingState extends State<p_Rating> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 FutureBuilder<List<String>>(
-                                  future: fetchPostImages(postId),
+                                  future: fetchPostImages(review['bookingId'], review['postId']),
                                   builder: (context, snapshot) {
-                                    final imageUrls = snapshot.data ?? [];
-                                    final imageUrl = imageUrls.isNotEmpty
-                                        ? imageUrls.first
-                                        : "";
-
+                                    final img = snapshot.data?.firstOrNull ?? "";
                                     return ClipRRect(
-                                      borderRadius: BorderRadius.circular(10),
-                                      child: imageUrl.isNotEmpty
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: img.isNotEmpty
                                           ? Image.network(
-                                        imageUrl,
+                                        img,
                                         width: 50,
                                         height: 50,
                                         fit: BoxFit.cover,
                                       )
                                           : Container(
-                                        width: 60,
-                                        height: 60,
-                                        color: Colors.grey[300],
-                                        child: const Icon(Icons.broken_image,
-                                            color: Colors.grey),
+                                        width: 50,
+                                        height: 50,
+                                        color: Colors.grey[200],
+                                        child: const Icon(Icons.image_outlined, color: Colors.grey),
                                       ),
                                     );
                                   },

@@ -1,3 +1,4 @@
+import 'package:fix_mate/service_seeker/s_PromotionPostInfo.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -5,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:fix_mate/services/FullScreenImageViewer.dart';
 import 'package:fix_mate/services/ReviewVideoViewer.dart';
 import 'package:fix_mate/service_seeker/s_InstantPostInfo.dart';
+import 'package:fix_mate/reusable_widget/reusable_widget.dart';
 
 class s_MyReview extends StatefulWidget {
   const s_MyReview({Key? key}) : super(key: key);
@@ -57,20 +59,36 @@ class _s_MyReviewState extends State<s_MyReview> {
     }).toList();
   }
 
-  Future<List<String>> fetchPostImages(String postId) async {
+  Future<List<String>> fetchPostImages(String bookingId, String postId) async {
+    String collectionName;
+    if (bookingId.startsWith('BKPR-')) {
+      collectionName = 'promotion';
+    } else if (bookingId.startsWith('BKIB-')) {
+      collectionName = 'instant_booking';
+    } else {
+      print("❌ Unknown booking type for ID: $bookingId");
+      return [];
+    }
+
     final postSnap = await FirebaseFirestore.instance
-        .collection('instant_booking')
+        .collection(collectionName)
         .doc(postId)
         .get();
 
     if (postSnap.exists) {
       final data = postSnap.data();
-      if (data != null && data['IPImage'] is List) {
-        return List<String>.from(data['IPImage']);
+      if (data != null) {
+        if (collectionName == 'promotion' && data['PImage'] is List) {
+          return List<String>.from(data['PImage']);
+        } else if (collectionName == 'instant_booking' && data['IPImage'] is List) {
+          return List<String>.from(data['IPImage']);
+        }
       }
     }
+
     return [];
   }
+
 
   String formatTimestamp(Timestamp? timestamp) {
     if (timestamp == null) return "-";
@@ -94,7 +112,7 @@ class _s_MyReviewState extends State<s_MyReview> {
           "My Reviews",
           style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
         ),
-        titleSpacing: 5,
+        titleSpacing: 2,
       ),
       body: CustomScrollView(
         slivers: [
@@ -316,8 +334,11 @@ class _s_MyReviewState extends State<s_MyReview> {
               : SliverList(
             delegate: SliverChildBuilderDelegate(
                   (context, index) {
-                final review = reviews[index].data() as Map<String, dynamic>;
-                final postId = review['postId'];
+                    final reviewDoc = reviews[index];
+                    final review = reviewDoc.data() as Map<String, dynamic>;
+
+                    final postId = review['postId'] ?? '';
+                    final bookingId = review['bookingId'] ?? '';
 
                 return Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
@@ -457,10 +478,27 @@ class _s_MyReviewState extends State<s_MyReview> {
 
                           const SizedBox(height: 12),
                           GestureDetector(
-                            onTap: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (_) => s_InstantPostInfo(docId: postId)),
-                            ),
+                            onTap: () {
+                              if (bookingId.startsWith('BKIB-')) {
+                                // Instant Booking → navigate to InstantPostInfo
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => s_InstantPostInfo(docId: postId),
+                                  ),
+                                );
+                              } else if (bookingId.startsWith('BKPR-')) {
+                                // Promotion → navigate to PromotionPostInfo
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => s_PromotionPostInfo(docId: postId),
+                                  ),
+                                );
+                              } else {
+                                ReusableSnackBar(context, "Unable to determine post type.", icon: Icons.warning, iconColor: Colors.orange);
+                              }
+                            },
                             child: Container(
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
@@ -473,7 +511,7 @@ class _s_MyReviewState extends State<s_MyReview> {
                               child: Row(
                                 children: [
                                   FutureBuilder<List<String>>(
-                                    future: fetchPostImages(postId),
+                                    future: fetchPostImages(review['bookingId'], review['postId']),
                                     builder: (context, snapshot) {
                                       final img = snapshot.data?.firstOrNull ?? "";
                                       return ClipRRect(

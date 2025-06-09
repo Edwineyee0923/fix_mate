@@ -9,6 +9,11 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fix_mate/reusable_widget/reusable_widget.dart';
+import 'dart:io'; // For exit()
+import 'package:flutter/services.dart';
+import 'package:fix_mate/services/showBookingNotification.dart';
+import 'package:intl/intl.dart';
+
 
 
 class s_HomePage extends StatefulWidget {
@@ -45,6 +50,66 @@ class _s_HomePageState extends State<s_HomePage> {
     _loadPromotionPosts(); // Load posts when the page initializes
     print("Initializing service provider fetch...");
     _loadSPPosts(); // Load posts when the page initializes
+    _checkAndScheduleUpcomingBookings();
+  }
+
+  Future<void> _checkAndScheduleUpcomingBookings() async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return;
+
+    final snapshot = await FirebaseFirestore.instance
+        .collection('bookings')
+        .where('seekerId', isEqualTo: currentUser.uid) // or 'providerId'
+        .where('status', isEqualTo: 'Active')
+        .get();
+
+    for (var doc in snapshot.docs) {
+      final data = doc.data();
+      final bookingId = doc.id;
+      final postId = data['postId'];
+      final seekerId = data['seekerId'];
+      final providerId = data['providerId'];
+      final dateStr = data['finalDate'];
+      final timeStr = data['finalTime'];
+
+      if (dateStr == null || timeStr == null) continue;
+
+      final finalDateTime = DateFormat("d MMM yyyy h:mm a").parse("$dateStr $timeStr");
+
+      // 🟡 Your scheduleBookingReminders() method goes here
+      await scheduleBookingReminders(
+        bookingId: bookingId,
+        postId: postId,
+        seekerId: seekerId,
+        providerId: providerId,
+        finalDateTime: finalDateTime,
+      );
+    }
+  }
+
+  Future<bool> _onWillPop(BuildContext context) async {
+    return await showDialog(
+      context: context,
+      builder: (context) => ConfirmationDialog(
+        title: "Exit Application",
+        message: "Are you sure you want to leave this application?",
+        confirmText: "Yes",
+        cancelText: "No",
+        icon: Icons.exit_to_app,
+        iconColor: const Color(0xFFfb9798),
+        confirmButtonColor: const Color(0xFFfb9798),
+        cancelButtonColor: Colors.white,
+        onConfirm: () {
+          if (Platform.isAndroid) {
+            SystemNavigator.pop(); // Smooth close on Android
+          } else if (Platform.isIOS) {
+            // iOS doesn't support closing programmatically — suggest user to swipe up
+            Navigator.of(context).pop(); // Just close dialog
+          }
+        },
+      ),
+    ) ??
+        false;
   }
 
   void _filterInstantPosts(String query) {
@@ -392,7 +457,7 @@ class _s_HomePageState extends State<s_HomePage> {
             style: TextStyle(color: Colors.black54),
           )
               : SizedBox(
-            height: 280,
+            height: 290,
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(children: displayedInstantPosts), // ✅ Updates dynamically
@@ -456,7 +521,7 @@ class _s_HomePageState extends State<s_HomePage> {
             style: TextStyle(color: Colors.black54),
           )
               : SizedBox(
-            height: 280,
+            height: 290,
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(children: displayedPromotionPosts), // ✅ Updated dynamically
@@ -549,7 +614,9 @@ class _s_HomePageState extends State<s_HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return SeekerLayout(
+    return WillPopScope(
+        onWillPop: () => _onWillPop(context),
+    child:SeekerLayout(
         selectedIndex: 0,
         child: Scaffold(
           backgroundColor: Color(0xFFFFF8F2),
@@ -578,6 +645,7 @@ class _s_HomePageState extends State<s_HomePage> {
             ),
           ),
         )
+    )
     );
   }
 }
@@ -685,8 +753,8 @@ Widget buildInstantBookingCard({
 
             // ⭐ Rating (Bottom-left)
             Positioned(
-              bottom: 15,
-              left: 14,
+              bottom: 12,
+              left: 15,
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
@@ -725,8 +793,8 @@ Widget buildInstantBookingCard({
 
             // 💸 Price (Bottom-right)
             Positioned(
-              bottom: 12,
-              right: 14,
+              bottom: 6,
+              right: 12,
               child: Text(
                 "RM $IPPrice",
                 style: const TextStyle(
@@ -871,8 +939,8 @@ Widget buildPromotionCard({
 
             // ⭐️ Rating badge (bottom-left)
             Positioned(
-              bottom: 15,
-              left: 14,
+              bottom: 12,
+              left: 15,
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
@@ -910,8 +978,8 @@ Widget buildPromotionCard({
 
             // Price
             Positioned(
-              bottom: 12,
-              right: 14,
+              bottom: 6,
+              right: 12,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
@@ -923,7 +991,6 @@ Widget buildPromotionCard({
                       decoration: TextDecoration.lineThrough,
                     ),
                   ),
-                  const SizedBox(height: 2),
                   Text(
                     "RM $PPrice",
                     style: const TextStyle(
@@ -1188,7 +1255,7 @@ class _FavoriteButton2State extends State<FavoriteButton2> {
           'favoritedAt': FieldValue.serverTimestamp(),
         });
         ReusableSnackBar(context, "Added provider to favourites",
-            icon: Icons.favorite, iconColor: Color(0xFFF06275));
+            icon: Icons.favorite, iconColor: Color(0xFFF06275), );
       }
 
       setState(() {

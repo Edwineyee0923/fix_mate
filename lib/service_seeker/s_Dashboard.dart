@@ -1,9 +1,10 @@
 import 'package:fix_mate/home_page/HomePage.dart';
 import 'package:fix_mate/service_provider/p_HomePage.dart';
 import 'package:fix_mate/service_seeker/s_BookingCalender.dart';
-import 'package:fix_mate/service_seeker/s_BookingModule/s_AInstantBookingDetail.dart';
+import 'package:fix_mate/service_seeker/s_BookingModule/s_ABookingDetail.dart';
 import 'package:fix_mate/service_seeker/s_BookingModule/s_BookingHistory.dart';
 import 'package:fix_mate/service_seeker/s_Favourite.dart';
+import 'package:fix_mate/service_seeker/s_HomePage.dart';
 import 'package:fix_mate/service_seeker/s_ReviewRating/s_MyReview.dart';
 import 'package:fix_mate/service_seeker/s_profile.dart';
 import 'package:flutter/material.dart';
@@ -11,11 +12,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:fix_mate/service_provider/p_layout.dart';
+import 'package:fix_mate/service_seeker/s_layout.dart';
 
 
 class s_Dashboard extends StatefulWidget {
-  static String routeName = "/service_provider/p_Dashboard";
+  static String routeName = "/service_provider/s_Dashboard";
 
   const s_Dashboard({Key? key}) : super(key: key);
 
@@ -31,7 +32,6 @@ class _s_DashboardState extends State<s_Dashboard> {
   String profilePicUrl = "";
   int totalReviews = 0;
   bool isLoading = true;
-  Map<String, dynamic> operationHours = {};
   Map<String, int> unseenCounts = {
     'pending confirmation': 0,
     'active': 0,
@@ -285,12 +285,12 @@ class _s_DashboardState extends State<s_Dashboard> {
           } else {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (_) => const p_HomePage()),
+              MaterialPageRoute(builder: (_) => const s_HomePage()),
             );
           }
           return false; // block default pop
         },
-        child: ProviderLayout(
+        child: SeekerLayout(
             selectedIndex: 3,
             child:Scaffold(
               backgroundColor: const Color(0xFFFFF8F2),
@@ -853,7 +853,7 @@ class _s_DashboardState extends State<s_Dashboard> {
                   ),
                   const SizedBox(width: 8),
                   const Text(
-                    "Upcoming Services",
+                    "Next Booking",
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -926,7 +926,7 @@ class _s_DashboardState extends State<s_Dashboard> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => s_AInstantBookingDetail(
+            builder: (_) => s_ABookingDetail(
               bookingId: bookingId,
               postId: postId,
               providerId: providerId,

@@ -10,6 +10,7 @@ class p_FilterInstantPost extends StatefulWidget {
   final RangeValues initialPriceRange;
   final String? initialSortOrder; // ✅ Allow null values
   final String? initialPostType;
+  final double? initialServiceRating;
 
   const p_FilterInstantPost({
     Key? key,
@@ -19,6 +20,7 @@ class p_FilterInstantPost extends StatefulWidget {
     required this.initialPriceRange,
     this.initialSortOrder, // ✅ Now accepts null
     this.initialPostType,
+    this.initialServiceRating,
   }) : super(key: key);
 
   @override
@@ -38,6 +40,8 @@ class _p_FilterInstantPostState extends State<p_FilterInstantPost> {
   RangeValues _priceRange = RangeValues(0, 1000);
   String? selectedSortOrder; // Can be null when nothing is selected
   String? selectedPostType = "No selected"; // ✅ Neutral starting stat
+  double? selectedServiceRating;
+
 
   // final List<String> categories = [
   //   "Cleaning", "Electrical", "Plumbing", "Painting",
@@ -75,7 +79,7 @@ class _p_FilterInstantPostState extends State<p_FilterInstantPost> {
     }
   }
 
-
+  final List<double> serviceRating = [5.0, 4.0, 3.0, 2.0, 1.0];
   final List<String> postType = ["No selected", "Active", "Inactive"];
   final List<String> sortOptions = [ "Random" ,"Newest", "Oldest"]; // ✅ Sorting options
 
@@ -89,6 +93,7 @@ class _p_FilterInstantPostState extends State<p_FilterInstantPost> {
     _priceRange = widget.initialPriceRange;
     selectedSortOrder = widget.initialSortOrder; // ✅ Initialize sorting order
     selectedPostType = widget.initialPostType ?? "No selected"; // ✅ Fixed line
+    selectedServiceRating = widget.initialServiceRating;
   }
 
   void _applyFilters() {
@@ -99,6 +104,7 @@ class _p_FilterInstantPostState extends State<p_FilterInstantPost> {
       "priceRange": _priceRange,
       "sortOrder": selectedSortOrder, // ✅ Pass sorting order
       "postType": selectedPostType,
+      "serviceRating": selectedServiceRating,
     });
   }
 
@@ -271,10 +277,87 @@ class _p_FilterInstantPostState extends State<p_FilterInstantPost> {
 
             const SizedBox(height: 10),
 
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Service Post Rating",
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black),
+                ),
+                const SizedBox(height: 6),
+                DropdownButtonFormField<double>(
+                  value: selectedServiceRating,
+                  decoration: InputDecoration(
+                    labelText: "Minimum Rating",
+                    labelStyle: TextStyle(
+                      fontSize: 16,
+                      color: Colors.black87,
+                    ),
+                    filled: true,
+                    fillColor: Colors.white,
+                    contentPadding: EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Color(0xFF464E65), width: 1.5),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Color(0xFF464E65), width: 1.5),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Color(0xFF464E65), width: 2),
+                    ),
+                  ),
+                  dropdownColor: Colors.white,
+                  icon: Icon(Icons.keyboard_arrow_down, color: Color(0xFF464E65)),
+                  style: TextStyle(fontSize: 16, color: Colors.black87),
+                  items: serviceRating.map((rating) {
+                    return DropdownMenuItem(
+                      value: rating,
+                      child: Row(
+                        children: [
+                          Icon(Icons.star_rounded, color: Colors.amber, size: 20),
+                          SizedBox(width: 6),
+                          Text(
+                            rating == 5.0 ? "$rating " : "$rating & up",
+                            style: TextStyle(fontSize: 16),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (value) => setState(() => selectedServiceRating = value),
+                ),
+              ],
+            ),
+
+
+
+
+
+
+            const SizedBox(height: 10),
+            /// **Thick Grey Divider**
+            const Divider(
+              color: Colors.grey, // Grey color
+              thickness: 1.0, // Make it thicker
+              height: 10, // Adjust spacing above and below the divider
+            ),
+
+            const SizedBox(height: 10),
+
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "Post Order",
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black),
+            ),
+            const SizedBox(height: 6),
             DropdownButtonFormField<String>(
               value: selectedSortOrder,
               decoration: InputDecoration(
-                labelText: "Post Order (Random/Newest/Oldest)",
                 labelStyle: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
@@ -315,13 +398,22 @@ class _p_FilterInstantPostState extends State<p_FilterInstantPost> {
               thickness: 1.0, // Make it thicker
               height: 10, // Adjust spacing above and below the divider
             ),
+          ],
+        ),
 
             const SizedBox(height: 10),
 
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "Post Type",
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black),
+            ),
+            const SizedBox(height: 6),
             DropdownButtonFormField<String>(
               value: selectedPostType,
               decoration: InputDecoration(
-                labelText: "Post Type (Active/Inactive)",
                 labelStyle: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
@@ -358,6 +450,8 @@ class _p_FilterInstantPostState extends State<p_FilterInstantPost> {
                 });
               },
             ),
+          ],
+        ),
 
             SizedBox(height: 20),
 

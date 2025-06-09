@@ -498,8 +498,9 @@ import 'package:fix_mate/service_provider/p_BookingModule/p_BookingHistory.dart'
 import 'package:fix_mate/service_provider/p_BookingCalender.dart';
 import 'package:fix_mate/service_provider/p_Dashboard.dart';
 import 'package:fix_mate/service_provider/p_HomePage.dart';
-import 'package:fix_mate/service_provider/p_Rating.dart';
+import 'package:fix_mate/service_provider/p_ReviewRating/p_Rating.dart';
 import 'package:fix_mate/service_provider/p_profile.dart';
+import 'package:fix_mate/service_seeker/s_BookingCalender.dart';
 import 'package:fix_mate/service_seeker/s_Dashboard.dart';
 import 'package:fix_mate/service_seeker/s_HomePage.dart';
 import 'package:fix_mate/service_seeker/s_ReviewRating/s_MyReview.dart';
@@ -562,18 +563,169 @@ Future<void> main() async {
 //   );
 // }
 
+// // Working version for the provider site
+// Future<void> initializeNotifications() async {
+//   const AndroidInitializationSettings initializationSettingsAndroid = AndroidInitializationSettings('fixmate_icon');
+//
+//   final InitializationSettings initializationSettings = InitializationSettings(
+//     android: initializationSettingsAndroid,
+//   );
+//
+//   // 🔐 Request notification permission explicitly (required for Android 13+)
+//   await flutterLocalNotificationsPlugin
+//       .resolvePlatformSpecificImplementation<
+//       AndroidFlutterLocalNotificationsPlugin>()
+//       ?.requestPermission();
+//
+//   await flutterLocalNotificationsPlugin.initialize(
+//     initializationSettings,
+//     onDidReceiveNotificationResponse: (response) async {
+//       final payload = response.payload ?? '';
+//       final parts = payload.split('|');
+//       if (parts.length >= 4) {
+//         final bookingId = parts[0];
+//         final postId = parts[1];
+//         final seekerId = parts[2];
+//         final providerId = parts[3];
+//
+//         // Save Firestore notification only when notification is triggered
+//         await FirebaseFirestore.instance.collection('p_notifications').add({
+//           'providerId': providerId,
+//           'bookingId': bookingId,
+//           'postId': postId,
+//           'seekerId': seekerId,
+//           'title': 'Booking Reminder\n(#$bookingId)',
+//           'message': 'Your scheduled booking service is about to start, please double check your booking details',
+//           'isRead': false,
+//           'createdAt': FieldValue.serverTimestamp(),
+//         });
+//
+//         navigatorKey.currentState?.push(
+//           MaterialPageRoute(
+//             builder: (_) => p_BookingCalender(
+//               highlightedBookingId: bookingId,
+//             ),
+//           ),
+//         );
+//       }
+//     },
+//   );
+// }
+
+
+
+
+// Working version
+// Future<void> initializeNotifications() async {
+//   const AndroidInitializationSettings initializationSettingsAndroid =
+//   AndroidInitializationSettings('fixmate_icon');
+//
+//   final InitializationSettings initializationSettings = InitializationSettings(
+//     android: initializationSettingsAndroid,
+//   );
+//
+//   // 🔐 Request notification permission explicitly (required for Android 13+)
+//   await flutterLocalNotificationsPlugin
+//       .resolvePlatformSpecificImplementation<
+//       AndroidFlutterLocalNotificationsPlugin>()
+//       ?.requestPermission();
+//
+//   await flutterLocalNotificationsPlugin.initialize(
+//     initializationSettings,
+//     onDidReceiveNotificationResponse: (response) async {
+//       final payload = response.payload ?? '';
+//       final parts = payload.split('|');
+//       if (parts.length >= 4) {
+//         final bookingId = parts[0];
+//         final postId = parts[1];
+//         final seekerId = parts[2];
+//         final providerId = parts[3];
+//
+//         // ✅ Write to provider notifications
+//         await FirebaseFirestore.instance.collection('p_notifications').add({
+//           'providerId': providerId,
+//           'bookingId': bookingId,
+//           'postId': postId,
+//           'seekerId': seekerId,
+//           'title': 'Booking Reminder\n(#$bookingId)',
+//           'message':
+//           'Your scheduled booking service is about to start, please double check your booking details',
+//           'isRead': false,
+//           'createdAt': FieldValue.serverTimestamp(),
+//         });
+//
+//         // ✅ Write to seeker notifications
+//         await FirebaseFirestore.instance.collection('s_notifications').add({
+//           'seekerId': seekerId,
+//           'providerId': providerId,
+//           'bookingId': bookingId,
+//           'postId': postId,
+//           'title': 'Booking Reminder\n(#$bookingId)',
+//           'message':
+//           'Your scheduled booking service is about to start. Please check your schedule.',
+//           'isRead': false,
+//           'createdAt': FieldValue.serverTimestamp(),
+//         });
+//
+//         // ✅ Detect current user role
+//         final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+//         String role = '';
+//
+//         // First check service_providers
+//         final providerSnap = await FirebaseFirestore.instance
+//             .collection('service_providers')
+//             .doc(currentUserId)
+//             .get();
+//
+//         if (providerSnap.exists) {
+//           role = 'provider';
+//         } else {
+//           // Then check service_seekers
+//           final seekerSnap = await FirebaseFirestore.instance
+//               .collection('service_seekers')
+//               .doc(currentUserId)
+//               .get();
+//           if (seekerSnap.exists) {
+//             role = 'seeker';
+//           }
+//         }
+//
+//         // ✅ Navigate to the correct calendar screen
+//         if (role == 'provider') {
+//           navigatorKey.currentState?.push(
+//             MaterialPageRoute(
+//               builder: (_) => p_BookingCalender(
+//                 highlightedBookingId: bookingId,
+//               ),
+//             ),
+//           );
+//         } else if (role == 'seeker') {
+//           navigatorKey.currentState?.push(
+//             MaterialPageRoute(
+//               builder: (_) => s_BookingCalender(
+//                 highlightedBookingId: bookingId,
+//               ),
+//             ),
+//           );
+//         } else {
+//           print('⚠️ Unknown user role. Could not navigate to calendar.');
+//         }
+//       }
+//     },
+//   );
+// }
 
 Future<void> initializeNotifications() async {
-  const AndroidInitializationSettings initializationSettingsAndroid = AndroidInitializationSettings('fixmate_icon');
+  const AndroidInitializationSettings initializationSettingsAndroid =
+  AndroidInitializationSettings('fixmate_icon');
 
   final InitializationSettings initializationSettings = InitializationSettings(
     android: initializationSettingsAndroid,
   );
 
-  // 🔐 Request notification permission explicitly (required for Android 13+)
+  // 🔐 Request notification permission (for Android 13+)
   await flutterLocalNotificationsPlugin
-      .resolvePlatformSpecificImplementation<
-      AndroidFlutterLocalNotificationsPlugin>()
+      .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
       ?.requestPermission();
 
   await flutterLocalNotificationsPlugin.initialize(
@@ -581,44 +733,78 @@ Future<void> initializeNotifications() async {
     onDidReceiveNotificationResponse: (response) async {
       final payload = response.payload ?? '';
       final parts = payload.split('|');
-      if (parts.length >= 4) {
+
+      if (parts.length >= 5) {
         final bookingId = parts[0];
         final postId = parts[1];
         final seekerId = parts[2];
         final providerId = parts[3];
+        final reminderMinutes = parts[4]; // 👈 Duration added
 
-        // Save Firestore notification only when notification is triggered
+        final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+        String role = '';
+
+        // ✅ Firestore logging (optional, if not already done during schedule)
         await FirebaseFirestore.instance.collection('p_notifications').add({
           'providerId': providerId,
           'bookingId': bookingId,
           'postId': postId,
           'seekerId': seekerId,
           'title': 'Booking Reminder\n(#$bookingId)',
-          'message': 'Your scheduled booking service is about to start, please double check your booking details',
+          'message': 'A $reminderMinutes-minute booking reminder. Please further check your schedule.',
           'isRead': false,
           'createdAt': FieldValue.serverTimestamp(),
         });
 
-        navigatorKey.currentState?.push(
-          MaterialPageRoute(
-            builder: (_) => p_BookingCalender(
-              highlightedBookingId: bookingId,
+        await FirebaseFirestore.instance.collection('s_notifications').add({
+          'seekerId': seekerId,
+          'providerId': providerId,
+          'bookingId': bookingId,
+          'postId': postId,
+          'title': 'Booking Reminder\n(#$bookingId)',
+          'message': 'A $reminderMinutes-minute booking reminder. Please further check your schedule.',
+          'isRead': false,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+
+        // ✅ Role detection
+        final providerSnap = await FirebaseFirestore.instance
+            .collection('service_providers')
+            .doc(currentUserId)
+            .get();
+
+        if (providerSnap.exists) {
+          role = 'provider';
+        } else {
+          final seekerSnap = await FirebaseFirestore.instance
+              .collection('service_seekers')
+              .doc(currentUserId)
+              .get();
+          if (seekerSnap.exists) {
+            role = 'seeker';
+          }
+        }
+
+        // ✅ Navigate to calendar with booking highlighted
+        if (role == 'provider') {
+          navigatorKey.currentState?.push(
+            MaterialPageRoute(
+              builder: (_) => p_BookingCalender(highlightedBookingId: bookingId),
             ),
-          ),
-        );
+          );
+        } else if (role == 'seeker') {
+          navigatorKey.currentState?.push(
+            MaterialPageRoute(
+              builder: (_) => s_BookingCalender(highlightedBookingId: bookingId),
+            ),
+          );
+        } else {
+          print('⚠️ Unknown user role. Could not navigate to calendar.');
+        }
       }
     },
   );
 }
-
-// Future<void> requestExactAlarmPermission() async {
-//   const platform = MethodChannel('com.example.fix_mate/alarm');
-//   try {
-//     await platform.invokeMethod('openExactAlarmSettings');
-//   } on PlatformException catch (e) {
-//     print("❌ Failed to open exact alarm settings: ${e.message}");
-//   }
-// }
 
 
 class MyApp extends StatefulWidget {
@@ -756,7 +942,7 @@ class _MyAppState extends State<MyApp> {
         if (postNavContext != null) {
           ReusableSnackBar(
             context,
-            "Payment successful! Your booking has been confirmed.!",
+            "Payment successful! Your booking has been confirmed!",
             icon: Icons.check_circle,
             iconColor: Colors.green,
           );
@@ -792,7 +978,7 @@ class _MyAppState extends State<MyApp> {
         primarySwatch: Colors.orange,
         fontFamily: 'Poppins',
       ),
-      home: s_Dashboard(),
+      home: s_HomePage(),
     );
   }
 }

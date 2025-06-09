@@ -217,9 +217,7 @@ class _s_profileState extends State<s_profile> {
 
   @override
   Widget build(BuildContext context) {
-    return SeekerLayout(
-      selectedIndex: 3,
-      child: Scaffold(
+    return Scaffold(
       backgroundColor: Color(0xFFFFFFF2),
       appBar: AppBar(
         backgroundColor: Color(0xFFfb9798),
@@ -239,20 +237,32 @@ class _s_profileState extends State<s_profile> {
         //     }
         //   },
         // ),
-        leading: isEditing
-            ? IconButton(
+        // leading: isEditing
+        //     ? IconButton(
+        //   icon: Icon(
+        //     Icons.arrow_back_ios_new_rounded,
+        //     color: Colors.white, // Makes the icon white
+        //   ),
+        //   onPressed: () {
+        //     _showDiscardChangesDialog(); // ✅ Ask user before discarding changes
+        //   },
+        // )
+        //     : null, // ✅ Hides the back button when `isEditing` is false
+        leading: IconButton(
           icon: Icon(
             Icons.arrow_back_ios_new_rounded,
-            color: Colors.white, // Makes the icon white
+            color: Colors.white,
           ),
           onPressed: () {
-            _showDiscardChangesDialog(); // ✅ Ask user before discarding changes
+            if (isEditing) {
+              _showDiscardChangesDialog(); // Show dialog when editing
+            } else {
+              Navigator.pop(context); // Go back normally when not editing
+            }
           },
-        )
-            : null, // ✅ Hides the back button when `isEditing` is false
-
+        ),
         title: Text("My Profile", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white,)),
-        titleSpacing: isEditing ? 5 : 25, // ✅ Adjust title spacing dynamically
+        titleSpacing: 2, // ✅ Adjust title spacing dynamically
         automaticallyImplyLeading: false,
         actions: [
           Padding(
@@ -310,7 +320,6 @@ class _s_profileState extends State<s_profile> {
           ),
         ),
       ),
-    )
     );
   }
 
@@ -450,31 +459,9 @@ class _s_profileState extends State<s_profile> {
               child: InternalTextField(labelText: "Date of Birth", icon: Icons.cake, controller: dobController, enabled: isEditing),
             ),
           ),
-          SizedBox(height: 25),
 
 
-          if (!isEditing)
-            pk_button(
-              context,
-              "My Booking Calender",
-                  () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => s_BookingCalender(),
-                  ),
-                );
-              },
-            ),
-
-          // ✅ Show Log Out button only when isEditing is true
-          if (!isEditing)
-          pk_button(
-            context,
-            "Log Out",
-            _logoutUser, // Calls the logout function
-          ),
-          SizedBox(height: 15),
+          SizedBox(height: 60),
         ],
       ),
     );

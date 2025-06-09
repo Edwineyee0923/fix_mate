@@ -6,12 +6,12 @@ import 'package:flutter/services.dart';
 import 'package:fix_mate/reusable_widget/reusable_widget.dart';
 import 'package:fix_mate/services/FullScreenImageViewer.dart';
 
-class s_CCInstantBookingDetail extends StatefulWidget {
+class s_CCBookingDetail extends StatefulWidget {
   final String bookingId;
   final String postId;
   final String providerId;
 
-  const s_CCInstantBookingDetail({
+  const s_CCBookingDetail({
     Key? key,
     required this.bookingId,
     required this.postId,
@@ -19,10 +19,10 @@ class s_CCInstantBookingDetail extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  State<s_CCInstantBookingDetail> createState() => _s_CCInstantBookingDetailState();
+  State<s_CCBookingDetail> createState() => _s_CCBookingDetailState();
 }
 
-class _s_CCInstantBookingDetailState extends State<s_CCInstantBookingDetail> {
+class _s_CCBookingDetailState extends State<s_CCBookingDetail> {
   Map<String, dynamic>? bookingData;
   Map<String, dynamic>? instantPostData;
   String? providerPhone;

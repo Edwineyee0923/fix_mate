@@ -1,8 +1,9 @@
-import 'package:fix_mate/service_provider/p_BookingModule/p_AInstantBookingDetail.dart';
-import 'package:fix_mate/service_provider/p_BookingModule/p_CCInstantBookingDetail.dart';
-import 'package:fix_mate/service_provider/p_BookingModule/p_CInstantBookingDetail.dart';
+import 'package:fix_mate/service_provider/p_BookingCalender.dart';
+import 'package:fix_mate/service_provider/p_BookingModule/p_ABookingDetail.dart';
+import 'package:fix_mate/service_provider/p_BookingModule/p_CCBookingDetail.dart';
+import 'package:fix_mate/service_provider/p_BookingModule/p_CBookingDetail.dart';
 import 'package:fix_mate/service_provider/p_BookingModule/p_Notification.dart';
-import 'package:fix_mate/service_provider/p_BookingModule/p_PInstantBookingDetail.dart';
+import 'package:fix_mate/service_provider/p_BookingModule/p_PBookingDetail.dart';
 import 'package:fix_mate/service_provider/p_HomePage.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -332,7 +333,20 @@ class _p_BookingHistoryState extends State<p_BookingHistory> {
           titleSpacing: 25,
           automaticallyImplyLeading: false,
           actions: [
-            if (providerId != null)
+            if (providerId != null) ...[
+              // 📅 Calendar Icon Button
+              IconButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const p_BookingCalender()),
+                  );
+                },
+                icon: const Icon(Icons.calendar_today_rounded, size: 26, color: Colors.white),
+                tooltip: 'View Calendar',
+              ),
+
+              // 🔔 Notifications with Badge
               StreamBuilder<QuerySnapshot>(
                 stream: FirebaseFirestore.instance
                     .collection('p_notifications')
@@ -341,56 +355,118 @@ class _p_BookingHistoryState extends State<p_BookingHistory> {
                     .snapshots(),
                 builder: (context, snapshot) {
                   int unreadCount = snapshot.data?.docs.length ?? 0;
+
                   return Padding(
                     padding: const EdgeInsets.only(right: 10),
                     child: IconButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const p_Notification()),
-                      );
-                    },
-                    icon: Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        const Icon(Icons.notifications_none_rounded, size: 28, color: Colors.white),
-
-                        if (unreadCount > 0)
-                          Positioned(
-                            top: -4,
-                            right: -4,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: Colors.redAccent,
-                                borderRadius: BorderRadius.circular(12),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.2),
-                                    blurRadius: 4,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
-                              child: Text(
-                                '$unreadCount',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const p_Notification()),
+                        );
+                      },
+                      icon: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          const Icon(Icons.notifications_none_rounded, size: 28, color: Colors.white),
+                          if (unreadCount > 0)
+                            Positioned(
+                              top: -4,
+                              right: -4,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.redAccent,
+                                  borderRadius: BorderRadius.circular(12),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.2),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
                                 ),
-                                textAlign: TextAlign.center,
+                                constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
+                                child: Text(
+                                  '$unreadCount',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
                               ),
                             ),
-                          ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
                   );
                 },
               ),
+            ],
           ],
+
+          // actions: [
+          //   if (providerId != null)
+          //     StreamBuilder<QuerySnapshot>(
+          //       stream: FirebaseFirestore.instance
+          //           .collection('p_notifications')
+          //           .where('providerId', isEqualTo: providerId)
+          //           .where('isRead', isEqualTo: false)
+          //           .snapshots(),
+          //       builder: (context, snapshot) {
+          //         int unreadCount = snapshot.data?.docs.length ?? 0;
+          //         return Padding(
+          //           padding: const EdgeInsets.only(right: 10),
+          //           child: IconButton(
+          //           onPressed: () {
+          //             Navigator.push(
+          //               context,
+          //               MaterialPageRoute(builder: (_) => const p_Notification()),
+          //             );
+          //           },
+          //           icon: Stack(
+          //             clipBehavior: Clip.none,
+          //             children: [
+          //               const Icon(Icons.notifications_none_rounded, size: 28, color: Colors.white),
+          //
+          //               if (unreadCount > 0)
+          //                 Positioned(
+          //                   top: -4,
+          //                   right: -4,
+          //                   child: Container(
+          //                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+          //                     decoration: BoxDecoration(
+          //                       color: Colors.redAccent,
+          //                       borderRadius: BorderRadius.circular(12),
+          //                       boxShadow: [
+          //                         BoxShadow(
+          //                           color: Colors.black.withOpacity(0.2),
+          //                           blurRadius: 4,
+          //                           offset: const Offset(0, 2),
+          //                         ),
+          //                       ],
+          //                     ),
+          //                     constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
+          //                     child: Text(
+          //                       '$unreadCount',
+          //                       style: const TextStyle(
+          //                         color: Colors.white,
+          //                         fontSize: 11,
+          //                         fontWeight: FontWeight.w600,
+          //                       ),
+          //                       textAlign: TextAlign.center,
+          //                     ),
+          //                   ),
+          //                 ),
+          //             ],
+          //           ),
+          //         ),
+          //         );
+          //       },
+          //     ),
+          // ],
         ),
         body: Column(
           children: [
@@ -499,24 +575,24 @@ class _p_BookingHistoryState extends State<p_BookingHistory> {
                                   MaterialPageRoute(
                                     builder: (context) =>
                                     isCompleted
-                                        ? p_CInstantBookingDetail(
+                                        ? p_CBookingDetail(
                                       bookingId: data['bookingId'],
                                       postId: data['postId'],
                                       seekerId: data['serviceSeekerId'],
                                     )
                                         : isActive
-                                        ? p_AInstantBookingDetail(
+                                        ? p_ABookingDetail(
                                       bookingId: data['bookingId'],
                                       postId: data['postId'],
                                       seekerId: data['serviceSeekerId'],
                                     )
                                         : isCancelled
-                                        ? p_CCInstantBookingDetail(
+                                        ? p_CCBookingDetail(
                                       bookingId: data['bookingId'],
                                       postId: data['postId'],
                                       seekerId: data['serviceSeekerId'],
                                     )
-                                        : p_PInstantBookingDetail(
+                                        : p_PBookingDetail(
                                       bookingId: data['bookingId'],
                                       postId: data['postId'],
                                       seekerId: data['serviceSeekerId'],

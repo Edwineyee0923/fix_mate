@@ -10,12 +10,12 @@ import 'package:fix_mate/services/FullScreenImageViewer.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 
 
-class s_AInstantBookingDetail extends StatefulWidget {
+class s_ABookingDetail extends StatefulWidget {
   final String bookingId;
   final String postId;
   final String providerId;
 
-  const s_AInstantBookingDetail({
+  const s_ABookingDetail({
     Key? key,
     required this.bookingId,
     required this.postId,
@@ -23,10 +23,10 @@ class s_AInstantBookingDetail extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  State<s_AInstantBookingDetail> createState() => _s_AInstantBookingDetailState();
+  State<s_ABookingDetail> createState() => _s_ABookingDetailState();
 }
 
-class _s_AInstantBookingDetailState extends State<s_AInstantBookingDetail> {
+class _s_ABookingDetailState extends State<s_ABookingDetail> {
   Map<String, dynamic>? bookingData;
   Map<String, dynamic>? instantPostData;
   String? providerPhone;

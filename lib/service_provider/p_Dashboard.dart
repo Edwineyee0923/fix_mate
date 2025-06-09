@@ -1,6 +1,6 @@
 import 'package:fix_mate/home_page/HomePage.dart';
 import 'package:fix_mate/service_provider/p_BookingCalender.dart';
-import 'package:fix_mate/service_provider/p_BookingModule/p_AInstantBookingDetail.dart';
+import 'package:fix_mate/service_provider/p_BookingModule/p_ABookingDetail.dart';
 import 'package:fix_mate/service_provider/p_BookingModule/p_BookingHistory.dart';
 import 'package:fix_mate/service_provider/p_HomePage.dart';
 import 'package:fix_mate/service_provider/p_SchedulePage.dart';
@@ -8,7 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fix_mate/service_provider/p_profile.dart';
-import 'package:fix_mate/service_provider/p_Rating.dart';
+import 'package:fix_mate/service_provider/p_ReviewRating/p_Rating.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:fix_mate/service_provider/p_layout.dart';
@@ -222,359 +222,7 @@ class _p_DashboardState extends State<p_Dashboard> {
       });
     }
   }
-  // @override
-  // Widget build(BuildContext context) {
-  //   return Scaffold(
-  //     backgroundColor: const Color(0xFFFFF8F2),
-  //     appBar: AppBar(
-  //       backgroundColor: const Color(0xFF464E65),
-  //       leading: IconButton(
-  //         icon: Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
-  //         onPressed: () {
-  //           Navigator.pop(context);
-  //         },
-  //       ),
-  //       title: const Text(
-  //           "Dashboard",
-  //           style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)
-  //       ),
-  //       titleSpacing: 5,
-  //       elevation: 0,
-  //     ),
-  //     body: ListView(
-  //       padding: const EdgeInsets.all(0),
-  //       children: [
-  //         // Provider Info Section
-  //         _buildProviderInfoSection(),
-  //         _buildOperationScheduleSection(),
-  //         // Add other sections here as needed
-  //         const SizedBox(height: 20),
-  //         // You can add more dashboard sections below
-  //       ],
-  //     ),
-  //   );
-  // }
-  //
-  // Widget _buildProviderInfoSection() {
-  //   return GestureDetector(
-  //     onTap: () {
-  //       Navigator.push(
-  //         context,
-  //         MaterialPageRoute(builder: (context) => const p_profile()),
-  //       );
-  //     },
-  //     child: Container(
-  //       margin: const EdgeInsets.all(16),
-  //       decoration: BoxDecoration(
-  //         gradient: const LinearGradient(
-  //           begin: Alignment.topLeft,
-  //           end: Alignment.bottomRight,
-  //           colors: [Colors.white, Color(0xFFF8F9FA)],
-  //         ),
-  //         borderRadius: BorderRadius.circular(20),
-  //         boxShadow: [
-  //           BoxShadow(
-  //             color: Colors.black.withOpacity(0.08),
-  //             blurRadius: 15,
-  //             offset: const Offset(0, 5),
-  //           ),
-  //         ],
-  //       ),
-  //       child: Padding(
-  //         padding: const EdgeInsets.all(20),
-  //         child: Column(
-  //           crossAxisAlignment: CrossAxisAlignment.start,
-  //           children: [
-  //             // Header with profile info
-  //             Row(
-  //               children: [
-  //                 // Profile Picture
-  //                 Container(
-  //                   decoration: BoxDecoration(
-  //                     shape: BoxShape.circle,
-  //                     border: Border.all(
-  //                       color: const Color(0xFF464E65).withOpacity(0.2),
-  //                       width: 3,
-  //                     ),
-  //                     boxShadow: [
-  //                       BoxShadow(
-  //                         color: Colors.black.withOpacity(0.1),
-  //                         blurRadius: 10,
-  //                         offset: const Offset(0, 3),
-  //                       ),
-  //                     ],
-  //                   ),
-  //                   child: CircleAvatar(
-  //                     radius: 35,
-  //                     backgroundColor: Colors.grey[200],
-  //                     backgroundImage: profilePicUrl.isNotEmpty
-  //                         ? NetworkImage(profilePicUrl)
-  //                         : null,
-  //                     child: profilePicUrl.isEmpty
-  //                         ? Icon(Icons.person, size: 40, color: Colors.grey[400])
-  //                         : null,
-  //                   ),
-  //                 ),
-  //                 const SizedBox(width: 16),
-  //
-  //                 // Name and welcome text
-  //                 Expanded(
-  //                   child: Column(
-  //                     crossAxisAlignment: CrossAxisAlignment.start,
-  //                     children: [
-  //                       Text(
-  //                         "Welcome back!",
-  //                         style: TextStyle(
-  //                           fontSize: 14,
-  //                           color: Colors.grey[600],
-  //                           fontWeight: FontWeight.w500,
-  //                         ),
-  //                       ),
-  //                       const SizedBox(height: 4),
-  //                       Text(
-  //                         isLoading ? "Loading..." : providerName,
-  //                         style: const TextStyle(
-  //                           fontSize: 22,
-  //                           fontWeight: FontWeight.bold,
-  //                           color: Color(0xFF464E65),
-  //                         ),
-  //                         maxLines: 2,
-  //                         overflow: TextOverflow.ellipsis,
-  //                       ),
-  //                     ],
-  //                   ),
-  //                 ),
-  //               ],
-  //             ),
-  //
-  //             const SizedBox(height: 16),
-  //
-  //             // Rating overview - just for visual, entire card is now clickable
-  //             Container(
-  //               padding: const EdgeInsets.all(16),
-  //               decoration: BoxDecoration(
-  //                 color: const Color(0x1561A9FF),
-  //                 borderRadius: BorderRadius.circular(15),
-  //                 border: Border.all(
-  //                   color: const Color(0x3361A9FF),
-  //                   width: 1,
-  //                 ),
-  //               ),
-  //               child: Row(
-  //                 children: [
-  //                   // Rating display
-  //                   Container(
-  //                     padding: const EdgeInsets.all(12),
-  //                     decoration: BoxDecoration(
-  //                       color: Colors.white,
-  //                       borderRadius: BorderRadius.circular(12),
-  //                       boxShadow: [
-  //                         BoxShadow(
-  //                           color: Colors.black.withOpacity(0.05),
-  //                           blurRadius: 8,
-  //                           offset: const Offset(0, 2),
-  //                         ),
-  //                       ],
-  //                     ),
-  //                     child: Row(
-  //                       mainAxisSize: MainAxisSize.min,
-  //                       children: [
-  //                         const Icon(
-  //                           Icons.star_rounded,
-  //                           color: Colors.amber,
-  //                           size: 24,
-  //                         ),
-  //                         const SizedBox(width: 6),
-  //                         Text(
-  //                           isLoading ? "0.0" : averageRating.toStringAsFixed(1),
-  //                           style: const TextStyle(
-  //                             fontSize: 20,
-  //                             fontWeight: FontWeight.bold,
-  //                             color: Color(0xFF464E65),
-  //                           ),
-  //                         ),
-  //                       ],
-  //                     ),
-  //                   ),
-  //
-  //                   const SizedBox(width: 16),
-  //
-  //                   // Review count
-  //                   Expanded(
-  //                     child: Column(
-  //                       crossAxisAlignment: CrossAxisAlignment.start,
-  //                       children: [
-  //                         Text(
-  //                           "Overall Rating",
-  //                           style: TextStyle(
-  //                             fontSize: 16,
-  //                             fontWeight: FontWeight.w600,
-  //                             color: Colors.grey[700],
-  //                           ),
-  //                         ),
-  //                         const SizedBox(height: 4),
-  //                         Text(
-  //                           isLoading
-  //                               ? "0 reviews"
-  //                               : "$totalReviews ${totalReviews == 1 ? 'review' : 'reviews'}",
-  //                           style: TextStyle(
-  //                             fontSize: 14,
-  //                             color: Colors.grey[600],
-  //                             fontWeight: FontWeight.w500,
-  //                           ),
-  //                         ),
-  //                       ],
-  //                     ),
-  //                   ),
-  //
-  //                   const Icon(
-  //                     Icons.arrow_forward_ios_rounded,
-  //                     size: 16,
-  //                     color: Color(0xFF61A9FF),
-  //                   ),
-  //                 ],
-  //               ),
-  //             ),
-  //           ],
-  //         ),
-  //       ),
-  //     ),
-  //   );
-  // }
-  //
-  //
-  //
-  // Widget _buildOperationScheduleSection() {
-  //   final days = [
-  //     'Monday', 'Tuesday', 'Wednesday', 'Thursday',
-  //     'Friday', 'Saturday', 'Sunday'
-  //   ];
-  //
-  //   return Container(
-  //     margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-  //     padding: const EdgeInsets.all(20),
-  //     decoration: BoxDecoration(
-  //       gradient: const LinearGradient(
-  //         begin: Alignment.topLeft,
-  //         end: Alignment.bottomRight,
-  //         colors: [Colors.white, Color(0xFFF8F9FA)],
-  //       ),
-  //       borderRadius: BorderRadius.circular(20),
-  //       boxShadow: [
-  //         BoxShadow(
-  //           color: Colors.black.withOpacity(0.08),
-  //           blurRadius: 15,
-  //           offset: const Offset(0, 5),
-  //         ),
-  //       ],
-  //     ),
-  //     child: Column(
-  //       crossAxisAlignment: CrossAxisAlignment.start,
-  //       children: [
-  //         // Header
-  //         Row(
-  //           children: [
-  //             Container(
-  //               padding: const EdgeInsets.all(12),
-  //               decoration: BoxDecoration(
-  //                 color: const Color(0xFF6C7CE7).withOpacity(0.1),
-  //                 shape: BoxShape.circle,
-  //               ),
-  //               child: const Icon(Icons.access_time_filled, color: Color(0xFF464E65)),
-  //             ),
-  //             const SizedBox(width: 12),
-  //             const Text(
-  //               "Operation Schedule",
-  //               style: TextStyle(
-  //                 fontSize: 18,
-  //                 fontWeight: FontWeight.bold,
-  //                 color: Color(0xFF464E65),
-  //               ),
-  //             ),
-  //           ],
-  //         ),
-  //         const SizedBox(height: 20),
-  //
-  //         // Day-wise schedule
-  //         Column(
-  //           children: days.map((day) {
-  //             final raw = operationHours[day] ?? {};
-  //             final schedule = Map<String, dynamic>.from(raw);
-  //             final start = schedule['start'] ?? null;
-  //             final end = schedule['end'] ?? null;
-  //             final isOpen = start != null && end != null;
-  //
-  //             return Padding(
-  //               padding: const EdgeInsets.symmetric(vertical: 6),
-  //               child: Row(
-  //                 children: [
-  //                   SizedBox(
-  //                     width: 80,
-  //                     child: Text(
-  //                       day.substring(0, 3),
-  //                       style: const TextStyle(
-  //                         fontWeight: FontWeight.w600,
-  //                         color: Color(0xFF464E65),
-  //                       ),
-  //                     ),
-  //                   ),
-  //                   const SizedBox(width: 8),
-  //                   Expanded(
-  //                     child: Container(
-  //                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-  //                       decoration: BoxDecoration(
-  //                         color: isOpen
-  //                             ? const Color(0xFF6C7CE7).withOpacity(0.08)
-  //                             : Colors.grey.withOpacity(0.1),
-  //                         borderRadius: BorderRadius.circular(10),
-  //                       ),
-  //                       child: Text(
-  //                         isOpen ? "$start - $end" : "Closed",
-  //                         style: TextStyle(
-  //                           fontSize: 13,
-  //                           color: isOpen ? const Color(0xFF6C7CE7) : Colors.grey[600],
-  //                           fontWeight: FontWeight.w600,
-  //                         ),
-  //                       ),
-  //                     ),
-  //                   ),
-  //                 ],
-  //               ),
-  //             );
-  //           }).toList(),
-  //         ),
-  //
-  //         const SizedBox(height: 24),
-  //
-  //         // Edit Schedule Button
-  //         SizedBox(
-  //           width: double.infinity,
-  //           height: 48,
-  //           child: ElevatedButton.icon(
-  //             style: ElevatedButton.styleFrom(
-  //               backgroundColor: const Color(0xFF464E65),
-  //               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-  //               elevation: 2,
-  //             ),
-  //             onPressed: () {
-  //               Navigator.push(
-  //                 context,
-  //                 MaterialPageRoute(builder: (_) => const p_SchedulePage()),
-  //               );
-  //             },
-  //             icon: const Icon(Icons.edit_calendar, size: 20, color: Colors.white, ),
-  //             label: const Text(
-  //               "Edit Schedule",
-  //               style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white, ),
-  //             ),
-  //           ),
-  //         ),
-  //       ],
-  //     ),
-  //   );
-  // }
 
-// Option 1: Using Expanded with flex to limit to 1/3 of screen
   @override
   Widget build(BuildContext context) {
     return WillPopScope(
@@ -869,8 +517,11 @@ Widget _buildCompactProviderInfoSection() {
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (_) => const p_SchedulePage()),
-                  );
+                  ).then((_) {
+                    _loadProviderData(); // 🔁 Refresh the schedule section after returning
+                  });
                 },
+
                 child: Row(
                   children: const [
                     const Text(
@@ -891,7 +542,7 @@ Widget _buildCompactProviderInfoSection() {
 
           // Horizontal scrollable schedule
           SizedBox(
-            height: 60,
+            height: 70,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               itemCount: days.length,
@@ -915,7 +566,14 @@ Widget _buildCompactProviderInfoSection() {
                 if (!availabilitySet) {
                   statusText = "Available"; // default fallback if field doesn't exist
                 } else if (isOpen) {
-                  statusText = "${start.substring(0, 5)} -\n${end.substring(0, 5)}";
+                  try {
+                    final startTime = DateFormat.jm().format(DateFormat("h:mm a").parse(start));
+                    final endTime = DateFormat.jm().format(DateFormat("h:mm a").parse(end));
+                    statusText = "$startTime -\n$endTime";
+                  } catch (_) {
+                    statusText = "Invalid";
+                  }
+
                 } else {
                   statusText = "Closed";
                 }
@@ -1171,7 +829,7 @@ Widget _buildCompactProviderInfoSection() {
                   ),
                   const SizedBox(width: 8),
                   const Text(
-                    "Upcoming Services",
+                    "Next Service",
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -1244,7 +902,7 @@ Widget _buildCompactProviderInfoSection() {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => p_AInstantBookingDetail(
+              builder: (_) => p_ABookingDetail(
                 bookingId: bookingId,
                 postId: postId,
                 seekerId: booking['serviceSeekerId'],
