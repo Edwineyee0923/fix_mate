@@ -994,7 +994,7 @@ class _p_PBookingDetailState extends State<p_PBookingDetail> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       SizedBox(
-                        width: 150,
+                        width: 140,
                         child: OutlinedButton(
                           onPressed: () {
                             setState(() {
@@ -1019,7 +1019,7 @@ class _p_PBookingDetailState extends State<p_PBookingDetail> {
                       ),
                       const SizedBox(width: 16),
                       SizedBox(
-                        width: 150,
+                        width: 140,
                         child: ElevatedButton(
                           onPressed: (_rescheduleDate != null && _rescheduleTime != null && !isSubmitting)
                               ? _confirmReschedule
@@ -1163,31 +1163,37 @@ class _p_PBookingDetailState extends State<p_PBookingDetail> {
 
           Padding(
             padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
               children: [
-                Text(
-                  instantPostData!["IPTitle"] ?? "Service Title",
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF2C3E50),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF464E65).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    bookingData!["serviceCategory"] ?? "Category",
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF464E65),
-                    ),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        instantPostData!["IPTitle"] ?? "Service Title",
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF2C3E50),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF464E65).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          bookingData!["serviceCategory"] ?? "Category",
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF464E65),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],

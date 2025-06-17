@@ -6,7 +6,7 @@ import 'package:fix_mate/service_seeker/s_InstantPostInfo.dart';
 import 'package:fix_mate/reusable_widget/reusable_widget.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/services.dart';
-
+import 'package:firebase_auth/firebase_auth.dart';
 
 class s_PBookingDetail extends StatefulWidget {
   final String bookingId;
@@ -365,7 +365,7 @@ class _s_PBookingDetailState extends State<s_PBookingDetail> {
         if (isPreferred) {
           _newPreferredTime = _parseToTimeOfDay(selectedTimeStr!);
         } else {
-          _newPreferredTime = _parseToTimeOfDay(selectedTimeStr!);
+          _newAlternativeTime = _parseToTimeOfDay(selectedTimeStr!);
         }
       });
     }
@@ -1147,14 +1147,15 @@ class _s_PBookingDetailState extends State<s_PBookingDetail> {
             _buildBookingInfoCard(),
             const SizedBox(height: 16),
             _buildScheduleSection(),
-            const SizedBox(height: 16),
-            // _buildStatusOrEditSection(),
-            // const SizedBox(height: 16),
-            // _buildLocationAndPrice(),
-            // const SizedBox(height: 16),
+            if (bookingData?['isRescheduling'] == true) ...[
+              const SizedBox(height: 16),
+            ],
             if (providerPhone != null) _buildContactSection(),
-            // const SizedBox(height: 24),
-            // if (bookingData?['sCancelled'] == true) _buildCancellationNotice(),
+            const SizedBox(height: 16),
+            _buildEditSection(),
+            const SizedBox(height: 5),
+           _buildCancellationSection(),
+            const SizedBox(height: 16),
           ],
         ),
       ),
@@ -1202,30 +1203,36 @@ class _s_PBookingDetailState extends State<s_PBookingDetail> {
 
           Padding(
             padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
               children: [
-                Text(
-                  instantPostData!["IPTitle"] ?? "Service Title",
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFfb9798).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    bookingData!["serviceCategory"] ?? "Category",
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFFfb9798),
-                    ),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        instantPostData!["IPTitle"] ?? "Service Title",
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFfb9798).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          bookingData!["serviceCategory"] ?? "Category",
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFFfb9798),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -1742,27 +1749,63 @@ class _s_PBookingDetailState extends State<s_PBookingDetail> {
     }
 
     // 🔁 Case 2: Rejected schedule – informative message
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: Colors.orange.withOpacity(0.08),
-          border: Border.all(color: Colors.orange),
-          borderRadius: BorderRadius.circular(12),
-        ),
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      margin: const EdgeInsets.only(bottom: 16),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              "⏳ You have rejected the schedule suggested by the provider.",
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.orange),
+            // Title
+            Row(
+              children: const [
+                Icon(Icons.schedule_outlined, color: Colors.orange, size: 24),
+                SizedBox(width: 12),
+                Text(
+                  "Schedule Rejected",
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    // color: Colors.orange,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 8),
-            const Text(
-              "Please contact the provider to arrange a new booking or wait for a new schedule suggestion.",
-              style: TextStyle(fontSize: 14),
+            const SizedBox(height: 16),
+
+            // Status notice
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Colors.orange.withOpacity(0.08),
+                border: Border.all(color: Colors.orange),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  Text(
+                    "⏳ You have rejected the schedule suggested by the provider.",
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      color: Colors.orange,
+                    ),
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    "Please contact the provider to arrange a new booking or wait for a new schedule suggestion.",
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ],
+              ),
             ),
+            SizedBox(height: 8),
           ],
         ),
       ),
@@ -1803,6 +1846,241 @@ class _s_PBookingDetailState extends State<s_PBookingDetail> {
       ),
     );
   }
+
+  Widget _buildEditSection() {
+    if (!(bookingData?['sCancelled'] ?? false) &&
+        !(bookingData?['rescheduleSent'] ?? false) &&
+        !(bookingData?['isRescheduling'] ?? false)) {
+      if (isEditingSchedule) {
+        return Card(
+          elevation: 2,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          margin: const EdgeInsets.only(bottom: 16),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  "Pick your new desired time slot",
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                const SizedBox(height: 16),
+
+                // Preferred Date & Time
+                Row(
+                  children: const [
+                    Icon(Icons.calendar_today, size: 18, color: Colors.blue),
+                    SizedBox(width: 6),
+                    Text("New Preferred Date & Time",
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                _buildDateTimePicker(
+                  "Select Preferred Date",
+                  _newPreferredDate,
+                      () => _selectDate(context, true),
+                  isDate: true,
+                ),
+                _buildDateTimePicker(
+                  "Select Preferred Time",
+                  _newPreferredTime,
+                      () => _showTimeSlotSelector(
+                    isPreferred: true,
+                    selectedDate: _newPreferredDate,
+                  ),
+                  isDate: false,
+                ),
+
+                const SizedBox(height: 20),
+                Divider(color: Colors.grey.shade400, thickness: 1.5),
+                const SizedBox(height: 16),
+
+                // Alternative Date & Time
+                Row(
+                  children: const [
+                    Icon(Icons.schedule, size: 18, color: Colors.teal),
+                    SizedBox(width: 6),
+                    Text("New Alternative Date & Time",
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                _buildDateTimePicker(
+                  "Select Alternative Date",
+                  _newAlternativeDate,
+                      () => _selectDate(context, false),
+                  isDate: true,
+                ),
+                _buildDateTimePicker(
+                  "Select Alternative Time",
+                  _newAlternativeTime,
+                      () => _showTimeSlotSelector(
+                    isPreferred: false,
+                    selectedDate: _newAlternativeDate,
+                  ),
+                  isDate: false,
+                ),
+
+                const SizedBox(height: 20),
+
+                // Action Buttons
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                      width: 150,
+                      child: OutlinedButton(
+                        onPressed: () {
+                          setState(() {
+                            isEditingSchedule = false;
+                            _newPreferredDate = null;
+                            _newPreferredTime = null;
+                            _newAlternativeDate = null;
+                            _newAlternativeTime = null;
+                          });
+                        },
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFFfb9798),
+                          side: const BorderSide(color: Color(0xFFfb9798)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        child: const Text(
+                          "Cancel",
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    SizedBox(
+                      width: 150,
+                      child: ElevatedButton(
+                        onPressed: _saveUpdatedSchedule,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFfb9798),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        child: const Text(
+                          "Save Changes",
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      } else {
+        // Edit Schedule Container with Title
+        return Card(
+          elevation: 2,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          margin: const EdgeInsets.only(bottom: 16),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Title
+                Row(
+                  children: const [
+                    Icon(Icons.edit_calendar, color: Color(0xFFfb9798), size: 24),
+                    SizedBox(width: 12),
+                    Text(
+                      "Edit Schedule",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        // color: Color(0xFFfb9798),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Reschedule notice
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFfb9798).withOpacity(0.08),
+                    border: Border.all(color: const Color(0xFFfb9798)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: const [
+                      Icon(Icons.info_outline, size: 20, color: Color(0xFFfb9798)),
+                      SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          "You can edit and reschedule the booking before the service provider confirms.",
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Color(0xFFfb9798),
+                            fontStyle: FontStyle.italic,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Edit Schedule Button
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      setState(() {
+                        isEditingSchedule = true;
+
+                        // Pre-fill from existing booking data
+                        _newPreferredDate = parseCustomDate(bookingData!['preferredDate']);
+                        _newPreferredTime = parseTimeOfDay(bookingData!['preferredTime']);
+
+                        _newAlternativeDate = bookingData!['alternativeDate'] != null
+                            ? parseCustomDate(bookingData!['alternativeDate'])
+                            : null;
+
+                        _newAlternativeTime = bookingData!['alternativeTime'] != null
+                            ? parseTimeOfDay(bookingData!['alternativeTime'])
+                            : null;
+                      });
+                    },
+                    icon: const Icon(Icons.edit_calendar),
+                    label: const Text("Edit Schedule"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFfb9798),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(50),
+                      ),
+                      textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+    } else {
+      return const SizedBox.shrink();
+    }
+  }
+
 
 
 
@@ -1903,6 +2181,180 @@ class _s_PBookingDetailState extends State<s_PBookingDetail> {
       ),
     );
   }
+
+  Widget _buildCancellationSection() {
+    if (!(bookingData?['isRescheduling'] ?? false) && !(bookingData?['sCancelled'] ?? false)) {
+      // Show cancellation request option
+      return Card(
+        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.only(bottom: 16),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Title
+              Row(
+                children: const [
+                  Icon(Icons.cancel_outlined, color: Color(0xFFfb9798), size: 24),
+                  SizedBox(width: 12),
+                  Text(
+                    "Request Cancellation",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      // color: Color(0xFFfb9798),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // Cancellation notice
+              Container(
+                padding: const EdgeInsets.all(14),
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFfb9798).withOpacity(0.08),
+                  border: Border.all(color: const Color(0xFFfb9798)),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: const [
+                    Icon(Icons.info_outline, size: 20, color: Color(0xFFfb9798)),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        "Please contact with the provider before you request to cancel this booking as the provider will decide on the refund cancellation decision",
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Color(0xFFfb9798),
+                          fontStyle: FontStyle.italic,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Request Cancellation Button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () async {
+                    final result = await showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      shape: const RoundedRectangleBorder(
+                        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                      ),
+                      builder: (_) => CancelReasonBottomSheet(
+                        bookingId: widget.bookingId,
+                        postId: widget.postId,
+                        seekerId: bookingData!['serviceSeekerId'],
+                        providerId: bookingData!['serviceProviderId'],
+                      ),
+                    );
+
+                    // ✅ Now that the sheet is closed and returned result
+                    if (result == true) {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => s_BookingHistory(
+                            key: UniqueKey(),
+                            initialTabIndex: 0, // Go to Pending tab
+                          ),
+                        ),
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.cancel_outlined),
+                  label: const Text("Request Cancellation"),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFfb9798),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(50),
+                    ),
+                    textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    } else if (bookingData?['sCancelled'] == true) {
+      // Show cancellation request sent status
+      return Card(
+        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.only(bottom: 16),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Title
+              Row(
+                children: const [
+                  Icon(Icons.pending_actions, color: Color(0xFFFF9900), size: 24),
+                  SizedBox(width: 12),
+                  Text(
+                    "Cancellation Requested",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      // color: Color(0xFFFF9900),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // Status notice
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF7E6),
+                  border: Border.all(color: const Color(0xFFFFCC99)),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: const [
+                    Icon(Icons.info_outline, size: 20, color: Color(0xFFFF9900)),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        "Cancellation request sent. Please wait for the provider's decision. Thank you.",
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Color(0xFFFF6600),
+                          fontStyle: FontStyle.italic,
+                          fontWeight: FontWeight.w500,
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    } else {
+      return const SizedBox.shrink();
+    }
+  }
+
+
 }
 
 
