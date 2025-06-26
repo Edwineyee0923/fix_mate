@@ -493,11 +493,13 @@
 
 
 import 'package:firebase_core/firebase_core.dart';
+import 'package:fix_mate/admin/a_Dashboard.dart';
 import 'package:fix_mate/home_page/login_page.dart';
 import 'package:fix_mate/service_provider/p_BookingModule/p_BookingHistory.dart';
 import 'package:fix_mate/service_provider/p_BookingCalender.dart';
 import 'package:fix_mate/service_provider/p_Dashboard.dart';
 import 'package:fix_mate/service_provider/p_HomePage.dart';
+import 'package:fix_mate/service_provider/p_Revenue.dart';
 import 'package:fix_mate/service_provider/p_ReviewRating/p_Rating.dart';
 import 'package:fix_mate/service_provider/p_profile.dart';
 import 'package:fix_mate/service_seeker/s_BookingCalender.dart';
@@ -978,7 +980,7 @@ class _MyAppState extends State<MyApp> {
         primarySwatch: Colors.orange,
         fontFamily: 'Poppins',
       ),
-      home: s_HomePage(),
+      home: p_Dashboard(),
     );
   }
 }

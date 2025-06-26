@@ -12,6 +12,7 @@ import 'package:dotted_border/dotted_border.dart';
 import 'package:fix_mate/services/FullScreenImageViewer.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
+import 'package:fix_mate/services/AddressMapPreview.dart';
 
 class p_ABookingDetail extends StatefulWidget {
   final String bookingId;
@@ -386,6 +387,18 @@ class _p_ABookingDetailState extends State<p_ABookingDetail> {
               copyable: true,
               copyMessage: "Location copied to clipboard!",
             ),
+
+            // 📍 Google Map Preview
+            if (bookingData!["location"] != null && bookingData!["location"].toString().isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 0.0),
+                child: AddressMapPreview(
+                  address: bookingData!["location"],
+                  googleApiKey: 'AIzaSyAPpKIogJONJDDFRRCylib63OtTRliSDdc', // replace securely
+                ),
+              ),
+
+
             _buildInfoRow(
               "Total Price",
               "RM ${bookingData!["price"]}",

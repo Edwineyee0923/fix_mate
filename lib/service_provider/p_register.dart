@@ -591,12 +591,42 @@ class _p_registerState extends State<p_register> {
                         ],
                       ),
                       SizedBox(height: 15),
+                      // InternalTextField(
+                      //   labelText: "ToyyibPay User Secret Key",
+                      //   hintText: "Enter your registered ToyyibPay User Secret Key",
+                      //   icon: Icons.key_sharp,
+                      //   controller: spUSecretController,
+                      //   validationMessage: "Please enter your registered ToyyibPay user secret key",
+                      //   isValid: isspUSecretValid,
+                      //   enabled: isEditing,
+                      //   onChanged: (value) {
+                      //     setState(() {
+                      //       isspUSecretValid = value.trim().isNotEmpty; // Check if input is not empty
+                      //     });
+                      //   },// Pass validation status
+                      // ),
+                      // SizedBox(height: 15),
+                      // InternalTextField(
+                      //   labelText: "ToyyibPay Category Code",
+                      //   hintText: "Enter your registered ToyyibPay category code",
+                      //   icon: Icons.category_outlined,
+                      //   controller: spCCodeController,
+                      //   validationMessage: "Please enter your registered ToyyibPay category code",
+                      //   isValid: isspCCodeValid,
+                      //   enabled: isEditing,
+                      //   onChanged: (value) {
+                      //     setState(() {
+                      //       isspCCodeValid = value.trim().isNotEmpty; // Check if input is not empty
+                      //     });
+                      //   },// Pass validation status
+                      // ),
+                      SizedBox(height: 15),
                       InternalTextField(
-                        labelText: "ToyyibPay User Secret Key",
-                        hintText: "Enter your registered ToyyibPay User Secret Key",
+                        labelText: "Transfer Bank Name",
+                        hintText: "Enter your preferred bank for revenue transfer",
                         icon: Icons.key_sharp,
                         controller: spUSecretController,
-                        validationMessage: "Please enter your registered ToyyibPay user secret key",
+                        validationMessage: "Please enter your preferred bank for revenue transfer",
                         isValid: isspUSecretValid,
                         enabled: isEditing,
                         onChanged: (value) {
@@ -607,11 +637,11 @@ class _p_registerState extends State<p_register> {
                       ),
                       SizedBox(height: 15),
                       InternalTextField(
-                        labelText: "ToyyibPay Category Code",
-                        hintText: "Enter your registered ToyyibPay category code",
+                        labelText: "Bank Account Number",
+                        hintText: "Bank account number without dash (-) ",
                         icon: Icons.category_outlined,
                         controller: spCCodeController,
-                        validationMessage: "Please enter your registered ToyyibPay category code",
+                        validationMessage: "Please enter your bank account number without dash (-)",
                         isValid: isspCCodeValid,
                         enabled: isEditing,
                         onChanged: (value) {
@@ -621,6 +651,21 @@ class _p_registerState extends State<p_register> {
                         },// Pass validation status
                       ),
                       SizedBox(height: 15),
+                      // InternalTextField(
+                      //   labelText: "Bank Account Holder Name",
+                      //   hintText: "Enter the bank account holder name",
+                      //   icon: Icons.category_outlined,
+                      //   controller: spCCodeController,
+                      //   validationMessage: "Please enter your bank account holder name",
+                      //   isValid: isspCCodeValid,
+                      //   enabled: isEditing,
+                      //   onChanged: (value) {
+                      //     setState(() {
+                      //       isspCCodeValid = value.trim().isNotEmpty; // Check if input is not empty
+                      //     });
+                      //   },// Pass validation status
+                      // ),
+                      // SizedBox(height: 15),
                       LongInputContainer(
                         labelText: "Google Drive Link (Supporting Document Upload)",
                         controller: certificateController,

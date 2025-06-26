@@ -3,6 +3,7 @@ import 'package:fix_mate/service_provider/p_BookingCalender.dart';
 import 'package:fix_mate/service_provider/p_BookingModule/p_ABookingDetail.dart';
 import 'package:fix_mate/service_provider/p_BookingModule/p_BookingHistory.dart';
 import 'package:fix_mate/service_provider/p_HomePage.dart';
+import 'package:fix_mate/service_provider/p_Revenue.dart';
 import 'package:fix_mate/service_provider/p_SchedulePage.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -268,6 +269,7 @@ class _p_DashboardState extends State<p_Dashboard> {
                 _buildCompactOperationScheduleSection(),
                 _buildBookingOverviewSection(),
                 _buildUpcomingBookingsSection(),
+                _buildRevenueSection(),
                 _buildSupportSection()
               ],
             ),
@@ -954,6 +956,313 @@ Widget _buildCompactProviderInfoSection() {
     ),
     );
   }
+
+  Widget _buildRevenueSection() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Colors.white, Color(0xFFF8F9FA)],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 10)],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF6C7CE7).withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.analytics_rounded,
+                      color: Color(0xFF464E65),
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Text(
+                    "June Revenue",
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF464E65),
+                    ),
+                  ),
+                ],
+              ),
+              TextButton(
+                onPressed: () {
+                  // Navigate to detailed analytics page
+                },
+                child: GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => p_Revenue()), // Replace with your actual class name
+                    );
+                  },
+                  child: const Row(
+                    children: [
+                      Text(
+                        "View Details",
+                        style: TextStyle(
+                          color: Color(0xFF6C7CE7),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      SizedBox(width: 4),
+                      Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFF6C7CE7)),
+                    ],
+                  ),
+                )
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 16),
+
+          // Main Content Row
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Pie Chart Section
+              Container(
+                width: 130,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        // Background circle
+                        SizedBox(
+                          width: 120,
+                          height: 120,
+                          child: CircularProgressIndicator(
+                            value: 1.0,
+                            strokeWidth: 20,
+                            backgroundColor: Colors.grey[200],
+                            valueColor: const AlwaysStoppedAnimation<Color>(Colors.grey),
+                          ),
+                        ),
+                        // Promotion jobs (1/3 = 0.333)
+                        SizedBox(
+                          width: 120,
+                          height: 120,
+                          child: CircularProgressIndicator(
+                            value: 0.333,
+                            strokeWidth: 20,
+                            backgroundColor: Colors.transparent,
+                            valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF6C7CE7)), // Purple
+                          ),
+                        ),
+                        // Instant booking (2/3 = 0.667) - rotated to start after promotion
+                        Transform.rotate(
+                          angle: 0.333 * 2 * 3.14159,
+                          child: SizedBox(
+                            width: 120,
+                            height: 120,
+                            child: CircularProgressIndicator(
+                              value: 0.667,
+                              strokeWidth: 20,
+                              backgroundColor: Colors.transparent,
+                              valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFFF8A65)), // Orange
+                            ),
+                          ),
+                        ),
+                        // Center Text
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: const [
+                            Text(
+                              "Total Jobs",
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFF464E65),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            Text(
+                              "3",
+                              style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF464E65),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+
+              const SizedBox(width: 20),
+
+              // Summary Card Section
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey.withOpacity(0.2)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        "Revenue Summary",
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF464E65),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+
+                      // Total Revenue
+                      _buildSummaryItem(
+                        "Total Revenue",
+                        "RM 440",
+                        const Color(0xFF22C55E),
+                      ),
+                      const SizedBox(height: 6),
+
+                      // FiMate Commission
+                      _buildSummaryItem(
+                        "Commission Due",
+                        "RM 22",
+                        const Color(0xFFEF4444),
+                      ),
+                      const SizedBox(height: 6),
+
+                      // Net Earnings
+                      Container(
+                        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                        margin: const EdgeInsets.only(top: 6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF6C7CE7).withOpacity(0.2), // slightly more visible
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: const [
+                            Text(
+                              "Net Earnings",
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF464E65),
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              "RM 418",
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF6C7CE7),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 30),
+
+          // Legend
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _buildLegendItem("Instant Booking", const Color(0xFFFF8A65), "2"),
+              const SizedBox(width: 24),
+              _buildLegendItem("Promotion Jobs", const Color(0xFF6C7CE7), "1"),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSummaryItem(String label, String value, Color valueColor) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Flexible(
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontSize: 11,
+              color: Color(0xFF6B7280),
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: valueColor,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLegendItem(String label, Color color, String count) {
+    return Row(
+      children: [
+        Container(
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          "$label ($count)",
+          style: const TextStyle(
+            fontSize: 12,
+            color: Color(0xFF6B7280),
+          ),
+        ),
+      ],
+    );
+  }
+
+
+
+
 
   Widget _buildSupportSection() {
     return Container(

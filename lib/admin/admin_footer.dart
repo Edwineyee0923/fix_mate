@@ -1,3 +1,4 @@
+import 'package:fix_mate/admin/a_Dashboard.dart';
 import 'package:flutter/material.dart';
 import 'package:fix_mate/admin/a_SP_application.dart';
 import 'package:fix_mate/admin/a_U_inquiries.dart';
@@ -20,6 +21,9 @@ class admin_footer extends StatelessWidget {
         route = U_inquiries.routeName;
         break;
       case 2:
+        route = a_Dashboard.routeName;
+        break;
+      case 3:
         route = contact_developer.routeName;
         break;
     }
@@ -43,6 +47,8 @@ class admin_footer extends StatelessWidget {
       case 1:
         return U_inquiries();
       case 2:
+        return a_Dashboard();
+      case 3:
         return contact_developer();
       default:
         return SP_application();
@@ -58,6 +64,10 @@ class admin_footer extends StatelessWidget {
       items: const [
         BottomNavigationBarItem(icon: Icon(Icons.dashboard, size: 30), label: 'Application'),
         BottomNavigationBarItem(icon: Icon(Icons.mail, size: 30), label: 'Inquiries'),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.dashboard_rounded, size: 30),
+          label: 'Dashboard',
+        ),
         BottomNavigationBarItem(icon: Icon(Icons.phone, size: 30), label: 'Dev Contact'),
       ],
       currentIndex: selectedIndex,

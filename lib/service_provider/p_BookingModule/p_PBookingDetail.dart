@@ -10,7 +10,7 @@ import 'package:fix_mate/reusable_widget/reusable_widget.dart';
 import 'package:fix_mate/services/RefundEvidenceUpload.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fix_mate/services/showBookingNotification.dart';
-
+import 'package:fix_mate/services/AddressMapPreview.dart';
 
 class p_PBookingDetail extends StatefulWidget {
   final String bookingId;
@@ -1258,6 +1258,16 @@ class _p_PBookingDetailState extends State<p_PBookingDetail> {
               copyable: true,
               copyMessage: "Location copied to clipboard!",
             ),
+
+            // 📍 Google Map Preview
+            if (bookingData!["location"] != null && bookingData!["location"].toString().isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 0.0),
+                child: AddressMapPreview(
+                  address: bookingData!["location"],
+                  googleApiKey: 'AIzaSyAPpKIogJONJDDFRRCylib63OtTRliSDdc', // replace securely
+                ),
+              ),
 
             // Price
             _buildInfoRow(

@@ -5,6 +5,8 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:flutter/services.dart';
 import 'package:fix_mate/services/FullScreenImageViewer.dart';
+import 'package:fix_mate/services/AddressMapPreview.dart';
+
 
 class SPDetailScreen extends StatefulWidget {
   final String docId;
@@ -339,20 +341,48 @@ class _SPDetailScreenState extends State<SPDetailScreen> {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(width: 140, child: Text("Address:", style: const TextStyle(fontWeight: FontWeight.bold))),
-          Expanded(child: Text(address)),
+          const SizedBox(
+            width: 140,
+            child: Text("Address:", style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+          Expanded(
+            child: GestureDetector(
+              onTap: () async {
+                final url = Uri.encodeFull("https://www.google.com/maps/search/?api=1&query=$address");
+                if (await canLaunchUrl(Uri.parse(url))) {
+                  await launchUrl(Uri.parse(url));
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Could not open Google Maps.")),
+                  );
+                }
+              },
+              child: Text(
+                address,
+                style: const TextStyle(
+                  color: Color(0xFFfb9798),
+                  decoration: TextDecoration.underline,
+                ),
+              ),
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.copy, color: Color(0xFFfb9798), size: 18),
             onPressed: () {
               Clipboard.setData(ClipboardData(text: address));
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Address copied to clipboard!")));
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text("Address copied to clipboard!")),
+              );
             },
           ),
         ],
       ),
     );
   }
+
+
 }
 
 Widget _buildJoinedDateRow(Timestamp? joinedAt) {
